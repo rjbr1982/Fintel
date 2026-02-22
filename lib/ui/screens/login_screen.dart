@@ -1,15 +1,8 @@
-// 🔒 STATUS: FIXED (Strict Aliasing & Cache reset)
-import 'dart:io' show Platform;
+// 🔒 STATUS: EDITED (SaaS/Web Transition - Official Firebase Auth for Web/Mobile)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-// 📱 כינוי הרמטי למובייל (הכל מתחיל ב- mobile_auth)
-import 'package:google_sign_in/google_sign_in.dart' as mobile_auth;
-
-// 💻 כינוי הרמטי למחשב (הכל מתחיל ב- desktop_auth)
-import 'package:desktop_webview_auth/desktop_webview_auth.dart' as desktop_auth;
-import 'package:desktop_webview_auth/google.dart' as desktop_google;
+import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,39 +18,25 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+      if (kIsWeb) {
+        // 🌐 SaaS/Web Auth: שימוש ב-Popup הרשמי של Firebase Auth לדפדפן
+        final googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
         
-        // 💻 שימוש אקסקלוסיבי בחבילת המחשב
-        final args = desktop_google.GoogleSignInArgs(
-          clientId: 'הכנס-כאן-את-ה-CLIENT-ID-שהעתקת-מגוגל', 
-          redirectUri: 'https://fintel-app-2e01e.firebaseapp.com/__/auth/handler',
-          scope: 'email profile',
-        );
+        await FirebaseAuth.instance.signInWithPopup(googleProvider);
         
-        final result = await desktop_auth.DesktopWebviewAuth.signIn(args);
-        
-        if (result == null) {
-          if (mounted) setState(() => _isLoading = false);
-          return; 
-        }
-        
-        final credential = GoogleAuthProvider.credential(
-          accessToken: result.accessToken,
-        );
-        await FirebaseAuth.instance.signInWithCredential(credential);
-
       } else {
-        // 📱 שימוש אקסקלוסיבי בחבילת המובייל דרך הכינוי "mobile_auth"
-        final mobile_auth.GoogleSignIn googleSignIn = mobile_auth.GoogleSignIn();
-        final mobile_auth.GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+        // 📱 Mobile Auth: שימוש ב-Google Sign In למכשירים ניידים
+        final GoogleSignIn googleSignIn = GoogleSignIn();
+        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
         
         if (googleUser == null) {
           if (mounted) setState(() => _isLoading = false);
           return;
         }
         
-        // עטיפה מאובטחת המונעת התראות על גרסאות ישנות/חדשות של החבילה
-        final mobile_auth.GoogleSignInAuthentication googleAuth = await Future.value(googleUser.authentication);
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
         
         final credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,

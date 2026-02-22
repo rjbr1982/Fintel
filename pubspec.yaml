@@ -15,24 +15,23 @@ dependencies:
   # State Management
   provider: ^6.1.1
   
-  # Database
-  sqflite: ^2.3.0
-  sqflite_common_ffi: ^2.3.0 # For Windows/Desktop
-  path: ^1.8.3
-  
   # Utilities
   intl: ^0.20.0 
   
-  # Notifications - הוספת התשתית להתראות ודיופמין פיננסי
+  # Notifications
   flutter_local_notifications: ^17.0.0
   
-  window_manager: ^0.3.9 # For controlling window size on Desktop
+  # System
   path_provider: ^2.1.5
-  firebase_core: ^4.4.0
-  cloud_firestore: ^6.1.2
-  firebase_auth: ^6.1.4
-  google_sign_in: ^7.2.0
-  desktop_webview_auth: ^0.0.16
+  
+  # SaaS & Firebase Cloud (Constitution 5.10)
+  # הגרסאות הושמטו בכוונה כדי שמנוע ה-Pub יפתור את התלויות בצורה חלקה
+  firebase_core: ^4.4.0 
+  cloud_firestore: ^6.1.2 
+  firebase_auth: ^6.1.4 
+  google_sign_in: ^6.3.0 
+  firebase_ui_auth: ^3.0.1 
+  firebase_ui_oauth_google: ^2.0.1 
 
 dev_dependencies:
   flutter_test:

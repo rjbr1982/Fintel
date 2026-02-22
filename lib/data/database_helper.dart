@@ -1,8 +1,6 @@
-// 🔒 STATUS: EDITED (Added Withdrawals Table & onUpgrade for Schema V2)
-import 'dart:io';
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
+// 🔒 STATUS: EDITED (SaaS/Web Transition - Cloud Firestore Implementation with Strict Typing)
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'expense_model.dart';
 import 'debt_model.dart';
 import 'asset_model.dart'; 
@@ -10,120 +8,42 @@ import 'shopping_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
-  static Database? _database;
 
   DatabaseHelper._init();
 
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDB('fintel_v22.db'); 
-    return _database!;
+  // קיצור דרך למסד הנתונים בענן
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
+
+  // מזהה המשתמש המחובר (קריטי לארכיטקטורת SaaS - כל משתמש מקבל "מגירה" משלו)
+  String get _uid => FirebaseAuth.instance.currentUser?.uid ?? 'unauthenticated';
+
+  // פונקציית עזר לגישה לאוסף של המשתמש הספציפי
+  CollectionReference _userCollection(String collectionName) {
+    return _db.collection('users').doc(_uid).collection(collectionName);
   }
 
-  Future<Database> _initDB(String filePath) async {
-    final appDocDir = await getApplicationDocumentsDirectory();
-    final dbFolder = join(appDocDir.path, 'Fintel');
-    
-    final dir = Directory(dbFolder);
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    
-    final path = join(dbFolder, filePath);
-    // הועלה לגרסה 2 כדי ליצור את טבלת המשיכות החדשה (withdrawals)
-    return await openDatabase(
-      path, 
-      version: 2, 
-      onCreate: _createDB,
-      onUpgrade: _upgradeDB,
-    );
-  }
-
-  // שדרוג מבנה הנתונים הקיים מבלי למחוק מידע
-  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS withdrawals (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          expenseId INTEGER NOT NULL,
-          amount REAL NOT NULL,
-          date TEXT NOT NULL,
-          note TEXT NOT NULL
-        )
-      ''');
-    }
-  }
-
-  Future<void> _createDB(Database db, int version) async {
-    const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
-    const textType = 'TEXT NOT NULL';
-    const realType = 'REAL NOT NULL';
-    const intType = 'INTEGER NOT NULL';
-    const boolType = 'INTEGER NOT NULL';
-
-    await db.execute('''
-      CREATE TABLE expenses (
-        id $idType, name $textType, category $textType, parentCategory $textType,
-        monthlyAmount $realType, originalAmount $realType, frequency $intType, 
-        isSinking $boolType, isPerChild $boolType, targetAmount REAL, currentBalance REAL, 
-        allocationRatio REAL, lastUpdateDate TEXT, isLocked $boolType, manualAmount REAL, date $textType
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE debts (
-        id $idType, name $textType, originalBalance $realType, currentBalance $realType, 
-        monthlyPayment $realType, date $textType
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE app_settings (
-        key TEXT PRIMARY KEY, value REAL
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE assets (
-        id $idType, name $textType, value $realType, type $textType, yieldPercentage $realType
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE shopping_items (
-        id $idType, name $textType, category $textType, price $realType, quantity $intType, 
-        frequency_weeks $intType, last_purchase_date TEXT, status $textType
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE family_members (
-        id $idType, name $textType, birthYear $intType
-      )
-    ''');
-
-    // הטבלה החדשה להוצאות צוברות
-    await db.execute('''
-      CREATE TABLE withdrawals (
-        id $idType, expenseId $intType, amount $realType, date $textType, note $textType
-      )
-    ''');
-  }
+  // --- יצירת מזהה מספרי ייחודי ---
+  int _generateId() => DateTime.now().millisecondsSinceEpoch;
 
   // --- ניהול הגדרות ---
   Future<void> saveSetting(String key, double value) async {
-    final db = await database;
-    await db.insert('app_settings', {'key': key, 'value': value}, conflictAlgorithm: ConflictAlgorithm.replace);
+    await _userCollection('app_settings').doc(key).set({
+      'key': key, 
+      'value': value
+    });
   }
+
   Future<double?> getSetting(String key) async {
-    final db = await database;
-    final maps = await db.query('app_settings', where: 'key = ?', whereArgs: [key]);
-    if (maps.isNotEmpty) return (maps.first['value'] as num).toDouble();
+    final doc = await _userCollection('app_settings').doc(key).get();
+    if (doc.exists && doc.data() != null) {
+      final data = doc.data() as Map<String, dynamic>;
+      return (data['value'] as num).toDouble();
+    }
     return null;
   }
+
   Future<void> deleteSetting(String key) async {
-    final db = await database;
-    await db.delete('app_settings', where: 'key = ?', whereArgs: [key]);
+    await _userCollection('app_settings').doc(key).delete();
   }
 
   // --- ניהול קופת צלף ---
@@ -131,67 +51,164 @@ class DatabaseHelper {
   Future<double> getSniperBalance() async => await getSetting('sniper_balance') ?? 0.0;
 
   // --- איפוס נתונים ---
-  Future<void> clearAllData() async {
-    final db = await database;
-    await db.delete('expenses');
-    await db.delete('debts');
-    await db.delete('app_settings');
-    await db.delete('assets');
-    await db.delete('shopping_items');
-    await db.delete('family_members');
-    await db.delete('withdrawals'); 
+  Future<void> _deleteCollection(String collectionName) async {
+    final snapshot = await _userCollection(collectionName).get();
+    final batch = _db.batch();
+    for (var doc in snapshot.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
   }
 
-  // --- CRUD משפחה ---
-  Future<int> insertFamilyMember(FamilyMember fm) async => (await database).insert('family_members', fm.toMap());
-  Future<List<FamilyMember>> getFamilyMembers() async {
-    final res = await (await database).query('family_members');
-    return res.map((json) => FamilyMember.fromMap(json)).toList();
+  Future<void> clearAllData() async {
+    await _deleteCollection('expenses');
+    await _deleteCollection('debts');
+    await _deleteCollection('app_settings');
+    await _deleteCollection('assets');
+    await _deleteCollection('shopping_items');
+    await _deleteCollection('family_members');
+    await _deleteCollection('withdrawals'); 
   }
-  Future<int> updateFamilyMember(FamilyMember fm) async => (await database).update('family_members', fm.toMap(), where: 'id = ?', whereArgs: [fm.id]);
-  Future<int> deleteFamilyMember(int id) async => (await database).delete('family_members', where: 'id = ?', whereArgs: [id]);
+
+  // --- CRUD משפחה (תוקן ל-Strict Typing) ---
+  Future<int> insertFamilyMember(FamilyMember fm) async {
+    final id = fm.id ?? _generateId();
+    final map = fm.toMap();
+    map['id'] = id;
+    await _userCollection('family_members').doc(id.toString()).set(map);
+    return id;
+  }
+  
+  Future<List<FamilyMember>> getFamilyMembers() async {
+    final snap = await _userCollection('family_members').get();
+    return snap.docs.map((doc) => FamilyMember.fromMap(doc.data() as Map<String, dynamic>)).toList();
+  }
+  
+  Future<int> updateFamilyMember(FamilyMember fm) async {
+    await _userCollection('family_members').doc(fm.id.toString()).update(fm.toMap());
+    return fm.id ?? 0;
+  }
+  
+  Future<int> deleteFamilyMember(int id) async {
+    await _userCollection('family_members').doc(id.toString()).delete();
+    return id;
+  }
 
   // --- CRUD הוצאות ---
-  Future<int> insertExpense(Expense e) async => (await database).insert('expenses', e.toMap());
-  Future<List<Expense>> getExpenses() async {
-    final res = await (await database).query('expenses');
-    return res.map((json) => Expense.fromMap(json)).toList();
+  Future<int> insertExpense(Expense e) async {
+    final id = e.id ?? _generateId();
+    final map = e.toMap();
+    map['id'] = id;
+    await _userCollection('expenses').doc(id.toString()).set(map);
+    return id;
   }
-  Future<int> updateExpense(Expense e) async => (await database).update('expenses', e.toMap(), where: 'id = ?', whereArgs: [e.id]);
-  Future<int> deleteExpense(int id) async => (await database).delete('expenses', where: 'id = ?', whereArgs: [id]);
+
+  Future<List<Expense>> getExpenses() async {
+    final snap = await _userCollection('expenses').get();
+    return snap.docs.map((doc) => Expense.fromMap(doc.data() as Map<String, dynamic>)).toList();
+  }
+
+  Future<int> updateExpense(Expense e) async {
+    await _userCollection('expenses').doc(e.id.toString()).update(e.toMap());
+    return e.id ?? 0;
+  }
+
+  Future<int> deleteExpense(int id) async {
+    await _userCollection('expenses').doc(id.toString()).delete();
+    return id;
+  }
 
   // --- CRUD חובות ---
   Future<List<Debt>> getDebts() async {
-    final res = await (await database).query('debts');
-    return res.map((json) => Debt.fromMap(json)).toList();
+    final snap = await _userCollection('debts').get();
+    return snap.docs.map((doc) => Debt.fromMap(doc.data() as Map<String, dynamic>)).toList();
   }
-  Future<int> insertDebt(Debt d) async => (await database).insert('debts', d.toMap());
-  Future<int> updateDebt(Debt d) async => (await database).update('debts', d.toMap(), where: 'id = ?', whereArgs: [d.id]);
-  Future<int> deleteDebt(int id) async => (await database).delete('debts', where: 'id = ?', whereArgs: [id]);
+
+  Future<int> insertDebt(Debt d) async {
+    final id = d.id ?? _generateId();
+    final map = d.toMap();
+    map['id'] = id;
+    await _userCollection('debts').doc(id.toString()).set(map);
+    return id;
+  }
+
+  Future<int> updateDebt(Debt d) async {
+    await _userCollection('debts').doc(d.id.toString()).update(d.toMap());
+    return d.id ?? 0;
+  }
+
+  Future<int> deleteDebt(int id) async {
+    await _userCollection('debts').doc(id.toString()).delete();
+    return id;
+  }
 
   // --- CRUD נכסים ---
   Future<List<Asset>> getAssets() async {
-    final res = await (await database).query('assets');
-    return res.map((json) => Asset.fromMap(json)).toList();
+    final snap = await _userCollection('assets').get();
+    return snap.docs.map((doc) => Asset.fromMap(doc.data() as Map<String, dynamic>)).toList();
   }
-  Future<int> insertAsset(Asset a) async => (await database).insert('assets', a.toMap());
-  Future<int> updateAsset(Asset a) async => (await database).update('assets', a.toMap(), where: 'id = ?', whereArgs: [a.id]);
-  Future<int> deleteAsset(int id) async => (await database).delete('assets', where: 'id = ?', whereArgs: [id]);
+
+  Future<int> insertAsset(Asset a) async {
+    final id = a.id ?? _generateId();
+    final map = a.toMap();
+    map['id'] = id;
+    await _userCollection('assets').doc(id.toString()).set(map);
+    return id;
+  }
+
+  Future<int> updateAsset(Asset a) async {
+    await _userCollection('assets').doc(a.id.toString()).update(a.toMap());
+    return a.id ?? 0;
+  }
+
+  Future<int> deleteAsset(int id) async {
+    await _userCollection('assets').doc(id.toString()).delete();
+    return id;
+  }
 
   // --- CRUD קניות ---
   Future<List<ShoppingItem>> getShoppingItems() async {
-    final res = await (await database).query('shopping_items');
-    return res.map((json) => ShoppingItem.fromMap(json)).toList();
+    final snap = await _userCollection('shopping_items').get();
+    return snap.docs.map((doc) => ShoppingItem.fromMap(doc.data() as Map<String, dynamic>)).toList();
   }
-  Future<int> insertShoppingItem(ShoppingItem i) async => (await database).insert('shopping_items', i.toMap());
-  Future<int> updateShoppingItem(ShoppingItem i) async => (await database).update('shopping_items', i.toMap(), where: 'id = ?', whereArgs: [i.id]);
-  Future<int> deleteShoppingItem(int id) async => (await database).delete('shopping_items', where: 'id = ?', whereArgs: [id]);
 
-  // --- CRUD משיכות (Withdrawals) ---
-  Future<int> insertWithdrawal(Withdrawal w) async => (await database).insert('withdrawals', w.toMap());
-  Future<List<Withdrawal>> getWithdrawals(int expenseId) async {
-    final res = await (await database).query('withdrawals', where: 'expenseId = ?', whereArgs: [expenseId], orderBy: 'date DESC');
-    return res.map((json) => Withdrawal.fromMap(json)).toList();
+  Future<int> insertShoppingItem(ShoppingItem i) async {
+    final id = i.id ?? _generateId();
+    final map = i.toMap();
+    map['id'] = id;
+    await _userCollection('shopping_items').doc(id.toString()).set(map);
+    return id;
   }
-  Future<int> deleteWithdrawal(int id) async => (await database).delete('withdrawals', where: 'id = ?', whereArgs: [id]);
+
+  Future<int> updateShoppingItem(ShoppingItem i) async {
+    await _userCollection('shopping_items').doc(i.id.toString()).update(i.toMap());
+    return i.id ?? 0;
+  }
+
+  Future<int> deleteShoppingItem(int id) async {
+    await _userCollection('shopping_items').doc(id.toString()).delete();
+    return id;
+  }
+
+  // --- CRUD משיכות (Withdrawals) (תוקן ל-Strict Typing) ---
+  Future<int> insertWithdrawal(Withdrawal w) async {
+    final id = w.id ?? _generateId();
+    final map = w.toMap();
+    map['id'] = id;
+    await _userCollection('withdrawals').doc(id.toString()).set(map);
+    return id;
+  }
+
+  Future<List<Withdrawal>> getWithdrawals(int expenseId) async {
+    final snap = await _userCollection('withdrawals')
+        .where('expenseId', isEqualTo: expenseId)
+        .orderBy('date', descending: true)
+        .get();
+    return snap.docs.map((doc) => Withdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
+  }
+
+  Future<int> deleteWithdrawal(int id) async {
+    await _userCollection('withdrawals').doc(id.toString()).delete();
+    return id;
+  }
 }

@@ -1,16 +1,12 @@
-// 🔒 STATUS: EDITED (Cleaned up AuthGate & Firebase Initialization)
+// 🔒 STATUS: EDITED (SaaS/Web Transition - Removed Windows/Desktop dependencies)
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'dart:io';
-import 'package:window_manager/window_manager.dart';
 
 import 'package:firebase_core/firebase_core.dart'; 
 import 'package:firebase_auth/firebase_auth.dart'; 
 import 'firebase_options.dart';                    
 
-import 'data/database_helper.dart';
 import 'providers/budget_provider.dart';
 import 'providers/asset_provider.dart';
 import 'providers/debt_provider.dart';
@@ -22,32 +18,10 @@ import 'utils/app_localizations.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🚀 אתחול מנוע הענן של Firebase
+  // 🚀 אתחול מנוע הענן של Firebase (מותאם ל-Web/SaaS)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
-  // אתחול מסד נתונים (Desktop)
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
-
-  // הגדרת חלון (Desktop)
-  if (Platform.isWindows) {
-    await windowManager.ensureInitialized();
-    WindowOptions windowOptions = const WindowOptions(
-      size: Size(1280, 720),
-      center: true,
-      title: 'Fintel - דוחכם',
-    );
-    windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
-    });
-  }
-
-  await DatabaseHelper.instance.database;
 
   runApp(
     MultiProvider(
@@ -112,7 +86,7 @@ class FintelApp extends StatelessWidget {
   }
 }
 
-// 🛡️ שומר הסף: בודק אם המשתמש מחובר
+// 🛡️ שומר הסף: בודק אם המשתמש מחובר בענן
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
