@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "281373882888",
+    "project_id": "fintel-app-2e01e",
+    "storage_bucket": "fintel-app-2e01e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:281373882888:android:d9653be057ab4faa022fbd",
+        "android_client_info": {
+          "package_name": "com.example.dohaham"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "281373882888-2k65j0c1a1lo1esrp0nkqqssj53k1fgk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3SNGu97G2CJtww5ChGlxn8a-RIS0BIGU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "281373882888-2k65j0c1a1lo1esrp0nkqqssj53k1fgk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

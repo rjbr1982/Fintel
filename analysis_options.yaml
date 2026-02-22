@@ -1,0 +1,15 @@
+# This file configures the analyzer, which statically analyzes Dart code to
+# check for errors, warnings, and lints.
+
+include: package:flutter_lints/flutter.yaml
+
+# --- התיקון הגדול: התעלמות מהספרייה שהורדנו ---
+analyzer:
+  exclude:
+    - packages/** # מתעלם מכל מה שבתוך תיקיית packages
+    - test/** # מתעלם מקבצי בדיקה (למקרה שנשארו)
+
+linter:
+  rules:
+    # avoid_print: false
+    # prefer_single_quotes: true
