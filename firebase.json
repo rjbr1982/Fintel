@@ -1,1 +1,36 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"fintel-app-2e01e","appId":"1:281373882888:android:d9653be057ab4faa022fbd","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"fintel-app-2e01e","configurations":{"android":"1:281373882888:android:d9653be057ab4faa022fbd","web":"1:281373882888:web:063f7b956d879b8b022fbd"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "fintel-app-2e01e",
+          "appId": "1:281373882888:android:d9653be057ab4faa022fbd",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "fintel-app-2e01e",
+          "configurations": {
+            "android": "1:281373882888:android:d9653be057ab4faa022fbd",
+            "web": "1:281373882888:web:063f7b956d879b8b022fbd"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
