@@ -1,4 +1,5 @@
-// 🔒 STATUS: FIXED (Corrected undefined variable 'index' to 'i' in loop)
+// 🔒 STATUS: EDITED (Real-time Firestore Streams Integration + Updated Future Percentages v12.10)
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../data/database_helper.dart';
@@ -23,11 +24,18 @@ class BudgetProvider with ChangeNotifier {
   double _variableAllocationRatio = defaultVariableRatio; 
   double _futureAllocationRatio = defaultFutureRatio;    
 
-  // --- משתני מנוע החירות (Freedom Engine) ---
+  // --- משתני מנוע החירות ---
   double _initialCapital = 0.0;
-  double _expectedYield = 4.0; // 4% default (Risk-free)
-  int _compoundingFrequency = 12; // Monthly default
+  double _expectedYield = 4.0;
+  int _compoundingFrequency = 12;
   double? _manualTargetIncome;
+
+  // --- מנויי האזנה לענן ---
+  StreamSubscription? _expensesSub;
+  StreamSubscription? _familySub;
+  StreamSubscription? _settingsSub;
+  StreamSubscription? _assetsSub;
+  bool _isListening = false;
 
   List<Expense> get expenses => _expenses;
   List<FamilyMember> get familyMembers => _familyMembers;
@@ -39,18 +47,23 @@ class BudgetProvider with ChangeNotifier {
   
   double get variableDeficit => _variableDeficit;
 
-  // חשיפת משתני המחשבון ל-UI
   double get initialCapital => _initialCapital;
   double get expectedYield => _expectedYield;
   int get compoundingFrequency => _compoundingFrequency;
   double? get manualTargetIncome => _manualTargetIncome;
 
-  // יעד אוטומטי הנגזר מכלל ההוצאות התפעוליות
   double get autoTargetIncome => totalFixedExpenses + totalVariableExpenses + totalFutureExpenses;
-  // יעד סופי (דרוס ידנית או אוטומטי)
   double get targetPassiveIncome => _manualTargetIncome ?? autoTargetIncome;
 
-  // סנכרון דינמי של הון עצמי מתוך מסד הנכסים
+  @override
+  void dispose() {
+    _expensesSub?.cancel();
+    _familySub?.cancel();
+    _settingsSub?.cancel();
+    _assetsSub?.cancel();
+    super.dispose();
+  }
+
   Future<void> syncCapitalFromAssets() async {
     final assets = await DatabaseHelper.instance.getAssets();
     _initialCapital = assets.fold(0.0, (sum, item) => sum + item.value);
@@ -59,6 +72,7 @@ class BudgetProvider with ChangeNotifier {
 
   Future<void> loadData() async {
     try {
+      // טעינה ראשונית כדי לאפשר מנגנוני גלגול אוטומטי
       _expenses = await DatabaseHelper.instance.getExpenses();
       _familyMembers = await DatabaseHelper.instance.getFamilyMembers();
 
@@ -68,7 +82,6 @@ class BudgetProvider with ChangeNotifier {
         _familyMembers = await DatabaseHelper.instance.getFamilyMembers();
       }
       
-      // טעינת הגדרות מנוע החירות והתקציב מזיכרון ה-DB
       await syncCapitalFromAssets(); 
       _expectedYield = await DatabaseHelper.instance.getSetting('expected_yield') ?? 4.0;
       _compoundingFrequency = (await DatabaseHelper.instance.getSetting('comp_freq') ?? 12.0).toInt();
@@ -82,9 +95,56 @@ class BudgetProvider with ChangeNotifier {
       await _performAutoRollover();
       _recalculateAll();
       notifyListeners();
+
+      // הפעלת האזנה לזמן אמת לאחר הטעינה הראשונית
+      if (!_isListening) {
+        _setupStreams();
+        _isListening = true;
+      }
     } catch (e) {
       debugPrint("Error loading data: $e");
     }
+  }
+
+  void _setupStreams() {
+    _expensesSub = DatabaseHelper.instance.streamExpenses().listen((data) {
+      _expenses = data;
+      _recalculateAll();
+      notifyListeners();
+    });
+
+    _familySub = DatabaseHelper.instance.streamFamilyMembers().listen((data) {
+      _familyMembers = data;
+      notifyListeners();
+    });
+
+    _assetsSub = DatabaseHelper.instance.streamAssets().listen((data) {
+      double newCapital = data.fold(0.0, (sum, item) => sum + item.value);
+      if (_initialCapital != newCapital) {
+        _initialCapital = newCapital;
+        notifyListeners();
+      }
+    });
+
+    _settingsSub = DatabaseHelper.instance.streamSettings().listen((snap) {
+      bool changed = false;
+      for (var doc in snap.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final key = data['key'];
+        final val = (data['value'] as num?)?.toDouble();
+
+        if (key == 'expected_yield' && val != null && _expectedYield != val) { _expectedYield = val; changed = true; }
+        if (key == 'comp_freq' && val != null && _compoundingFrequency != val.toInt()) { _compoundingFrequency = val.toInt(); changed = true; }
+        if (key == 'manual_target_income' && _manualTargetIncome != val) { _manualTargetIncome = val; changed = true; }
+        if (key == 'variable_ratio' && val != null && _variableAllocationRatio != val) { _variableAllocationRatio = val; changed = true; }
+        if (key == 'future_ratio' && val != null && _futureAllocationRatio != val) { _futureAllocationRatio = val; changed = true; }
+        if (key == 'child_count' && val != null && _childCount != val.toInt()) { _childCount = val.toInt(); changed = true; }
+      }
+      if (changed) {
+        _recalculateAll();
+        notifyListeners();
+      }
+    });
   }
 
   Future<void> setFreedomSettings({
@@ -92,10 +152,6 @@ class BudgetProvider with ChangeNotifier {
     required double yieldRate,
     required int frequency,
   }) async {
-    _manualTargetIncome = manualTarget;
-    _expectedYield = yieldRate;
-    _compoundingFrequency = frequency;
-
     if (manualTarget != null) {
       await DatabaseHelper.instance.saveSetting('manual_target_income', manualTarget);
     } else {
@@ -103,8 +159,6 @@ class BudgetProvider with ChangeNotifier {
     }
     await DatabaseHelper.instance.saveSetting('expected_yield', yieldRate);
     await DatabaseHelper.instance.saveSetting('comp_freq', frequency.toDouble());
-
-    notifyListeners();
   }
 
   int? calculateMonthsToFreedom() {
@@ -144,8 +198,13 @@ class BudgetProvider with ChangeNotifier {
     final Map<String, double> defaultRatios = {
       'בגדים אבא': 0.19, 'בילויים אבא': 0.14, 'בגדים אמא': 0.09,
       'בילויים אמא': 0.19, 'טיפוח אמא': 0.15, 'בגדים ילדים': 0.12,
-      'בילויים ילדים': 0.12, 'תנור גז': 0.2, 'בר מצווה אליעזר': 0.5,
-      'הדברה': 0.15, 'רפואי': 0.15,
+      'בילויים ילדים': 0.12, 
+      'רכישות גדולות': 0.67, 
+      'בר מצווה אליעזר': 0.11,
+      'חופשה שנתית': 0.11,
+      'תנור גז': 0.07, 
+      'הדברה': 0.02, 
+      'רפואי': 0.02,
     };
 
     defaultRatio = defaultRatios[name] ?? 0.0;
@@ -160,9 +219,6 @@ class BudgetProvider with ChangeNotifier {
     );
 
     await DatabaseHelper.instance.updateExpense(updated);
-    _expenses[index] = updated;
-    _recalculateAll();
-    notifyListeners();
   }
 
   Future<void> _forceCategorySync() async {
@@ -264,17 +320,11 @@ class BudgetProvider with ChangeNotifier {
   }
 
   Future<void> resetVariableRatio() async {
-    _variableAllocationRatio = defaultVariableRatio;
     await DatabaseHelper.instance.saveSetting('variable_ratio', defaultVariableRatio);
-    _recalculateAll();
-    notifyListeners();
   }
 
   Future<void> resetFutureRatio() async {
-    _futureAllocationRatio = defaultFutureRatio;
     await DatabaseHelper.instance.saveSetting('future_ratio', defaultFutureRatio);
-    _recalculateAll();
-    notifyListeners();
   }
 
   Future<void> fullAppReset() async {
@@ -339,9 +389,6 @@ class BudgetProvider with ChangeNotifier {
         isLocked: true, manualAmount: amount, date: old.date,
       );
       await DatabaseHelper.instance.updateExpense(updated);
-      _expenses[index] = updated;
-      _recalculateAll(); 
-      notifyListeners();
     }
   }
 
@@ -358,9 +405,6 @@ class BudgetProvider with ChangeNotifier {
         isLocked: false, manualAmount: null, date: old.date,
       );
       await DatabaseHelper.instance.updateExpense(updated);
-      _expenses[index] = updated;
-      _recalculateAll();
-      notifyListeners();
     }
   }
 
@@ -376,9 +420,6 @@ class BudgetProvider with ChangeNotifier {
         isLocked: false, manualAmount: null, date: old.date,
       );
       await DatabaseHelper.instance.updateExpense(updated);
-      _expenses[index] = updated;
-      _recalculateAll();
-      notifyListeners();
     }
   }
 
@@ -402,9 +443,6 @@ class BudgetProvider with ChangeNotifier {
         date: old.date,
       );
       await DatabaseHelper.instance.updateExpense(updated);
-      _expenses[index] = updated;
-      _recalculateAll();
-      notifyListeners();
     }
   }
 
@@ -507,42 +545,34 @@ class BudgetProvider with ChangeNotifier {
   Future<void> addFamilyMember(String name, int birthYear) async {
     final newMember = FamilyMember(name: name, birthYear: birthYear);
     await DatabaseHelper.instance.insertFamilyMember(newMember);
-    await loadData();
   }
 
   Future<void> removeFamilyMember(int id) async {
     await DatabaseHelper.instance.deleteFamilyMember(id);
-    await loadData();
   }
 
   Future<void> updateFamilyMember(FamilyMember member) async {
     if (member.id != null) {
       await DatabaseHelper.instance.updateFamilyMember(member);
-      await loadData();
     }
   }
 
   Future<void> addExpense(Expense expense) async {
     await DatabaseHelper.instance.insertExpense(expense);
-    await loadData();
   }
 
   Future<void> updateExpense(Expense expense) async {
     if (expense.id != null) {
       await DatabaseHelper.instance.updateExpense(expense);
-      await loadData();
     }
   }
 
   Future<void> deleteExpense(int id) async {
     await DatabaseHelper.instance.deleteExpense(id);
-    await loadData();
   }
   
   Future<void> renameParentCategory(String oldName, String newName) async {
     if (oldName == newName || newName.trim().isEmpty) return;
-    
-    bool changed = false;
     for (int i = 0; i < _expenses.length; i++) {
       if (_expenses[i].parentCategory == oldName) {
         final e = _expenses[i];
@@ -554,35 +584,21 @@ class BudgetProvider with ChangeNotifier {
           lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
         );
         await DatabaseHelper.instance.updateExpense(updated);
-        _expenses[i] = updated; // <-- תוקן כאן מ-index ל-i
-        changed = true;
       }
-    }
-    
-    if (changed) {
-      _recalculateAll();
-      notifyListeners();
     }
   }
 
   Future<void> setChildCount(int count) async {
-    _childCount = count;
     await DatabaseHelper.instance.saveSetting('child_count', count.toDouble());
-    _recalculateAll(); 
-    notifyListeners();
   }
 
   Future<void> setAllocationRatios({double? variable, double? future}) async {
     if (variable != null) {
-      _variableAllocationRatio = variable;
       await DatabaseHelper.instance.saveSetting('variable_ratio', variable);
     }
     if (future != null) {
-      _futureAllocationRatio = future;
       await DatabaseHelper.instance.saveSetting('future_ratio', future);
     }
-    _recalculateAll();
-    notifyListeners();
   }
 
   double get totalIncome => _expenses.where((e) => e.category == 'הכנסות').fold(0.0, (sum, e) => sum + e.monthlyAmount);
@@ -670,12 +686,12 @@ class BudgetProvider with ChangeNotifier {
       Expense(name: 'בילויים ילדים', category: 'משתנות', parentCategory: 'ילדים - משתנות', monthlyAmount: 0, allocationRatio: 0.12, isSinking: true, date: now, lastUpdateDate: now),
     ];
     final future = [
-      Expense(name: 'רכישות גדולות', category: 'עתידיות', parentCategory: 'רכישות גדולות', monthlyAmount: 0, allocationRatio: 0.0, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'חופשה שנתית', category: 'עתידיות', parentCategory: 'חופשה שנתית', monthlyAmount: 0, allocationRatio: 0.0, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'תנור גז', category: 'עתידיות', parentCategory: 'רכישות קטנות', monthlyAmount: 0, allocationRatio: 0.2, targetAmount: 2500, currentBalance: 0, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'בר מצווה אליעזר', category: 'עתידיות', parentCategory: 'הפקת אירועים', monthlyAmount: 0, allocationRatio: 0.5, targetAmount: 10000, currentBalance: 5147, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'הדברה', category: 'עתידיות', parentCategory: 'תיקונים', monthlyAmount: 0, allocationRatio: 0.15, targetAmount: 450, currentBalance: 1298, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'רפואי', category: 'עתידיות', parentCategory: 'רפואי', monthlyAmount: 0, allocationRatio: 0.15, targetAmount: 1000, currentBalance: 318, isSinking: true, date: now, lastUpdateDate: now),
+      Expense(name: 'רכישות גדולות', category: 'עתידיות', parentCategory: 'רכישות גדולות', monthlyAmount: 0, allocationRatio: 0.67, isSinking: true, date: now, lastUpdateDate: now),
+      Expense(name: 'חופשה שנתית', category: 'עתידיות', parentCategory: 'חופשה שנתית', monthlyAmount: 0, allocationRatio: 0.11, isSinking: true, date: now, lastUpdateDate: now),
+      Expense(name: 'תנור גז', category: 'עתידיות', parentCategory: 'רכישות קטנות', monthlyAmount: 0, allocationRatio: 0.07, targetAmount: 2500, currentBalance: 0, isSinking: true, date: now, lastUpdateDate: now),
+      Expense(name: 'בר מצווה אליעזר', category: 'עתידיות', parentCategory: 'הפקת אירועים', monthlyAmount: 0, allocationRatio: 0.11, targetAmount: 10000, currentBalance: 5147, isSinking: true, date: now, lastUpdateDate: now),
+      Expense(name: 'הדברה', category: 'עתידיות', parentCategory: 'תיקונים', monthlyAmount: 0, allocationRatio: 0.02, targetAmount: 450, currentBalance: 1298, isSinking: true, date: now, lastUpdateDate: now),
+      Expense(name: 'רפואי', category: 'עתידיות', parentCategory: 'רפואי', monthlyAmount: 0, allocationRatio: 0.02, targetAmount: 1000, currentBalance: 318, isSinking: true, date: now, lastUpdateDate: now),
     ];
     
     for (var e in incomes) { await db.insertExpense(e); }
@@ -684,7 +700,7 @@ class BudgetProvider with ChangeNotifier {
     for (var e in future) { await db.insertExpense(e); }
   }
 
-  // --- משיכות מהוצאות צוברות (Withdrawals) ---
+  // --- משיכות מהוצאות צוברות ---
   
   Future<List<Withdrawal>> getWithdrawalsForExpense(int expenseId) async {
     return await DatabaseHelper.instance.getWithdrawals(expenseId);
@@ -692,9 +708,8 @@ class BudgetProvider with ChangeNotifier {
 
   Future<void> addWithdrawal(int expenseId, double amount, String note) async {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
-    if (index == -1) {
-      return;
-    }
+    if (index == -1) return;
+    
     final expense = _expenses[index];
     final newBalance = (expense.currentBalance ?? 0) - amount;
 
@@ -705,9 +720,7 @@ class BudgetProvider with ChangeNotifier {
   }
 
   Future<void> deleteWithdrawal(Withdrawal w) async {
-    if (w.id == null) {
-      return;
-    }
+    if (w.id == null) return;
     await DatabaseHelper.instance.deleteWithdrawal(w.id!);
     
     final index = _expenses.indexWhere((e) => e.id == w.expenseId);
@@ -736,7 +749,5 @@ class BudgetProvider with ChangeNotifier {
       isLocked: expense.isLocked, manualAmount: expense.manualAmount, date: expense.date,
     );
     await DatabaseHelper.instance.updateExpense(updated);
-    _expenses[index] = updated;
-    notifyListeners();
   }
 }

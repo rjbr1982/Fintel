@@ -1,31 +1,71 @@
-// 🔒 STATUS: EDITED (SaaS/Web Transition - Cloud Firestore Implementation with Strict Typing)
+// 🔒 STATUS: EDITED (Added Checking Account History CRUD & Streams)
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'expense_model.dart';
 import 'debt_model.dart';
 import 'asset_model.dart'; 
 import 'shopping_model.dart';
+import 'checking_model.dart'; // <--- הייבוא החדש
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
 
   DatabaseHelper._init();
 
-  // קיצור דרך למסד הנתונים בענן
   FirebaseFirestore get _db => FirebaseFirestore.instance;
 
-  // מזהה המשתמש המחובר (קריטי לארכיטקטורת SaaS - כל משתמש מקבל "מגירה" משלו)
   String get _uid => FirebaseAuth.instance.currentUser?.uid ?? 'unauthenticated';
 
-  // פונקציית עזר לגישה לאוסף של המשתמש הספציפי
   CollectionReference _userCollection(String collectionName) {
     return _db.collection('users').doc(_uid).collection(collectionName);
   }
 
-  // --- יצירת מזהה מספרי ייחודי ---
   int _generateId() => DateTime.now().millisecondsSinceEpoch;
 
-  // --- ניהול הגדרות ---
+  // ==========================================
+  // 🔄 REAL-TIME STREAMS (SaaS Sync)
+  // ==========================================
+  
+  Stream<List<Expense>> streamExpenses() {
+    return _userCollection('expenses').snapshots().map((snap) =>
+        snap.docs.map((doc) => Expense.fromMap(doc.data() as Map<String, dynamic>)).toList());
+  }
+
+  Stream<List<Debt>> streamDebts() {
+    return _userCollection('debts').snapshots().map((snap) =>
+        snap.docs.map((doc) => Debt.fromMap(doc.data() as Map<String, dynamic>)).toList());
+  }
+
+  Stream<List<Asset>> streamAssets() {
+    return _userCollection('assets').snapshots().map((snap) =>
+        snap.docs.map((doc) => Asset.fromMap(doc.data() as Map<String, dynamic>)).toList());
+  }
+
+  Stream<List<ShoppingItem>> streamShoppingItems() {
+    return _userCollection('shopping_items').snapshots().map((snap) =>
+        snap.docs.map((doc) => ShoppingItem.fromMap(doc.data() as Map<String, dynamic>)).toList());
+  }
+
+  Stream<List<FamilyMember>> streamFamilyMembers() {
+    return _userCollection('family_members').snapshots().map((snap) =>
+        snap.docs.map((doc) => FamilyMember.fromMap(doc.data() as Map<String, dynamic>)).toList());
+  }
+
+  Stream<QuerySnapshot> streamSettings() {
+    return _userCollection('app_settings').snapshots();
+  }
+
+  // זרם עו"ש
+  Stream<List<CheckingEntry>> streamCheckingHistory() {
+    return _userCollection('checking_history').orderBy('date', descending: true).snapshots().map((snap) =>
+        snap.docs.map((doc) => CheckingEntry.fromMap(doc.data() as Map<String, dynamic>)).toList());
+  }
+
+  // ==========================================
+  // הגדרות
+  // ==========================================
+  
   Future<void> saveSetting(String key, double value) async {
     await _userCollection('app_settings').doc(key).set({
       'key': key, 
@@ -46,11 +86,13 @@ class DatabaseHelper {
     await _userCollection('app_settings').doc(key).delete();
   }
 
-  // --- ניהול קופת צלף ---
   Future<void> saveSniperBalance(double balance) async => await saveSetting('sniper_balance', balance);
   Future<double> getSniperBalance() async => await getSetting('sniper_balance') ?? 0.0;
 
-  // --- איפוס נתונים ---
+  // ==========================================
+  // איפוס נתונים
+  // ==========================================
+  
   Future<void> _deleteCollection(String collectionName) async {
     final snapshot = await _userCollection(collectionName).get();
     final batch = _db.batch();
@@ -68,9 +110,13 @@ class DatabaseHelper {
     await _deleteCollection('shopping_items');
     await _deleteCollection('family_members');
     await _deleteCollection('withdrawals'); 
+    await _deleteCollection('checking_history'); 
   }
 
-  // --- CRUD משפחה (תוקן ל-Strict Typing) ---
+  // ==========================================
+  // CRUD פעולות חד פעמיות
+  // ==========================================
+
   Future<int> insertFamilyMember(FamilyMember fm) async {
     final id = fm.id ?? _generateId();
     final map = fm.toMap();
@@ -94,7 +140,6 @@ class DatabaseHelper {
     return id;
   }
 
-  // --- CRUD הוצאות ---
   Future<int> insertExpense(Expense e) async {
     final id = e.id ?? _generateId();
     final map = e.toMap();
@@ -118,7 +163,6 @@ class DatabaseHelper {
     return id;
   }
 
-  // --- CRUD חובות ---
   Future<List<Debt>> getDebts() async {
     final snap = await _userCollection('debts').get();
     return snap.docs.map((doc) => Debt.fromMap(doc.data() as Map<String, dynamic>)).toList();
@@ -142,7 +186,6 @@ class DatabaseHelper {
     return id;
   }
 
-  // --- CRUD נכסים ---
   Future<List<Asset>> getAssets() async {
     final snap = await _userCollection('assets').get();
     return snap.docs.map((doc) => Asset.fromMap(doc.data() as Map<String, dynamic>)).toList();
@@ -166,7 +209,6 @@ class DatabaseHelper {
     return id;
   }
 
-  // --- CRUD קניות ---
   Future<List<ShoppingItem>> getShoppingItems() async {
     final snap = await _userCollection('shopping_items').get();
     return snap.docs.map((doc) => ShoppingItem.fromMap(doc.data() as Map<String, dynamic>)).toList();
@@ -190,7 +232,6 @@ class DatabaseHelper {
     return id;
   }
 
-  // --- CRUD משיכות (Withdrawals) (תוקן ל-Strict Typing) ---
   Future<int> insertWithdrawal(Withdrawal w) async {
     final id = w.id ?? _generateId();
     final map = w.toMap();
@@ -209,6 +250,22 @@ class DatabaseHelper {
 
   Future<int> deleteWithdrawal(int id) async {
     await _userCollection('withdrawals').doc(id.toString()).delete();
+    return id;
+  }
+
+  // ==========================================
+  // CRUD לעו"ש
+  // ==========================================
+  Future<int> insertCheckingEntry(CheckingEntry entry) async {
+    final id = entry.id ?? _generateId();
+    final map = entry.toMap();
+    map['id'] = id;
+    await _userCollection('checking_history').doc(id.toString()).set(map);
+    return id;
+  }
+
+  Future<int> deleteCheckingEntry(int id) async {
+    await _userCollection('checking_history').doc(id.toString()).delete();
     return id;
   }
 }

@@ -1,8 +1,9 @@
-// 🔒 STATUS: EDITED (Removed duplicate Target Income setting, fixed missing method error)
+// 🔒 STATUS: EDITED (Added AI Export Button for Context Extraction)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../utils/app_localizations.dart';
+import '../../services/ai_export_service.dart'; // הייבוא החדש
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
@@ -41,12 +42,29 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400])),
       
       actions: [
+        // 🤖 כפתור ייצוא נתונים ל-AI
+        IconButton(
+          icon: const Icon(Icons.psychology, color: Colors.deepPurple),
+          tooltip: 'ייצוא נתונים ל-AI',
+          onPressed: () async {
+            await AiExportService.generateAndCopy(context);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('הנתונים הועתקו בהצלחה! ניתן להדביק בצ\'אט עם ה-AI.'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            }
+          },
+        ),
+
         if (canPop)
           IconButton(
             icon: const Icon(Icons.dashboard_outlined, color: Colors.blueGrey),
             tooltip: 'חזרה לדשבורד',
             onPressed: () {
-              // תיקון באג המסך השחור - ניווט קשיח למסך הראשי וניקוי כל ההיסטוריה
               Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
             },
           ),

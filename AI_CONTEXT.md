@@ -1,6 +1,19 @@
-# AI Context: Project Fintel ("Dohaham")
-**Role:** Senior Flutter & Dart Expert
-**Current Stage:** Sinking Funds Withdrawals, Multi-Level Shopping Sort, Debt Matrix UI (Completed).
-**Status:** DB upgraded to v2 with 'withdrawals' table. Auto-rollover applies to ALL Sinking Funds. Debt Schedule operates as a unified horizontal matrix. Shopping list supports infinite multi-level sorting with Drag & Drop UI. Annual sums visibility added.
-**Next Task:** 1. Deep-dive mathematical audit: Compare Freedom Engine iteration results vs. "דוחכם עדכון אפריל 2025.xlsm" (Section 3.2.1). 2. Architecture design for "The Life-Path Timeline" visualization (Section 10.6).
-**Active Constitution:** v12.6
+# AI_CONTEXT
+
+## PROJECT OVERVIEW
+* **App Name:** Fintel (דוחכם) - Financial/Expense Management App
+* **Architecture:** SaaS (Web & Mobile)
+* **Tech Stack:** Flutter, Firebase Auth (Google Sign-In), Cloud Firestore, Firebase Hosting.
+
+## CURRENT STATE
+* **Migration Complete:** Transitioned from a local Windows/SQLite desktop app to a Cloud-based SaaS.
+* **Hosting:** Deployed live at `https://fintel-app-2e01e.web.app` (Firebase Hosting).
+* **Auth:** Uses `signInWithPopup` for Web (`kIsWeb`) and standard `GoogleSignIn` for Mobile.
+* **Database:** Cloud Firestore. Architecture uses user-specific document isolation: `users/{uid}/expenses` (and other sub-collections like debts, assets, etc.).
+* **Code Health:** `flutter analyze` is 100% clean. Git is fully synced to the main branch.
+
+## ⚠️ STRICT AI INSTRUCTIONS FOR THIS PROJECT
+1. **No Shortcuts (Full Files Only):** When modifying a file, always provide the **full, updated code** of the file so the user can easily overwrite the existing one. Do not provide partial snippets unless explicitly requested.
+2. **Web/Mobile Compatibility:** Any new feature or package introduced must support both Web (`kIsWeb`) and Mobile environments. Do not introduce Windows/Desktop-only dependencies.
+3. **Surgical Troubleshooting:** If terminal/OS errors occur, prefer Dart/Flutter workarounds over making the user change deep Windows/PowerShell OS settings.
+4. **Tone:** Professional, direct, analytical, and solution-oriented. Explain the *why* behind errors before giving the solution.
