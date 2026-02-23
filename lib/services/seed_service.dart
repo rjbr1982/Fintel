@@ -1,118 +1,126 @@
-// 🔒 STATUS: EDITED (Added isSinking to all relevant items based on new Sinking Funds definition)
-import 'package:flutter/foundation.dart';
+// 🔒 STATUS: EDITED (Fixed Shopping Anchor Name & Removed Pharm)
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
 import '../data/shopping_model.dart';
 
 class SeedService {
   
-  static Future<void> ensureSeeded() async {
-    // תיקון קריטי: שימוש ב-Singleton למניעת נעילות דאטה-בייס
+  static Future<void> generateInitialData({
+    required String vehicleType,
+    required double leasingCost,
+    required double rentAmount,
+    required double supermarketAmount,
+    required double electricityAmount,
+    required double waterAmount,
+  }) async {
     final db = DatabaseHelper.instance;
     
     final existingExpenses = await db.getExpenses();
-    final existingShopping = await db.getShoppingItems();
-    
-    // אם שתי הטבלאות אינן ריקות, אין צורך באתחול
-    if (existingExpenses.isNotEmpty && existingShopping.isNotEmpty) {
-      return;
+    if (existingExpenses.isNotEmpty) {
+      return; 
     }
 
-    // --- רשימת האמת להוצאות (מותאמת לחוקה v12.0 ולרשימת הצוברות החדשה) ---
-    if (existingExpenses.isEmpty) {
-      final List<Expense> initialExpenses = [
-        
-        // === הכנסות ===
-        _create('משכורת נטו (1)', 'הכנסות', 'הכנסות', 11000), 
-        _create('משכורת נטו (2)', 'הכנסות', 'הכנסות', 5570),
-        _create('קצבת ילדים', 'הכנסות', 'הכנסות', 590),
-        
-        // === קבועות ===
-        _create('צדקה', 'קבועות', 'צדקה', 0),
-        _create('שכירות', 'קבועות', 'דיור', 3500),
-        _create('וועד בית', 'קבועות', 'דיור', 0),
-        _create('ארנונה', 'קבועות', 'דיור', 380),
-        _create('הובלה ותיקונים', 'קבועות', 'דיור', 0, isSinking: true),
-        _create('חשמל', 'קבועות', 'מגורים', 350, frequency: Frequency.BI_MONTHLY), 
-        _create('מים', 'קבועות', 'מגורים', 110, frequency: Frequency.BI_MONTHLY),
-        _create('גז', 'קבועות', 'מגורים', 40),
-        
-        // רכב (צוברות לפי דרישה חדשה)
-        _create('ביטוח', 'קבועות', 'רכב', 0, isSinking: true, frequency: Frequency.YEARLY),
-        _create('טסט', 'קבועות', 'רכב', 0, isSinking: true, frequency: Frequency.YEARLY),
-        _create('טיפול', 'קבועות', 'רכב', 0, isSinking: true, frequency: Frequency.YEARLY),
-        _create('תיקונים', 'קבועות', 'רכב', 0, isSinking: true),
-        _create('ליסינג', 'קבועות', 'רכב', 0),
-        _create('דלק', 'קבועות', 'רכב', 0), // שוטף
-        
-        // מדיה
-        _create('בזק', 'קבועות', 'מדיה', 0),
-        _create('פרטנר', 'קבועות', 'מדיה', 0),
-        _create('גוגל AI Pro', 'קבועות', 'מדיה', 0),
-        _create('גוגל יוטיוב פרימיום', 'קבועות', 'מדיה', 0),
-        _create('מייקרוסופט', 'קבועות', 'מדיה', 0, isSinking: true), // הוגדר כצובר
-        _create("צ'אט GPT", 'קבועות', 'מדיה', 0),
-        _create('אפליקציית כושר', 'קבועות', 'מדיה', 0),
-        
-        // ילדים - קבועות (כולן צוברות)
-        _create('שכר לימוד', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true),
-        _create('ציוד בית ספר', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
-        _create('חוגים', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true),
-        _create('מתנות לימי הולדת', 'קבועות', 'ילדים', 0, isSinking: true),
-        _create('קייטנות', 'קבועות', 'ילדים', 0, isSinking: true, frequency: Frequency.YEARLY),
-        
-        // חגים (כולם צוברים)
-        _create('ראש השנה', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-        _create('יום כיפור', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-        _create('סוכות', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-        _create('שמחת תורה', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-        _create('חנוכה', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-        _create("ט''ו בשבט", 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-        _create('פורים', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-        _create('פסח', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-        _create('יום העצמאות', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-        _create("ל''ג בעומר", 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-        _create('שבועות', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-        
-        // שונות קבועות
-        _create('קופת חולים', 'קבועות', 'קופת חולים', 0),
-        _create('נסיעות', 'קבועות', 'נסיעות', 0, isSinking: true),
-        _create('תספורת', 'קבועות', 'תספורת', 0),
-        _create('קטנות לבית', 'קבועות', 'קטנות לבית', 0, isSinking: true),
-        _create('בילויים', 'קבועות', 'בילויים', 0, isSinking: true),
+    final List<Expense> initialExpenses = [
+      
+      // === הכנסות ===
+      _create('משכורת נטו (1)', 'הכנסות', 'הכנסות', 11000), 
+      _create('משכורת נטו (2)', 'הכנסות', 'הכנסות', 5570),
+      _create('קצבת ילדים', 'הכנסות', 'הכנסות', 590),
+      
+      // === קבועות ===
+      _create('צדקה', 'קבועות', 'צדקה', 0),
+      _create('שכירות/משכנתא', 'קבועות', 'דיור', rentAmount),
+      _create('וועד בית', 'קבועות', 'דיור', 0),
+      _create('ארנונה', 'קבועות', 'דיור', 380),
+      _create('הובלה ותיקונים', 'קבועות', 'דיור', 0, isSinking: true),
+      _create('חשמל', 'קבועות', 'מגורים', electricityAmount, frequency: Frequency.BI_MONTHLY), 
+      _create('מים', 'קבועות', 'מגורים', waterAmount, frequency: Frequency.BI_MONTHLY),
+      _create('גז', 'קבועות', 'מגורים', 40),
+      
+      // רכב (מוזרק דינמית)
+      if (vehicleType == 'car') ...[
+        _create('ביטוח', 'קבועות', 'רכב', 3500, isSinking: true, frequency: Frequency.YEARLY),
+        _create('טסט', 'קבועות', 'רכב', 1250, isSinking: true, frequency: Frequency.YEARLY),
+        _create('טיפול', 'קבועות', 'רכב', 2000, isSinking: true, frequency: Frequency.YEARLY),
+        _create('תיקונים', 'קבועות', 'רכב', 500, isSinking: true),
+        _create('ליסינג', 'קבועות', 'רכב', leasingCost),
+        _create('דלק', 'קבועות', 'רכב', 500), 
+      ] else if (vehicleType == 'motorcycle') ...[
+        _create('ביטוח', 'קבועות', 'רכב', 3500, isSinking: true, frequency: Frequency.YEARLY),
+        _create('טסט', 'קבועות', 'רכב', 250, isSinking: true, frequency: Frequency.YEARLY),
+        _create('טיפול', 'קבועות', 'רכב', 500, isSinking: true, frequency: Frequency.YEARLY),
+        _create('תיקונים', 'קבועות', 'רכב', 50, isSinking: true),
+        _create('דלק', 'קבועות', 'רכב', 30), 
+      ],
+      
+      // מדיה
+      _create('בזק', 'קבועות', 'מדיה', 0),
+      _create('פרטנר', 'קבועות', 'מדיה', 0),
+      _create('גוגל AI Pro', 'קבועות', 'מדיה', 0),
+      _create('גוגל יוטיוב פרימיום', 'קבועות', 'מדיה', 0),
+      _create('מייקרוסופט', 'קבועות', 'מדיה', 0, isSinking: true), 
+      _create("צ'אט GPT", 'קבועות', 'מדיה', 0),
+      _create('אפליקציית כושר', 'קבועות', 'מדיה', 0),
+      
+      // ילדים - קבועות (כולן צוברות)
+      _create('שכר לימוד', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true),
+      _create('ציוד בית ספר', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
+      _create('חוגים', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true),
+      _create('מתנות לימי הולדת', 'קבועות', 'ילדים', 0, isSinking: true),
+      _create('קייטנות', 'קבועות', 'ילדים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      
+      // חגים (כולם צוברים)
+      _create('ראש השנה', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      _create('יום כיפור', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      _create('סוכות', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      _create('שמחת תורה', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      _create('חנוכה', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      _create("ט''ו בשבט", 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      _create('פורים', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      _create('פסח', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      _create('יום העצמאות', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      _create("ל''ג בעומר", 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      _create('שבועות', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      
+      // שונות קבועות
+      _create('קופת חולים', 'קבועות', 'קופת חולים', 0),
+      _create('נסיעות', 'קבועות', 'נסיעות', 0, isSinking: true),
+      _create('תספורת', 'קבועות', 'תספורת', 0),
+      _create('קטנות לבית', 'קבועות', 'קטנות לבית', 0, isSinking: true),
+      _create('בילויים', 'קבועות', 'בילויים', 0, isSinking: true),
 
-        // === משתנות (קניות) ===
-        _create('סופר ומזון', 'משתנות', 'קניות', 0),
-        _create('פארם וניקיון', 'משתנות', 'קניות', 0),
+      // === משתנות (קניות) ===
+      // תוקן: השם הוחזר ל'קניות' כדי שהמסך יזהה אותו כעוגן, ופארם וניקיון נמחק!
+      _create('קניות', 'משתנות', 'קניות', supermarketAmount),
 
-        // === משתנות (אישיות - Waterfall) - כולן צוברות כעת ===
-        _create('בגדים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.1, isSinking: true),
-        _create('בילויים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.1, isSinking: true),
-        _create('בגדים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.1, isSinking: true),
-        _create('בילויים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.1, isSinking: true),
-        _create('טיפוח אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.1, isSinking: true),
-        
-        _create('בגדים ילדים', 'משתנות', 'ילדים', 0, isPerChild: true, allocationRatio: 0.05, isSinking: true),
-        _create('בילויים ילדים', 'משתנות', 'ילדים', 0, isPerChild: true, allocationRatio: 0.05, isSinking: true),
-        
-        // === עתידיות ===
-        _create('מקדמה לבית', 'עתידיות', 'רכישות גדולות', 0, isSinking: true, allocationRatio: 0.5),
-        _create('תנור גז', 'עתידיות', 'רכישות קטנות', 0, isSinking: true, allocationRatio: 0.1),
-        _create('בר מצווה אליעזר', 'עתידיות', 'הפקת אירועים', 0, isSinking: true, allocationRatio: 0.1),
-        _create('הדברה', 'עתידיות', 'תיקונים', 0, isSinking: true, allocationRatio: 0.1),
-        _create('רפואי', 'עתידיות', 'רפואי', 0, isSinking: true, allocationRatio: 0.1),
-        _create('חופשה שנתית', 'עתידיות', 'חופשה שנתית', 0, isSinking: true, allocationRatio: 0.1),
-        
-        // === פיננסיות ===
-        _create('השקעות שונות', 'פיננסיות', 'כללי', 0),
-      ];
+      // === משתנות (אישיות - Waterfall) ===
+      _create('בגדים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.1, isSinking: true),
+      _create('בילויים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.1, isSinking: true),
+      _create('בגדים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.1, isSinking: true),
+      _create('בילויים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.1, isSinking: true),
+      _create('טיפוח אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.1, isSinking: true),
+      
+      _create('בגדים ילדים', 'משתנות', 'ילדים', 0, isPerChild: true, allocationRatio: 0.05, isSinking: true),
+      _create('בילויים ילדים', 'משתנות', 'ילדים', 0, isPerChild: true, allocationRatio: 0.05, isSinking: true),
+      
+      // === עתידיות ===
+      _create('מקדמה לבית', 'עתידיות', 'רכישות גדולות', 0, isSinking: true, allocationRatio: 0.5),
+      _create('תנור גז', 'עתידיות', 'רכישות קטנות', 0, isSinking: true, allocationRatio: 0.1),
+      _create('בר מצווה אליעזר', 'עתידיות', 'הפקת אירועים', 0, isSinking: true, allocationRatio: 0.1),
+      _create('הדברה', 'עתידיות', 'תיקונים', 0, isSinking: true, allocationRatio: 0.1),
+      _create('רפואי', 'עתידיות', 'רפואי', 0, isSinking: true, allocationRatio: 0.1),
+      _create('חופשה שנתית', 'עתידיות', 'חופשה שנתית', 0, isSinking: true, allocationRatio: 0.1),
+      
+      // === פיננסיות ===
+      _create('השקעות שונות', 'פיננסיות', 'כללי', 0),
+    ];
 
-      for (var expense in initialExpenses) {
-        await db.insertExpense(expense);
-      }
+    for (var expense in initialExpenses) {
+      await db.insertExpense(expense);
     }
 
     // --- רשימת האמת לקניות (Seed Data) ---
+    final existingShopping = await db.getShoppingItems();
     if (existingShopping.isEmpty) {
       final List<ShoppingItem> initialShoppingItems = [
         // 1 שבוע
@@ -238,8 +246,6 @@ class SeedService {
         await db.insertShoppingItem(item);
       }
     }
-    
-    debugPrint('SeedService v22: Database populated with Constitution 12.0 structure and Sinking Funds Logic.');
   }
 
   // פונקציית עזר להוצאות
@@ -250,28 +256,37 @@ class SeedService {
         Frequency frequency = Frequency.MONTHLY,
         double allocationRatio = 0.0
       }) {
+    
+    double actualMonthly = amount;
+    if (frequency == Frequency.YEARLY) {
+      actualMonthly = amount / 12;
+    } else if (frequency == Frequency.BI_MONTHLY) {
+      actualMonthly = amount / 2;
+    }
+
     return Expense(
       name: name,
       category: category,
       parentCategory: parentCategory,
-      monthlyAmount: amount,
+      monthlyAmount: actualMonthly,
+      originalAmount: actualMonthly,
       frequency: frequency,
       isSinking: isSinking,
       isPerChild: isPerChild,
       allocationRatio: allocationRatio,
       date: DateTime.now().toIso8601String(),
+      currentBalance: 0.0, 
     );
   }
 
-  // פונקציית עזר לפריטי קניות
   static ShoppingItem _createShopping(String name, String category, double price, int weeks) {
     return ShoppingItem(
       name: name,
       category: category,
       price: price,
-      quantity: 1, // כמות ברירת מחדל
+      quantity: 1, 
       frequencyWeeks: weeks,
-      status: 'צהוב', // מתחיל בסטטוס רגיל
+      status: 'צהוב', 
     );
   }
 }

@@ -1,9 +1,10 @@
-// 🔒 STATUS: EDITED (Added AI Export Button for Context Extraction)
+// 🔒 STATUS: EDITED (Added direct routing to Onboarding after Factory Reset)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../utils/app_localizations.dart';
-import '../../services/ai_export_service.dart'; // הייבוא החדש
+import '../../services/ai_export_service.dart';
+import '../screens/onboarding_screen.dart'; // הייבוא של מסך הקליטה!
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
@@ -36,13 +37,30 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
           )
         : null,
 
-      title: title != null 
-        ? Text(title!, style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold))
-        : Text(loc?.get('appTitle') ?? 'דוחכם', 
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400])),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Image.asset(
+              'assets/icon/icon.png',
+              width: 28,
+              height: 28,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: title != null 
+              ? Text(title!, style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)
+              : Text(loc?.get('appTitle') ?? 'דוחכם', 
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400])),
+          ),
+        ],
+      ),
       
       actions: [
-        // 🤖 כפתור ייצוא נתונים ל-AI
         IconButton(
           icon: const Icon(Icons.psychology, color: Colors.deepPurple),
           tooltip: 'ייצוא נתונים ל-AI',
@@ -255,7 +273,14 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
               await budget.fullAppReset();
-              if (ctx.mounted) Navigator.pop(ctx);
+              if (ctx.mounted) {
+                Navigator.pop(ctx); // סוגר את חלונית האישור
+                // 🚀 פקודת הניווט החדשה ששכחנו - זורקת ישירות למסך הקליטה!
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+                  (route) => false,
+                );
+              }
             },
             child: const Text('אפס הכל', style: TextStyle(color: Colors.white)),
           ),

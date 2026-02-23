@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Real-time Firestore Streams Integration + Updated Future Percentages v12.10)
+// 🔒 STATUS: EDITED (Removed Hardcoded Seed, Fixed Auto-Sync bypass for Onboarding)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -72,15 +72,8 @@ class BudgetProvider with ChangeNotifier {
 
   Future<void> loadData() async {
     try {
-      // טעינה ראשונית כדי לאפשר מנגנוני גלגול אוטומטי
       _expenses = await DatabaseHelper.instance.getExpenses();
       _familyMembers = await DatabaseHelper.instance.getFamilyMembers();
-
-      if (_expenses.isEmpty && _familyMembers.isEmpty) {
-        await _seedInitialData();
-        _expenses = await DatabaseHelper.instance.getExpenses();
-        _familyMembers = await DatabaseHelper.instance.getFamilyMembers();
-      }
       
       await syncCapitalFromAssets(); 
       _expectedYield = await DatabaseHelper.instance.getSetting('expected_yield') ?? 4.0;
@@ -96,7 +89,6 @@ class BudgetProvider with ChangeNotifier {
       _recalculateAll();
       notifyListeners();
 
-      // הפעלת האזנה לזמן אמת לאחר הטעינה הראשונית
       if (!_isListening) {
         _setupStreams();
         _isListening = true;
@@ -222,6 +214,9 @@ class BudgetProvider with ChangeNotifier {
   }
 
   Future<void> _forceCategorySync() async {
+    // 🛑 תיקון קריטי: לא מסנכרנים קטגוריות למסד ריק, אחרת זה מכשיל את ה-Onboarding!
+    if (_expenses.isEmpty) return;
+
     bool changed = false;
     final now = DateTime.now().toIso8601String();
     final Map<String, Map<String, String>> syncRules = {
@@ -338,7 +333,9 @@ class BudgetProvider with ChangeNotifier {
     _futureAllocationRatio = defaultFutureRatio;
     _externalDebtPayment = 0;
     _isFutureMode = false;
-    await loadData();
+    _expenses = [];
+    _familyMembers = [];
+    notifyListeners();
   }
 
   Future<void> _performAutoRollover() async {
@@ -616,88 +613,6 @@ class BudgetProvider with ChangeNotifier {
   double get financialDiversionAmount {
     if (_isFutureMode || !_hasActiveDebts) return 0.0;
     return totalFinancialExpenses;
-  }
-
-  Future<void> _seedInitialData() async {
-    final db = DatabaseHelper.instance;
-    final now = DateTime.now().toIso8601String();
-    final initialFamily = [
-      FamilyMember(name: 'רפאל', birthYear: 1982),
-      FamilyMember(name: 'קרן', birthYear: 1990),
-      FamilyMember(name: 'אליעזר', birthYear: 2013),
-      FamilyMember(name: 'מלכה', birthYear: 2015),
-      FamilyMember(name: 'שרה', birthYear: 2017),
-    ];
-    for (var m in initialFamily) { await db.insertFamilyMember(m); }
-    final incomes = [
-      Expense(name: 'פלקס', category: 'הכנסות', parentCategory: 'הכנסות', monthlyAmount: 11000, date: now),
-      Expense(name: 'מכון המקדש', category: 'הכנסות', parentCategory: 'הכנסות', monthlyAmount: 5570, date: now),
-      Expense(name: 'קצבת ילדים', category: 'הכנסות', parentCategory: 'הכנסות', monthlyAmount: 590, date: now),
-    ];
-    final fixed = [
-      Expense(name: 'צדקה', category: 'קבועות', parentCategory: 'צדקה', monthlyAmount: 50, date: now),
-      Expense(name: 'שכירות', category: 'קבועות', parentCategory: 'דיור', monthlyAmount: 3300, date: now),
-      Expense(name: 'וועד בית', category: 'קבועות', parentCategory: 'דיור', monthlyAmount: 170, date: now),
-      Expense(name: 'ארנונה', category: 'קבועות', parentCategory: 'דיור', monthlyAmount: 350, date: now),
-      Expense(name: 'הובלה ותיקונים', category: 'קבועות', parentCategory: 'דיור', monthlyAmount: 208, isSinking: true, date: now),
-      Expense(name: 'חשמל', category: 'קבועות', parentCategory: 'מגורים', monthlyAmount: 750, date: now),
-      Expense(name: 'מים', category: 'קבועות', parentCategory: 'מגורים', monthlyAmount: 250, date: now),
-      Expense(name: 'גז', category: 'קבועות', parentCategory: 'מגורים', monthlyAmount: 50, date: now),
-      Expense(name: 'טסט', category: 'קבועות', parentCategory: 'רכב', monthlyAmount: 21, isSinking: true, date: now),
-      Expense(name: 'ביטוח', category: 'קבועות', parentCategory: 'רכב', monthlyAmount: 292, isSinking: true, date: now),
-      Expense(name: 'טיפול', category: 'קבועות', parentCategory: 'רכב', monthlyAmount: 42, isSinking: true, date: now),
-      Expense(name: 'תיקונים', category: 'קבועות', parentCategory: 'רכב', monthlyAmount: 50, isSinking: true, date: now),
-      Expense(name: 'דלק', category: 'קבועות', parentCategory: 'רכב', monthlyAmount: 30, date: now),
-      Expense(name: 'פרטנר', category: 'קבועות', parentCategory: 'מדיה', monthlyAmount: 220, date: now),
-      Expense(name: 'גוגל AI פרו', category: 'קבועות', parentCategory: 'מדיה', monthlyAmount: 75, date: now),
-      Expense(name: 'יוטיוב פרימיום', category: 'קבועות', parentCategory: 'מדיה', monthlyAmount: 48, date: now),
-      Expense(name: 'מייקרוסופט', category: 'קבועות', parentCategory: 'מדיה', monthlyAmount: 38, isSinking: true, date: now),
-      Expense(name: 'צ\'אט GPT', category: 'קבועות', parentCategory: 'מדיה', monthlyAmount: 74, date: now),
-      Expense(name: 'שכר לימוד', category: 'קבועות', parentCategory: 'ילדים - קבועות', monthlyAmount: 174, isPerChild: true, isSinking: true, date: now),
-      Expense(name: 'ציוד בית ספר', category: 'קבועות', parentCategory: 'ילדים - קבועות', monthlyAmount: 33, isPerChild: true, isSinking: true, date: now),
-      Expense(name: 'חוגים', category: 'קבועות', parentCategory: 'ילדים - קבועות', monthlyAmount: 200, isPerChild: true, isSinking: true, date: now),
-      Expense(name: 'מתנות ימי הולדת', category: 'קבועות', parentCategory: 'ילדים - קבועות', monthlyAmount: 21, isPerChild: true, isSinking: true, date: now),
-      Expense(name: 'קייטנות', category: 'קבועות', parentCategory: 'ילדים - קבועות', monthlyAmount: 0, isPerChild: true, isSinking: true, date: now),
-      Expense(name: 'ראש השנה', category: 'קבועות', parentCategory: 'חגים', monthlyAmount: 41.61, isSinking: true, date: now),
-      Expense(name: 'יום כיפור', category: 'קבועות', parentCategory: 'חגים', monthlyAmount: 41.61, isSinking: true, date: now),
-      Expense(name: 'סוכות', category: 'קבועות', parentCategory: 'חגים', monthlyAmount: 41.61, isSinking: true, date: now),
-      Expense(name: 'שמחת תורה', category: 'קבועות', parentCategory: 'חגים', monthlyAmount: 41.61, isSinking: true, date: now),
-      Expense(name: 'חנוכה', category: 'קבועות', parentCategory: 'חגים', monthlyAmount: 16.67, isSinking: true, date: now),
-      Expense(name: 'ט"ו בשבט', category: 'קבועות', parentCategory: 'חגים', monthlyAmount: 16.67, isSinking: true, date: now),
-      Expense(name: 'פורים', category: 'קבועות', parentCategory: 'חגים', monthlyAmount: 16.67, isSinking: true, date: now),
-      Expense(name: 'פסח', category: 'קבועות', parentCategory: 'חגים', monthlyAmount: 125, isSinking: true, date: now),
-      Expense(name: 'יום העצמאות', category: 'קבועות', parentCategory: 'חגים', monthlyAmount: 41.67, isSinking: true, date: now),
-      Expense(name: 'ל"ג בעומר', category: 'קבועות', parentCategory: 'חגים', monthlyAmount: 41.67, isSinking: true, date: now),
-      Expense(name: 'שבועות', category: 'קבועות', parentCategory: 'חגים', monthlyAmount: 41.67, isSinking: true, date: now),
-      Expense(name: 'קופת חולים', category: 'קבועות', parentCategory: 'קופ"ח', monthlyAmount: 600, date: now),
-      Expense(name: 'נסיעות', category: 'קבועות', parentCategory: 'נסיעות', monthlyAmount: 100, isSinking: true, date: now),
-      Expense(name: 'תספורת', category: 'קבועות', parentCategory: 'תספורת', monthlyAmount: 130, date: now),
-      Expense(name: 'קטנות לבית', category: 'קבועות', parentCategory: 'קטנות לבית', monthlyAmount: 100, isSinking: true, date: now),
-      Expense(name: 'בילויים', category: 'קבועות', parentCategory: 'בילויים', monthlyAmount: 89, isSinking: true, date: now),
-    ];
-    final variables = [
-      Expense(name: 'קניות', category: 'משתנות', parentCategory: 'קניות', monthlyAmount: 4936, date: now, lastUpdateDate: now),
-      Expense(name: 'בגדים אבא', category: 'משתנות', parentCategory: 'אבא', monthlyAmount: 0, allocationRatio: 0.19, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'בילויים אבא', category: 'משתנות', parentCategory: 'אבא', monthlyAmount: 0, allocationRatio: 0.14, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'בגדים אמא', category: 'משתנות', parentCategory: 'אמא', monthlyAmount: 0, allocationRatio: 0.09, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'בילויים אמא', category: 'משתנות', parentCategory: 'אמא', monthlyAmount: 0, allocationRatio: 0.19, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'טיפוח אמא', category: 'משתנות', parentCategory: 'אמא', monthlyAmount: 0, allocationRatio: 0.15, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'בגדים ילדים', category: 'משתנות', parentCategory: 'ילדים - משתנות', monthlyAmount: 0, allocationRatio: 0.12, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'בילויים ילדים', category: 'משתנות', parentCategory: 'ילדים - משתנות', monthlyAmount: 0, allocationRatio: 0.12, isSinking: true, date: now, lastUpdateDate: now),
-    ];
-    final future = [
-      Expense(name: 'רכישות גדולות', category: 'עתידיות', parentCategory: 'רכישות גדולות', monthlyAmount: 0, allocationRatio: 0.67, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'חופשה שנתית', category: 'עתידיות', parentCategory: 'חופשה שנתית', monthlyAmount: 0, allocationRatio: 0.11, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'תנור גז', category: 'עתידיות', parentCategory: 'רכישות קטנות', monthlyAmount: 0, allocationRatio: 0.07, targetAmount: 2500, currentBalance: 0, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'בר מצווה אליעזר', category: 'עתידיות', parentCategory: 'הפקת אירועים', monthlyAmount: 0, allocationRatio: 0.11, targetAmount: 10000, currentBalance: 5147, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'הדברה', category: 'עתידיות', parentCategory: 'תיקונים', monthlyAmount: 0, allocationRatio: 0.02, targetAmount: 450, currentBalance: 1298, isSinking: true, date: now, lastUpdateDate: now),
-      Expense(name: 'רפואי', category: 'עתידיות', parentCategory: 'רפואי', monthlyAmount: 0, allocationRatio: 0.02, targetAmount: 1000, currentBalance: 318, isSinking: true, date: now, lastUpdateDate: now),
-    ];
-    
-    for (var e in incomes) { await db.insertExpense(e); }
-    for (var e in fixed) { await db.insertExpense(e); }
-    for (var e in variables) { await db.insertExpense(e); }
-    for (var e in future) { await db.insertExpense(e); }
   }
 
   // --- משיכות מהוצאות צוברות ---

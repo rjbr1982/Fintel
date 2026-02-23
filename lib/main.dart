@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (SaaS/Web Transition - Removed Windows/Desktop dependencies)
+// 🔒 STATUS: EDITED (Added Smart Routing to Onboarding for New Users)
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +13,8 @@ import 'providers/debt_provider.dart';
 import 'providers/shopping_provider.dart';
 import 'ui/screens/main_screen.dart';
 import 'ui/screens/login_screen.dart'; 
+import 'ui/screens/onboarding_screen.dart'; // המסך החדש
+import 'data/database_helper.dart'; // גישה למסד הנתונים
 import 'utils/app_localizations.dart';
 
 void main() async {
@@ -86,9 +88,15 @@ class FintelApp extends StatelessWidget {
   }
 }
 
-// 🛡️ שומר הסף: בודק אם המשתמש מחובר בענן
+// 🛡️ שומר הסף: מנתב משתמש חדש להגדרות, ומשתמש קיים לדשבורד
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
+
+  Future<bool> _needsOnboarding() async {
+    // אם אין הוצאות במערכת, משמע זהו משתמש חדש לגמרי
+    final expenses = await DatabaseHelper.instance.getExpenses();
+    return expenses.isEmpty;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,14 +105,26 @@ class AuthGate extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(color: Color(0xFF00A3FF)),
-            ),
+            body: Center(child: CircularProgressIndicator(color: Color(0xFF00A3FF))),
           );
         }
 
         if (snapshot.hasData) {
-          return const MainScreen();
+          return FutureBuilder<bool>(
+            future: _needsOnboarding(),
+            builder: (context, onboardSnap) {
+              if (onboardSnap.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator(color: Color(0xFF00FF85))),
+                );
+              }
+              // אם נדרש אתחול - ניתוב לקליטה. אחרת - לדשבורד
+              if (onboardSnap.data == true) {
+                return const OnboardingScreen();
+              }
+              return const MainScreen();
+            },
+          );
         }
 
         return const LoginScreen();

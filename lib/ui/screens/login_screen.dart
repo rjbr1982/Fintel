@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (SaaS/Web Transition - Official Firebase Auth for Web/Mobile & Web Image Fix)
+// 🔒 STATUS: EDITED (Added Official Fintel App Icon)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -67,13 +67,26 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // סמלון האפליקציה המקורי
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00A3FF).withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(24),
                   ),
-                  child: const Icon(Icons.account_balance_wallet_rounded, size: 80, color: Color(0xFF00A3FF)),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset(
+                      'assets/icon/icon.png',
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        // גיבוי למקרה שהנתיב לא הוגדר נכון
+                        return const Icon(Icons.account_balance_wallet_rounded, size: 80, color: Color(0xFF00A3FF));
+                      },
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 32),
                 
@@ -100,7 +113,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                           elevation: 2,
                         ),
-                        // הוחלף מ-SVG ל-PNG כדי לתמוך בצורה חלקה בדפדפן
                         icon: Image.network(
                           'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/48px-Google_%22G%22_logo.svg.png',
                           height: 24,
