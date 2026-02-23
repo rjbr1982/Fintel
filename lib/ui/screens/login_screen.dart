@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (SaaS/Web Transition - Official Firebase Auth for Web/Mobile)
+// 🔒 STATUS: EDITED (SaaS/Web Transition - Official Firebase Auth for Web/Mobile & Web Image Fix)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -100,8 +100,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                           elevation: 2,
                         ),
+                        // הוחלף מ-SVG ל-PNG כדי לתמוך בצורה חלקה בדפדפן
                         icon: Image.network(
-                          'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg',
+                          'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/48px-Google_%22G%22_logo.svg.png',
                           height: 24,
                         ),
                         label: const Text(
