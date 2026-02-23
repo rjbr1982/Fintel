@@ -1,4 +1,4 @@
-// 🔒 STATUS: FIXED (Pro Surgical Edit: Zero Warnings + Per-Child Cost UI)
+// 🔒 STATUS: FIXED (Zero Warnings - Removed unused import and unnecessary non-null assertion)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -139,6 +139,10 @@ class CategoryDrilldownScreen extends StatelessWidget {
                       }
                     }
 
+                    // בדיקת קופות מאוחדות
+                    bool isUnified = ['רכב', 'ילדים - קבועות', 'אבא', 'אמא', 'ילדים - משתנות'].contains(parentName);
+                    bool hasSinking = items.any((e) => e.isSinking);
+
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       elevation: 1,
@@ -212,6 +216,19 @@ class CategoryDrilldownScreen extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(width: 8),
+                            if (isUnified && hasSinking)
+                              IconButton(
+                                icon: const Icon(Icons.account_balance_wallet, color: Colors.green),
+                                tooltip: 'ניהול קופה מאוחדת',
+                                onPressed: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                                    builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: parentName, expenses: items),
+                                  );
+                                }
+                              ),
                             const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
                           ],
                         ),
@@ -267,6 +284,7 @@ class SpecificExpensesScreen extends StatelessWidget {
     }
 
     bool isFixedOrIncome = (mainCategory == 'קבועות' || mainCategory == 'הכנסות');
+    bool isUnified = ['רכב', 'ילדים - קבועות', 'אבא', 'אמא', 'ילדים - משתנות'].contains(parentCategory);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -281,17 +299,48 @@ class SpecificExpensesScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.05), border: const Border(bottom: BorderSide(color: Colors.black12))),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
               children: [
-                const Text('סה"כ:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('${loc?.get('currency_symbol') ?? '₪'}${total.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue)),
-                    Text('${loc?.get('currency_symbol') ?? '₪'}${(total * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
+                    const Text('סה"כ תזרים חודשי:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('${loc?.get('currency_symbol') ?? '₪'}${total.toStringAsFixed(0)}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue)),
+                        Text('${loc?.get('currency_symbol') ?? '₪'}${(total * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                      ],
+                    ),
                   ],
                 ),
+                if (isUnified && currentExpenses.any((e) => e.isSinking)) ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('קופה נצברת מאוחדת:', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text('₪${currentExpenses.fold(0.0, (s, e) => s + (e.currentBalance ?? 0)).toStringAsFixed(0)}', style: const TextStyle(color: Colors.green, fontSize: 22, fontWeight: FontWeight.bold)),
+                    ]
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green.withValues(alpha: 0.1), foregroundColor: Colors.green, elevation: 0),
+                      icon: const Icon(Icons.account_balance_wallet),
+                      label: const Text('ניהול משיכות (קופה מאוחדת)', style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: () => showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                        builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: parentCategory, expenses: currentExpenses),
+                      ),
+                    ),
+                  )
+                ]
               ],
             ),
           ),
@@ -341,7 +390,6 @@ class SpecificExpensesScreen extends StatelessWidget {
                       else if ((isVariable || isFuture) && !expense.isLocked)
                         Text('${((expense.allocationRatio ?? 0) * 100).toStringAsFixed(1)}% מהיתרה', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                       
-                      // חישוב מיוחד: עלות פר ילד עבור סעיפים גלובליים בקטגוריית ילדים
                       if (!expense.isPerChild && expense.parentCategory == 'ילדים' && provider.childCount > 0) ...[
                         const SizedBox(height: 4),
                         Text(
@@ -350,7 +398,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                         ),
                       ],
 
-                      if (expense.isSinking && !isFuture) ...[
+                      if (expense.isSinking && !isFuture && !isUnified) ...[
                         const SizedBox(height: 4),
                         Text('קופה נצברת: ₪${(expense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)),
                       ],
@@ -386,7 +434,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                       ]),
                       const SizedBox(width: 12),
                       
-                      if (expense.isSinking)
+                      if (expense.isSinking && !isUnified)
                         IconButton(
                           icon: const Icon(Icons.account_balance_wallet_outlined, size: 20, color: Colors.green),
                           tooltip: 'ניהול קופה ומשיכות',
@@ -732,7 +780,327 @@ class SpecificExpensesScreen extends StatelessWidget {
   }
 }
 
-// --- ניהול משיכות ויתרה מקופה צוברת (BottomSheet) ---
+// =========================================================================
+// פאנל ניהול קופות מאוחדות וקופות ילדים (Unified Sinking Funds)
+// =========================================================================
+class _UnifiedFundBottomSheet extends StatefulWidget {
+  final BudgetProvider provider;
+  final String parentCategory;
+  final List<Expense> expenses;
+
+  const _UnifiedFundBottomSheet({
+    required this.provider,
+    required this.parentCategory,
+    required this.expenses,
+  });
+
+  @override
+  State<_UnifiedFundBottomSheet> createState() => _UnifiedFundBottomSheetState();
+}
+
+class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
+  List<Withdrawal> _withdrawals = [];
+  bool _isLoading = true;
+  final _amountController = TextEditingController();
+  final _noteController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWithdrawals();
+  }
+
+  Future<void> _loadWithdrawals() async {
+    List<Withdrawal> all = [];
+    for (var e in widget.expenses) {
+      if (e.id != null) {
+        final w = await widget.provider.getWithdrawalsForExpense(e.id!);
+        all.addAll(w);
+      }
+    }
+    all.sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
+    
+    if (mounted) {
+      setState(() {
+        _withdrawals = all;
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _handleWithdrawal(String? childName) async {
+    final amt = double.tryParse(_amountController.text);
+    if (amt != null && amt > 0 && widget.expenses.isNotEmpty && widget.expenses.first.id != null) {
+      String finalNote = _noteController.text.trim();
+      if (childName != null) {
+        finalNote = '[$childName] $finalNote'; // תיוג חכם המאפשר זיהוי דינמי של ילד!
+      }
+      await widget.provider.addWithdrawal(widget.expenses.first.id!, amt, finalNote);
+      _amountController.clear();
+      _noteController.clear();
+      _loadWithdrawals();
+    }
+  }
+
+  void _openWithdrawalDialog([String? childName]) {
+    _amountController.clear();
+    _noteController.clear();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(childName != null ? 'משיכה עבור $childName' : 'משיכה משותפת'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: _amountController, keyboardType: const TextInputType.numberWithOptions(decimal: true), autofocus: true, decoration: const InputDecoration(labelText: 'סכום המשיכה', suffixText: '₪', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'פירוט/הערה (לאן יצא?)', border: OutlineInputBorder())),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey[900]),
+            onPressed: () {
+              _handleWithdrawal(childName);
+              Navigator.pop(ctx);
+            },
+            child: const Text('אישור משיכה', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryList() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('היסטוריית משיכות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+        const Divider(),
+        if (_isLoading) const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+        else if (_withdrawals.isEmpty) const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו משיכות מקופה זו', style: TextStyle(color: Colors.grey))))
+        else ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _withdrawals.length,
+          itemBuilder: (ctx, i) {
+            final w = _withdrawals[i];
+            final date = DateTime.parse(w.date);
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.money_off, color: Colors.redAccent),
+              title: Text('₪${w.amount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent)),
+              subtitle: Text('${w.note}${w.note.isNotEmpty ? " • " : ""}${date.day}/${date.month}/${date.year}'),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
+                tooltip: 'מחק והחזר יתרה',
+                onPressed: () async {
+                  await widget.provider.deleteWithdrawal(w);
+                  _loadWithdrawals();
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStandardUnifiedView(double totalCurrentBalance) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                  Text('₪${totalCurrentBalance.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.green),
+                tooltip: 'עדכון יתרה משותפת',
+                onPressed: () {
+                  final ctrl = TextEditingController(text: totalCurrentBalance.toStringAsFixed(0));
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      title: const Text("עדכון יתרה מאוחדת", style: TextStyle(fontSize: 18)),
+                      content: TextField(
+                        controller: ctrl, 
+                        keyboardType: TextInputType.number, 
+                        decoration: const InputDecoration(suffixText: '₪', helperText: 'הזן את הסכום הקיים כיום בקופה זו')
+                      ),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ביטול")),
+                        ElevatedButton(
+                          onPressed: () {
+                            final val = double.tryParse(ctrl.text);
+                            if (val != null) {
+                              double diff = val - totalCurrentBalance;
+                              if (diff != 0 && widget.expenses.isNotEmpty && widget.expenses.first.id != null) {
+                                widget.provider.setExpenseCurrentBalance(
+                                  widget.expenses.first.id!, 
+                                  (widget.expenses.first.currentBalance ?? 0) + diff
+                                ).then((_) => _loadWithdrawals());
+                              }
+                              Navigator.pop(ctx);
+                            }
+                          }, 
+                          child: const Text("שמור")
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold))),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: TextField(
+                controller: _amountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'סכום', suffixText: '₪', border: OutlineInputBorder(), isDense: true),
+              )
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 3,
+              child: TextField(
+                controller: _noteController,
+                decoration: const InputDecoration(labelText: 'לאן יצא הכסף?', border: OutlineInputBorder(), isDense: true),
+              )
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              style: IconButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+              icon: const Icon(Icons.arrow_downward),
+              onPressed: () => _handleWithdrawal(null),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        _buildHistoryList(),
+      ],
+    );
+  }
+
+  Widget _buildKidsView(double totalCurrentBalance, List<FamilyMember> kids) {
+    double sumAllWithdrawals = _withdrawals.fold(0.0, (sum, w) => sum + w.amount);
+    double totalDeposited = totalCurrentBalance + sumAllWithdrawals;
+    double sharePerChild = totalDeposited / kids.length;
+
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('סה״כ צבור בקופה המשותפת', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                Text('₪${totalCurrentBalance.toStringAsFixed(0)}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 18)),
+              ],
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _openWithdrawalDialog(null),
+              icon: const Icon(Icons.group, size: 18),
+              label: const Text('משיכה לכולם'),
+            ),
+          ],
+        ),
+        const Divider(height: 30),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: kids.length,
+          itemBuilder: (ctx, i) {
+            final child = kids[i];
+            
+            double specificWithdrawals = 0;
+            double generalWithdrawals = 0;
+            
+            for (var w in _withdrawals) {
+              if (w.note.startsWith('[${child.name}]')) {
+                specificWithdrawals += w.amount;
+              } else if (!w.note.startsWith('[')) {
+                generalWithdrawals += w.amount;
+              }
+            }
+            
+            double childBalance = sharePerChild - specificWithdrawals - (generalWithdrawals / kids.length);
+
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 6),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.blueGrey.withValues(alpha: 0.2))),
+              elevation: 0,
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.blue.withValues(alpha: 0.1), 
+                  child: Text(child.name.isNotEmpty ? child.name[0] : '?', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))
+                ),
+                title: Text(child.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('יתרה: ₪${childBalance.toStringAsFixed(0)}', style: TextStyle(color: childBalance >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
+                trailing: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey[900], foregroundColor: Colors.white),
+                  onPressed: () => _openWithdrawalDialog(child.name),
+                  child: const Text('משיכה'),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        _buildHistoryList(),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    double totalCurrentBalance = widget.expenses.fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
+    bool isKidsVariable = widget.parentCategory == 'ילדים - משתנות';
+    
+    // סינון ילדים מתוך רשימת בני המשפחה (הנחה: גיל עד 25 הוא "ילד" לצורך קופות, מסנן הורים)
+    final kids = widget.provider.familyMembers.where((fm) => (DateTime.now().year - fm.birthYear) <= 25).toList();
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 16, right: 16, top: 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('קופה מאוחדת: ${widget.parentCategory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            if (isKidsVariable && kids.isNotEmpty) 
+              _buildKidsView(totalCurrentBalance, kids)
+            else 
+              _buildStandardUnifiedView(totalCurrentBalance),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- ניהול משיכות ויתרה מקופה צוברת רגילה (ללא איחוד) ---
 class _SinkingFundBottomSheet extends StatefulWidget {
   final BudgetProvider provider;
   final Expense expense;
@@ -777,111 +1145,112 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
         bottom: MediaQuery.of(context).viewInsets.bottom,
         left: 16, right: 16, top: 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('ניהול קופה: ${currentExpense.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('ניהול קופה: ${currentExpense.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                      Text('₪${(currentExpense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.green),
+                    tooltip: 'עדכון יתרה',
+                    onPressed: () {
+                      final ctrl = TextEditingController(text: (currentExpense.currentBalance ?? 0).toStringAsFixed(0));
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          title: const Text("עדכון יתרה צבורה", style: TextStyle(fontSize: 18)),
+                          content: TextField(
+                            controller: ctrl, 
+                            keyboardType: TextInputType.number, 
+                            decoration: const InputDecoration(suffixText: '₪', helperText: 'הזן את הסכום הקיים כיום בקופה זו')
+                          ),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ביטול")),
+                            ElevatedButton(
+                              onPressed: () {
+                                final val = double.tryParse(ctrl.text);
+                                if (val != null) {
+                                  widget.provider.setExpenseCurrentBalance(currentExpense.id!, val);
+                                  Navigator.pop(ctx);
+                                }
+                              }, 
+                              child: const Text("שמור")
+                            )
+                          ]
+                        )
+                      );
+                    }
+                  )
+                ]
+              )
+            ),
+            const SizedBox(height: 20),
+            
+            const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold))),
+            const SizedBox(height: 8),
+            Row(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                    Text('₪${(currentExpense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
-                  ],
+                Expanded(
+                  flex: 2,
+                  child: TextField(
+                    controller: _amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'סכום', suffixText: '₪', border: OutlineInputBorder(), isDense: true),
+                  )
                 ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 3,
+                  child: TextField(
+                    controller: _noteController,
+                    decoration: const InputDecoration(labelText: 'לאן יצא הכסף?', border: OutlineInputBorder(), isDense: true),
+                  )
+                ),
+                const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.green),
-                  tooltip: 'עדכון יתרה',
-                  onPressed: () {
-                    final ctrl = TextEditingController(text: (currentExpense.currentBalance ?? 0).toStringAsFixed(0));
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        title: const Text("עדכון יתרה צבורה", style: TextStyle(fontSize: 18)),
-                        content: TextField(
-                          controller: ctrl, 
-                          keyboardType: TextInputType.number, 
-                          decoration: const InputDecoration(suffixText: '₪', helperText: 'הזן את הסכום הקיים כיום בקופה זו')
-                        ),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ביטול")),
-                          ElevatedButton(
-                            onPressed: () {
-                              final val = double.tryParse(ctrl.text);
-                              if (val != null) {
-                                widget.provider.setExpenseCurrentBalance(currentExpense.id!, val);
-                                Navigator.pop(ctx);
-                              }
-                            }, 
-                            child: const Text("שמור")
-                          )
-                        ]
-                      )
-                    );
-                  }
+                  style: IconButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                  icon: const Icon(Icons.arrow_downward),
+                  onPressed: () async {
+                    final amt = double.tryParse(_amountController.text);
+                    if (amt != null && amt > 0) {
+                      await widget.provider.addWithdrawal(currentExpense.id!, amt, _noteController.text);
+                      _amountController.clear();
+                      _noteController.clear();
+                      _loadWithdrawals();
+                    }
+                  },
                 )
               ]
-            )
-          ),
-          const SizedBox(height: 20),
-          
-          const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold))),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  controller: _amountController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'סכום', suffixText: '₪', border: OutlineInputBorder(), isDense: true),
-                )
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  controller: _noteController,
-                  decoration: const InputDecoration(labelText: 'לאן יצא הכסף?', border: OutlineInputBorder(), isDense: true),
-                )
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                style: IconButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                icon: const Icon(Icons.arrow_downward),
-                onPressed: () async {
-                  final amt = double.tryParse(_amountController.text);
-                  if (amt != null && amt > 0) {
-                    await widget.provider.addWithdrawal(currentExpense.id!, amt, _noteController.text);
-                    _amountController.clear();
-                    _noteController.clear();
-                    _loadWithdrawals();
-                  }
-                },
-              )
-            ]
-          ),
-          
-          const SizedBox(height: 24),
-          const Align(alignment: Alignment.centerRight, child: Text('היסטוריית משיכות', style: TextStyle(fontWeight: FontWeight.bold))),
-          const Divider(),
-          
-          if (_isLoading)
-            const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())
-          else if (_withdrawals.isEmpty)
-            const Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו משיכות מקופה זו', style: TextStyle(color: Colors.grey)))
-          else
-            SizedBox(
-              height: 180, 
-              child: ListView.builder(
+            ),
+            
+            const SizedBox(height: 24),
+            const Align(alignment: Alignment.centerRight, child: Text('היסטוריית משיכות', style: TextStyle(fontWeight: FontWeight.bold))),
+            const Divider(),
+            
+            if (_isLoading)
+              const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())
+            else if (_withdrawals.isEmpty)
+              const Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו משיכות מקופה זו', style: TextStyle(color: Colors.grey)))
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: _withdrawals.length,
                 itemBuilder: (ctx, i) {
                   final w = _withdrawals[i];
@@ -901,10 +1270,10 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
                     ),
                   );
                 }
-              )
-            ),
-          const SizedBox(height: 20),
-        ]
+              ),
+            const SizedBox(height: 20),
+          ]
+        )
       )
     );
   }

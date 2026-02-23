@@ -1,25 +1,22 @@
 # PROJECT_STATUS.md
 
-## 🚀 STATUS: SUCCESSFUL MIGRATION TO SAAS (WEB/MOBILE)
+## 🚀 STATUS: SAAS OPTIMIZED & ADVANCED TRACKING IMPLEMENTED
 
-* **ARCHITECTURE:** Transitioned from Local-First (Windows) to Cloud-First (Firebase).
-* **DATABASE:** Fully migrated from SQLite to Cloud Firestore.
-* **AUTHENTICATION:** Implemented Firebase Google Auth (supports Popup for Web & Native for Mobile).
-* **DEPLOYMENT:** Web version is LIVE at https://fintel-app-2e01e.web.app
-* **CODEBASE:** Cleaned from desktop-specific dependencies; `flutter analyze` is 100% clean.
-* **GIT:** All changes committed and pushed to main branch.
+* **ARCHITECTURE:** Cloud-First (Firebase) with Real-Time Streams (Listeners) active. Unified Sinking Funds logic implemented without schema changes.
+* **DATABASE:** Cloud Firestore. Added `checking_history` collection for cashflow tracking.
+* **AUTHENTICATION:** Firebase Google Auth (Web & Mobile).
+* **DEPLOYMENT:** Live at https://fintel-app-2e01e.web.app
+* **CODEBASE:** Clean (0 warnings). Native Canvas used for graphs to maintain performance.
+* **GIT:** Up to date with unified funds and checking tracking features.
 
 ---
 
 ## 🧠 TECHNICAL CONTEXT
 
-* **Platform:** Flutter Web & Mobile (Android APK verified).
+* **Platform:** Flutter Web & Mobile.
 * **Backend:** Firebase (Auth, Firestore, Hosting).
-* **Key Files Modified:**
-    * `pubspec.yaml`: Removed desktop packages, added `firebase_core`, `firebase_auth`, `cloud_firestore`, `google_sign_in`.
-    * `DatabaseHelper`: Now handles Firestore collections (users -> UID -> sub-collections).
-    * `LoginScreen`: Fixed Web-specific image loading (PNG instead of SVG) and implemented conditional Auth logic.
-    * `firebase_options.dart`: Updated via FlutterFire CLI.
-* **Environment:**
-    * **Firebase Project ID:** fintel-app-2e01e
-    * **Hosting Directory:** build/web
+* **Key Strategic Decisions (Decision Log):**
+    * *Real-Time Sync (v12.10):* Shifted from `.get()` to `.snapshots()` in `DatabaseHelper` to solve cross-device sync issues.
+    * *Unified Sinking Funds (v12.12):* Abstracted Sinking Funds UI to group by `parentCategory` (e.g., 'רכב') and dynamically track per-child variations using smart string tags in withdrawal notes `[Child Name]`, avoiding DB schema restructuring.
+    * *Native Charts:* Used `CustomPainter` for Checking Account trendlines to avoid bloated third-party package dependencies.
+    * *AI Export:* Added `AiExportService` (accessible via Global Header) to parse app state into Markdown clipboard text for prompt engineering.
