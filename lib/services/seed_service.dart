@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Shopping Anchor Name & Removed Pharm)
+// 🔒 STATUS: EDITED (Fixed Ratios, Holidays Seed, and Children Categories)
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
 import '../data/shopping_model.dart';
@@ -66,21 +66,21 @@ class SeedService {
       _create('שכר לימוד', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true),
       _create('ציוד בית ספר', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
       _create('חוגים', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true),
-      _create('מתנות לימי הולדת', 'קבועות', 'ילדים', 0, isSinking: true),
-      _create('קייטנות', 'קבועות', 'ילדים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      _create('מתנות לימי הולדת', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true), // תוקן: נוסף isPerChild לאיחוד הקטגוריה
+      _create('קייטנות', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
       
-      // חגים (כולם צוברים)
-      _create('ראש השנה', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-      _create('יום כיפור', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-      _create('סוכות', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-      _create('שמחת תורה', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-      _create('חנוכה', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-      _create("ט''ו בשבט", 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-      _create('פורים', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-      _create('פסח', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-      _create('יום העצמאות', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-      _create("ל''ג בעומר", 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
-      _create('שבועות', 'קבועות', 'חגים', 0, isSinking: true, frequency: Frequency.YEARLY),
+      // חגים (הוזנו סכומי היעד השנתיים המדויקים, המערכת מחלקת ב-12 אוטומטית)
+      _create('ראש השנה', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
+      _create('יום כיפור', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
+      _create('סוכות', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
+      _create('שמחת תורה', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
+      _create('חנוכה', 'קבועות', 'חגים', 200, isSinking: true, frequency: Frequency.YEARLY),
+      _create("ט''ו בשבט", 'קבועות', 'חגים', 200, isSinking: true, frequency: Frequency.YEARLY),
+      _create('פורים', 'קבועות', 'חגים', 200, isSinking: true, frequency: Frequency.YEARLY),
+      _create('פסח', 'קבועות', 'חגים', 1500, isSinking: true, frequency: Frequency.YEARLY),
+      _create('יום העצמאות', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
+      _create("ל''ג בעומר", 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
+      _create('שבועות', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
       
       // שונות קבועות
       _create('קופת חולים', 'קבועות', 'קופת חולים', 0),
@@ -90,26 +90,24 @@ class SeedService {
       _create('בילויים', 'קבועות', 'בילויים', 0, isSinking: true),
 
       // === משתנות (קניות) ===
-      // תוקן: השם הוחזר ל'קניות' כדי שהמסך יזהה אותו כעוגן, ופארם וניקיון נמחק!
       _create('קניות', 'משתנות', 'קניות', supermarketAmount),
 
-      // === משתנות (אישיות - Waterfall) ===
-      _create('בגדים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.1, isSinking: true),
-      _create('בילויים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.1, isSinking: true),
-      _create('בגדים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.1, isSinking: true),
-      _create('בילויים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.1, isSinking: true),
-      _create('טיפוח אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.1, isSinking: true),
+      // === משתנות (אישיות - יחסי חלוקה תוקנו) ===
+      _create('בגדים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.19, isSinking: true),
+      _create('בילויים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.14, isSinking: true),
+      _create('בגדים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.09, isSinking: true),
+      _create('בילויים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.19, isSinking: true),
+      _create('טיפוח אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.15, isSinking: true),
+      _create('בגדים ילדים', 'משתנות', 'ילדים', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
+      _create('בילויים ילדים', 'משתנות', 'ילדים', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
       
-      _create('בגדים ילדים', 'משתנות', 'ילדים', 0, isPerChild: true, allocationRatio: 0.05, isSinking: true),
-      _create('בילויים ילדים', 'משתנות', 'ילדים', 0, isPerChild: true, allocationRatio: 0.05, isSinking: true),
-      
-      // === עתידיות ===
-      _create('מקדמה לבית', 'עתידיות', 'רכישות גדולות', 0, isSinking: true, allocationRatio: 0.5),
-      _create('תנור גז', 'עתידיות', 'רכישות קטנות', 0, isSinking: true, allocationRatio: 0.1),
-      _create('בר מצווה אליעזר', 'עתידיות', 'הפקת אירועים', 0, isSinking: true, allocationRatio: 0.1),
-      _create('הדברה', 'עתידיות', 'תיקונים', 0, isSinking: true, allocationRatio: 0.1),
-      _create('רפואי', 'עתידיות', 'רפואי', 0, isSinking: true, allocationRatio: 0.1),
-      _create('חופשה שנתית', 'עתידיות', 'חופשה שנתית', 0, isSinking: true, allocationRatio: 0.1),
+      // === עתידיות (יחסי חלוקה תוקנו) ===
+      _create('מקדמה לבית', 'עתידיות', 'רכישות גדולות', 0, isSinking: true, allocationRatio: 0.67),
+      _create('תנור גז', 'עתידיות', 'רכישות קטנות', 0, isSinking: true, allocationRatio: 0.07),
+      _create('בר מצווה אליעזר', 'עתידיות', 'הפקת אירועים', 0, isSinking: true, allocationRatio: 0.11),
+      _create('הדברה', 'עתידיות', 'תיקונים', 0, isSinking: true, allocationRatio: 0.02),
+      _create('רפואי', 'עתידיות', 'רפואי', 0, isSinking: true, allocationRatio: 0.02),
+      _create('חופשה שנתית', 'עתידיות', 'חופשה שנתית', 0, isSinking: true, allocationRatio: 0.11),
       
       // === פיננסיות ===
       _create('השקעות שונות', 'פיננסיות', 'כללי', 0),

@@ -1,6 +1,7 @@
-// 🔒 STATUS: EDITED (Added direct routing to Onboarding after Factory Reset)
+// 🔒 STATUS: EDITED (Added Logout functionality)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // הייבוא החדש עבור ההתנתקות
 import '../../providers/budget_provider.dart';
 import '../../utils/app_localizations.dart';
 import '../../services/ai_export_service.dart';
@@ -117,6 +118,16 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
           _buildSettingsTile(ctx, Icons.balance, 'חלוקת שארית (עתידיות/פיננסיות)', () {
               Navigator.pop(ctx);
               _showFutureVsFinancialDialog(context, budget);
+          }),
+          const Divider(),
+          // מנגנון ההתנתקות החדש:
+          _buildSettingsTile(ctx, Icons.logout, 'התנתקות מהחשבון (Log Out)', () async {
+              Navigator.pop(ctx);
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) {
+                // ניתוב מחדש לשער (AuthGate) שיזהה שהמשתמש התנתק ויציג מסך התחברות
+                Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+              }
           }),
           const Divider(),
           _buildSettingsTile(ctx, Icons.restore, 'איפוס כל הנתונים (Factory Reset)', () {
@@ -275,7 +286,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
               await budget.fullAppReset();
               if (ctx.mounted) {
                 Navigator.pop(ctx); // סוגר את חלונית האישור
-                // 🚀 פקודת הניווט החדשה ששכחנו - זורקת ישירות למסך הקליטה!
+                // פקודת הניווט שזורקת ישירות למסך הקליטה לאחר איפוס
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const OnboardingScreen()),
                   (route) => false,

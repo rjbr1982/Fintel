@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Full Family Members Input - Names & Birth Years)
+// 🔒 STATUS: EDITED (Removed default "Aba/Ima" values for dynamic family structure)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -16,11 +16,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentStep = 0;
   bool _isLoading = false;
 
-  // --- משתני משפחה דינמיים ---
-  final _parent1NameCtrl = TextEditingController(text: 'אבא');
-  final _parent1YearCtrl = TextEditingController(text: '1980');
-  final _parent2NameCtrl = TextEditingController(text: 'אמא');
-  final _parent2YearCtrl = TextEditingController(text: '1982');
+  // --- משתני משפחה דינמיים לחלוטין (ללא ברירות מחדל קשיחות) ---
+  final List<Map<String, TextEditingController>> _adults = [
+    {
+      'name': TextEditingController(),
+      'year': TextEditingController(text: (DateTime.now().year - 30).toString()), // ברירת מחדל כללית לגיל
+    }
+  ];
   
   final List<Map<String, TextEditingController>> _children = [];
 
@@ -34,10 +36,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   void dispose() {
-    _parent1NameCtrl.dispose();
-    _parent1YearCtrl.dispose();
-    _parent2NameCtrl.dispose();
-    _parent2YearCtrl.dispose();
+    for (var adult in _adults) {
+      adult['name']?.dispose();
+      adult['year']?.dispose();
+    }
     for (var child in _children) {
       child['name']?.dispose();
       child['year']?.dispose();
@@ -48,6 +50,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _waterCtrl.dispose();
     _leasingCtrl.dispose();
     super.dispose();
+  }
+
+  void _addAdultField() {
+    setState(() {
+      _adults.add({
+        'name': TextEditingController(),
+        'year': TextEditingController(text: (DateTime.now().year - 30).toString()),
+      });
+    });
   }
 
   void _addChildField() {
@@ -81,19 +92,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (!mounted) return;
 
-    // 2. שמירת בני המשפחה באופן מדויק
+    // 2. שמירת בני המשפחה
     final budget = Provider.of<BudgetProvider>(context, listen: false);
     
-    if (_parent1NameCtrl.text.isNotEmpty) {
-      await budget.addFamilyMember(_parent1NameCtrl.text, int.tryParse(_parent1YearCtrl.text) ?? 1980);
-    }
-    if (_parent2NameCtrl.text.isNotEmpty) {
-      await budget.addFamilyMember(_parent2NameCtrl.text, int.tryParse(_parent2YearCtrl.text) ?? 1980);
+    // הוספת מבוגרים
+    for (var adult in _adults) {
+      final name = adult['name']!.text.trim();
+      if (name.isNotEmpty) {
+        await budget.addFamilyMember(name, int.tryParse(adult['year']!.text) ?? (DateTime.now().year - 30));
+      }
     }
     
+    // הוספת ילדים
     int validChildrenCount = 0;
     for (var child in _children) {
-      final name = child['name']!.text;
+      final name = child['name']!.text.trim();
       if (name.isNotEmpty) {
         validChildrenCount++;
         await budget.addFamilyMember(name, int.tryParse(child['year']!.text) ?? DateTime.now().year);
@@ -168,17 +181,38 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               );
             },
             steps: [
-              // שלב 1: משפחה (שודרג למלא)
+              // שלב 1: משפחה (דינמי לחלוטין)
               Step(
                 title: const Text('הגדרות משפחה', style: TextStyle(fontSize: 18)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('הורים:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                    const Text('מבוגרים אחראיים:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
                     const SizedBox(height: 12),
-                    _buildFamilyRow(_parent1NameCtrl, _parent1YearCtrl, 'שם הורה 1', showDelete: false),
-                    const SizedBox(height: 8),
-                    _buildFamilyRow(_parent2NameCtrl, _parent2YearCtrl, 'שם הורה 2 (אופציונלי)', showDelete: false),
+                    ..._adults.asMap().entries.map((entry) {
+                      int idx = entry.key;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: _buildFamilyRow(
+                          entry.value['name']!, 
+                          entry.value['year']!, 
+                          'שם פרטי', 
+                          showDelete: _adults.length > 1, // אפשר למחוק רק אם יש יותר ממבוגר אחד
+                          onDelete: () => setState(() => _adults.removeAt(idx)),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 4),
+                    OutlinedButton.icon(
+                      onPressed: _addAdultField,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('הוסף מבוגר'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF00A3FF),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
                     
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16.0),

@@ -1,8 +1,7 @@
-// 🔒 STATUS: EDITED (Cleaned unused variable and set Capital field to read-only)
+// 🔒 STATUS: EDITED (Shortened Title to "תזרים" and cleaned unused 'loc')
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
-import '../../utils/app_localizations.dart';
 import '../widgets/global_header.dart';
 import 'category_drilldown_screen.dart'; 
 import 'reducing_screen.dart'; 
@@ -13,7 +12,6 @@ class PnLScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
     final budget = context.watch<BudgetProvider>();
 
     final isFutureMode = budget.isFutureMode;
@@ -34,8 +32,8 @@ class PnLScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: isFutureMode ? const Color(0xFFF0FDF4) : Colors.white,
-      appBar: GlobalHeader(
-        title: loc?.get('pnl') ?? 'דוח תזרים מזוקק',
+      appBar: const GlobalHeader(
+        title: 'תזרים', // הכותרת קוצרה בהתאם לדרישה
       ),
       body: Column(
         children: [

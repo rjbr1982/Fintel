@@ -1,4 +1,4 @@
-// 🔒 STATUS: FIXED (Zero Warnings - Removed unnecessary const and added mounted check for BuildContext)
+// 🔒 STATUS: FIXED (Resolved Note Truncation in Withdrawal History)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -206,7 +206,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  '${loc?.get('currency_symbol') ?? '₪'}${total.toStringAsFixed(0)}',
+                                  '${loc?.get('currency_symbol') ?? '₪'}${(total).toStringAsFixed(0)}',
                                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue),
                                 ),
                                 Text(
@@ -308,7 +308,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text('${loc?.get('currency_symbol') ?? '₪'}${total.toStringAsFixed(0)}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue)),
+                        Text('${loc?.get('currency_symbol') ?? '₪'}${(total).toStringAsFixed(0)}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue)),
                         Text('${loc?.get('currency_symbol') ?? '₪'}${(total * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
                       ],
                     ),
@@ -428,7 +428,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
-                        Text('${loc?.get('currency_symbol') ?? '₪'}${displayAmount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: expense.isLocked ? Colors.orange[800] : Colors.black)),
+                        Text('${loc?.get('currency_symbol') ?? '₪'}${(displayAmount).toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: expense.isLocked ? Colors.orange[800] : Colors.black)),
                         Text('${loc?.get('currency_symbol') ?? '₪'}${(displayAmount * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
                         if (isFuture) const Text('הפרשה חודשית', style: TextStyle(fontSize: 10, color: Colors.grey)),
                       ]),
@@ -502,7 +502,7 @@ class SpecificExpensesScreen extends StatelessWidget {
           children: [
             TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הסעיף')),
             const SizedBox(height: 10),
-            TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום חודשי', suffixText: '₪')),
+            TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום חודשי כולל', suffixText: '₪')),
           ],
         ),
         actions: [
@@ -511,13 +511,18 @@ class SpecificExpensesScreen extends StatelessWidget {
             onPressed: () {
               final amount = double.tryParse(amountController.text) ?? 0.0;
               if (nameController.text.isNotEmpty) {
+                bool isChildCat = parentCat == 'ילדים' || parentCat == 'ילדים - קבועות';
+                int multiplier = isChildCat ? provider.childCount : 1;
+                if (multiplier < 1) multiplier = 1;
+
                 final newExpense = Expense(
                   name: nameController.text.trim(),
                   category: mainCat,
                   parentCategory: parentCat,
-                  monthlyAmount: amount,
+                  monthlyAmount: amount / multiplier, 
                   frequency: Frequency.MONTHLY,
                   isLocked: true, 
+                  isPerChild: isChildCat,
                   date: DateTime.now().toIso8601String(),
                 );
                 provider.addExpense(newExpense);
@@ -535,13 +540,15 @@ class SpecificExpensesScreen extends StatelessWidget {
     double factor = 1.0;
     if (expense.frequency == Frequency.YEARLY) {
       factor = 12.0;
-    }
-    if (expense.frequency == Frequency.BI_MONTHLY) {
+    } else if (expense.frequency == Frequency.BI_MONTHLY) {
       factor = 2.0;
     }
     
+    int multiplier = expense.isPerChild ? provider.childCount : 1;
+    if (multiplier < 1) multiplier = 1;
+    
     final nameController = TextEditingController(text: expense.name); 
-    final amountController = TextEditingController(text: (expense.monthlyAmount * factor).toStringAsFixed(0));
+    final amountController = TextEditingController(text: (expense.monthlyAmount * factor * multiplier).toStringAsFixed(0));
     Frequency selectedFreq = expense.frequency;
 
     showDialog(
@@ -559,7 +566,11 @@ class SpecificExpensesScreen extends StatelessWidget {
                   decoration: const InputDecoration(labelText: 'שם הסעיף')
                 ),
                 const SizedBox(height: 10),
-                TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום לתשלום', suffixText: '₪')),
+                TextField(
+                  controller: amountController, 
+                  keyboardType: TextInputType.number, 
+                  decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום לתשלום (עבור כל הילדים)' : 'סכום לתשלום', suffixText: '₪')
+                ),
                 const SizedBox(height: 16),
                 DropdownButton<Frequency>(
                   value: selectedFreq, isExpanded: true,
@@ -586,6 +597,9 @@ class SpecificExpensesScreen extends StatelessWidget {
                     } else if (selectedFreq == Frequency.BI_MONTHLY) {
                       monthly = val / 2;
                     }
+                    
+                    monthly = monthly / multiplier;
+
                     provider.updateExpense(Expense(
                       id: expense.id, 
                       name: finalName, 
@@ -607,7 +621,10 @@ class SpecificExpensesScreen extends StatelessWidget {
   }
 
   void _showSmartEditDialog(BuildContext context, BudgetProvider provider, Expense expense) {
-    final amountController = TextEditingController(text: expense.isLocked ? expense.monthlyAmount.toStringAsFixed(0) : "");
+    int multiplier = expense.isPerChild ? provider.childCount : 1;
+    if (multiplier < 1) multiplier = 1;
+
+    final amountController = TextEditingController(text: expense.isLocked ? (expense.monthlyAmount * multiplier).toStringAsFixed(0) : "");
     final ratioController = TextEditingController(text: ((expense.allocationRatio ?? 0) * 100).toStringAsFixed(1));
     bool isRatioMode = !expense.isLocked; 
 
@@ -642,7 +659,7 @@ class SpecificExpensesScreen extends StatelessWidget {
               const SizedBox(height: 20),
               isRatioMode 
                 ? TextField(controller: ratioController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'אחוז מהיתרה', suffixText: '%', border: OutlineInputBorder()))
-                : TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום קבוע', suffixText: '₪', border: OutlineInputBorder())),
+                : TextField(controller: amountController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום קבוע (כולל)' : 'סכום קבוע', suffixText: '₪', border: const OutlineInputBorder())),
             ],
           ),
           actions: [
@@ -661,7 +678,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                   } else {
                     final val = double.tryParse(valText);
                     if (val != null) {
-                      provider.lockExpenseAmount(expense.id!, val);
+                      provider.lockExpenseAmount(expense.id!, val / multiplier);
                     }
                   }
                 }
@@ -676,11 +693,14 @@ class SpecificExpensesScreen extends StatelessWidget {
   }
 
   void _showFutureEditDialog(BuildContext context, BudgetProvider provider, Expense expense) {
+    int multiplier = expense.isPerChild ? provider.childCount : 1;
+    if (multiplier < 1) multiplier = 1;
+
     final nameController = TextEditingController(text: expense.name);
     final targetController = TextEditingController(text: (expense.targetAmount ?? 0).toStringAsFixed(0));
     final balanceController = TextEditingController(text: (expense.currentBalance ?? 0).toStringAsFixed(0));
     final ratioController = TextEditingController(text: ((expense.allocationRatio ?? 0) * 100).toStringAsFixed(1));
-    final amountController = TextEditingController(text: expense.isLocked ? expense.monthlyAmount.toStringAsFixed(0) : "");
+    final amountController = TextEditingController(text: expense.isLocked ? (expense.monthlyAmount * multiplier).toStringAsFixed(0) : "");
     final monthsController = TextEditingController(); 
 
     int selectedMode = expense.isLocked ? 1 : 0; 
@@ -728,7 +748,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                 if (selectedMode == 0)
                   TextField(controller: ratioController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'אחוז מהחיסכון', suffixText: '%', border: OutlineInputBorder()))
                 else if (selectedMode == 1)
-                  TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום קבוע חודשי', suffixText: '₪', border: OutlineInputBorder()))
+                  TextField(controller: amountController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום קבוע כולל' : 'סכום קבוע חודשי', suffixText: '₪', border: const OutlineInputBorder()))
                 else if (selectedMode == 2)
                   TextField(controller: monthsController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'חודשים נותרים ליעד', suffixText: 'חודשים', border: OutlineInputBorder(), helperText: 'המערכת תחשב ותנעל את הסכום החודשי')),
               ],
@@ -744,6 +764,7 @@ class SpecificExpensesScreen extends StatelessWidget {
 
                 if (selectedMode == 1) {
                   newManualAmount = double.tryParse(amountController.text);
+                  if (newManualAmount != null) newManualAmount = newManualAmount / multiplier;
                 } else if (selectedMode == 2) {
                   int? months = int.tryParse(monthsController.text);
                   double target = double.tryParse(targetController.text) ?? 0;
@@ -753,6 +774,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                     if (newManualAmount < 0) {
                       newManualAmount = 0;
                     }
+                    newManualAmount = newManualAmount / multiplier;
                   }
                 }
 
@@ -833,7 +855,7 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
     if (amt != null && amt > 0 && widget.expenses.isNotEmpty && widget.expenses.first.id != null) {
       String finalNote = _noteController.text.trim();
       if (childName != null) {
-        finalNote = '[$childName] $finalNote'; // תיוג חכם המאפשר זיהוי דינמי של ילד!
+        finalNote = '[$childName] $finalNote'; 
       }
       await widget.provider.addWithdrawal(widget.expenses.first.id!, amt, finalNote);
       _amountController.clear();
@@ -892,8 +914,6 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
               if (val != null) {
                 double diff = val - currentChildBalance;
                 if (diff != 0 && widget.expenses.isNotEmpty && widget.expenses.first.id != null) {
-                  // If diff > 0, we want to ADD money -> withdrawal amount is -diff
-                  // If diff < 0, we want to REMOVE money -> withdrawal amount is -diff
                   await widget.provider.addWithdrawal(
                     widget.expenses.first.id!,
                     -diff,
@@ -939,7 +959,18 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
               contentPadding: EdgeInsets.zero,
               leading: Icon(icon, color: color),
               title: Text('₪${displayAmount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: color)),
-              subtitle: Text('${w.note}${w.note.isNotEmpty ? " • " : ""}${date.day}/${date.month}/${date.year}'),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (w.note.isNotEmpty)
+                      Text(w.note, style: const TextStyle(color: Colors.black87), softWrap: true),
+                    const SizedBox(height: 2),
+                    Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
+              ),
               trailing: IconButton(
                 icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
                 tooltip: 'מחק פעולה והחזר יתרה',
@@ -1193,7 +1224,7 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
     double totalCurrentBalance = widget.expenses.fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
     bool isKidsVariable = widget.parentCategory == 'ילדים - משתנות';
     
-    // סינון ילדים מתוך רשימת בני המשפחה (הנחה: גיל עד 25 הוא "ילד" לצורך קופות, מסנן הורים)
+    // סינון ילדים מתוך רשימת בני המשפחה
     final kids = widget.provider.familyMembers.where((fm) => (DateTime.now().year - fm.birthYear) <= 25).toList();
 
     return Padding(
@@ -1382,7 +1413,18 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(icon, color: color),
                     title: Text('₪${displayAmount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: color)),
-                    subtitle: Text('${w.note}${w.note.isNotEmpty ? " • " : ""}${date.day}/${date.month}/${date.year}'),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (w.note.isNotEmpty)
+                            Text(w.note, style: const TextStyle(color: Colors.black87), softWrap: true),
+                          const SizedBox(height: 2),
+                          Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
                       tooltip: 'מחק פעולה והחזר יתרה',

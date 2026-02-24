@@ -1,22 +1,12 @@
-# PROJECT_STATUS.md
+# 📊 סטטוס פרויקט: דוחכם (Dohaham)
+**עודכן לאחרונה:** סיום סשן (התאמת חישובי ילדים, דינמיות משפחה, תזרים ו-UI)
 
-## 🚀 STATUS: SAAS OPTIMIZED & ADVANCED TRACKING IMPLEMENTED
+## 🟢 הושלם בסשן האחרון:
+1. **באג 1568 - הוצאות מבוססות ילדים:** תוקנה לוגיקת ההזנה. המשתמש מזין סכום *כולל* לכל הילדים, והמערכת מחלקת ושומרת את הסכום "לילד יחיד" במסד הנתונים כדי למנוע הכפלת-יתר וניפוח התקציב.
+2. **מסך קליטה (Onboarding) גמיש:** הוסרו ברירות המחדל הקשיחות ("אבא", "אמא"). הוטמע "דף חלק" המאפשר הוספה דינמית של מבוגרים וילדים, כולל שנת לידה, לתמיכה בכל מבני המשפחה.
+3. **דוח PnL:** קיצור כותרת המסך מ-"דוח תזרים מזוקק" ל-"תזרים".
+4. **תיקון UI - היסטוריית משיכות:** תוקן באג חיתוך טקסט הערות בקופות משיכה (CategoryDrilldownScreen) באמצעות `softWrap: true` והורדת התאריך לשורה נפרדת.
+5. **Zero Warnings:** ניקוי קוד מצוחצח (הסרת משתני `loc` ו-imports מיותרים) - הטרמינל נקי משגיאות ואזהרות.
 
-* **ARCHITECTURE:** Cloud-First (Firebase) with Real-Time Streams (Listeners) active. Unified Sinking Funds logic implemented without schema changes.
-* **DATABASE:** Cloud Firestore. Added `checking_history` collection for cashflow tracking.
-* **AUTHENTICATION:** Firebase Google Auth (Web & Mobile).
-* **DEPLOYMENT:** Live at https://fintel-app-2e01e.web.app
-* **CODEBASE:** Clean (0 warnings). Native Canvas used for graphs to maintain performance.
-* **GIT:** Up to date with unified funds and checking tracking features.
-
----
-
-## 🧠 TECHNICAL CONTEXT
-
-* **Platform:** Flutter Web & Mobile.
-* **Backend:** Firebase (Auth, Firestore, Hosting).
-* **Key Strategic Decisions (Decision Log):**
-    * *Real-Time Sync (v12.10):* Shifted from `.get()` to `.snapshots()` in `DatabaseHelper` to solve cross-device sync issues.
-    * *Unified Sinking Funds (v12.12):* Abstracted Sinking Funds UI to group by `parentCategory` (e.g., 'רכב') and dynamically track per-child variations using smart string tags in withdrawal notes `[Child Name]`, avoiding DB schema restructuring.
-    * *Native Charts:* Used `CustomPainter` for Checking Account trendlines to avoid bloated third-party package dependencies.
-    * *AI Export:* Added `AiExportService` (accessible via Global Header) to parse app state into Markdown clipboard text for prompt engineering.
+## 🟡 משימות פתוחות / הצעדים הבאים:
+* [ ] להגדיר בסשן הבא מול המשתמש. (המערכת כרגע יציבה ונקייה מבאגים ידועים).
