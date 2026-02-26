@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Ratios, Removed Unwanted Renames, Fixed Children Category)
+// 🔒 STATUS: EDITED (Implemented Dynamic Seed Logic per Rule 4.18)
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
 import '../data/shopping_model.dart';
@@ -6,12 +6,15 @@ import '../data/shopping_model.dart';
 class SeedService {
   
   static Future<void> generateInitialData({
+    required String maritalStatus,
     required String vehicleType,
+    required String housingType,
     required double leasingCost,
-    required double rentAmount,
+    required double housingAmount,
     required double supermarketAmount,
     required double electricityAmount,
     required double waterAmount,
+    required int childrenCount,
   }) async {
     final db = DatabaseHelper.instance;
     
@@ -24,12 +27,14 @@ class SeedService {
       
       // === הכנסות ===
       _create('משכורת נטו (1)', 'הכנסות', 'הכנסות', 11000), 
-      _create('משכורת נטו (2)', 'הכנסות', 'הכנסות', 5570),
-      _create('קצבת ילדים', 'הכנסות', 'הכנסות', 590),
+      if (maritalStatus == 'married') 
+        _create('משכורת נטו (2)', 'הכנסות', 'הכנסות', 5570),
+      if (childrenCount > 0)
+        _create('קצבת ילדים', 'הכנסות', 'הכנסות', 590),
       
       // === קבועות ===
       _create('צדקה', 'קבועות', 'צדקה', 0),
-      _create('שכירות/משכנתא', 'קבועות', 'דיור', rentAmount),
+      _create(housingType == 'mortgage' ? 'משכנתא' : 'שכירות', 'קבועות', 'דיור', housingAmount),
       _create('וועד בית', 'קבועות', 'דיור', 0),
       _create('ארנונה', 'קבועות', 'דיור', 380),
       _create('הובלה ותיקונים', 'קבועות', 'דיור', 0, isSinking: true),
@@ -37,7 +42,7 @@ class SeedService {
       _create('מים', 'קבועות', 'מגורים', waterAmount, frequency: Frequency.BI_MONTHLY),
       _create('גז', 'קבועות', 'מגורים', 40),
       
-      // רכב (מוזרק דינמית)
+      // רכב (מוזרק דינמית לפי בחירה)
       if (vehicleType == 'car') ...[
         _create('ביטוח', 'קבועות', 'רכב', 3500, isSinking: true, frequency: Frequency.YEARLY),
         _create('טסט', 'קבועות', 'רכב', 1250, isSinking: true, frequency: Frequency.YEARLY),
@@ -51,7 +56,7 @@ class SeedService {
         _create('טיפול', 'קבועות', 'רכב', 500, isSinking: true, frequency: Frequency.YEARLY),
         _create('תיקונים', 'קבועות', 'רכב', 50, isSinking: true),
         _create('דלק', 'קבועות', 'רכב', 30), 
-      ],
+      ], // תחב"צ ('none') משמיט את הקטגוריה לחלוטין.
       
       // מדיה
       _create('בזק', 'קבועות', 'מדיה', 0),
@@ -62,12 +67,14 @@ class SeedService {
       _create("צ'אט GPT", 'קבועות', 'מדיה', 0),
       _create('אפליקציית כושר', 'קבועות', 'מדיה', 0),
       
-      // ילדים - קבועות (כולן צוברות)
-      _create('שכר לימוד', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true),
-      _create('ציוד בית ספר', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
-      _create('חוגים', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true),
-      _create('מתנות לימי הולדת', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true),
-      _create('קייטנות', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
+      // ילדים - קבועות (רק אם יש ילדים)
+      if (childrenCount > 0) ...[
+        _create('שכר לימוד', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true),
+        _create('ציוד בית ספר', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
+        _create('חוגים', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true),
+        _create('מתנות לימי הולדת', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true),
+        _create('קייטנות', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
+      ],
       
       // חגים
       _create('ראש השנה', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
@@ -89,19 +96,41 @@ class SeedService {
       _create('קטנות לבית', 'קבועות', 'קטנות לבית', 0, isSinking: true),
       _create('בילויים', 'קבועות', 'בילויים', 0, isSinking: true),
 
-      // === משתנות (קניות) ===
+      // === משתנות (קניות - עוגן) ===
       _create('קניות', 'משתנות', 'קניות', supermarketAmount),
 
-      // === משתנות (אישיות) ===
-      _create('בגדים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.19, isSinking: true),
-      _create('בילויים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.14, isSinking: true),
-      _create('בגדים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.09, isSinking: true),
-      _create('בילויים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.19, isSinking: true),
-      _create('טיפוח אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.15, isSinking: true),
-      _create('בגדים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
-      _create('בילויים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
+      // === משתנות (חלוקה דינמית לפי משפחה, סה"כ תמיד 100%) ===
+      if (maritalStatus == 'single' && childrenCount > 0) ...[
+        // רווק/ה + ילדים
+        _create('בגדים אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.28, isSinking: true),
+        _create('בילויים אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.33, isSinking: true),
+        _create('טיפוח אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.15, isSinking: true),
+        _create('בגדים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
+        _create('בילויים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
+      ] else if (maritalStatus == 'married' && childrenCount == 0) ...[
+        // נשוי/ה ללא ילדים (ה-24% פוצלו)
+        _create('בגדים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.25, isSinking: true),
+        _create('בילויים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.20, isSinking: true),
+        _create('בגדים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.15, isSinking: true),
+        _create('בילויים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.25, isSinking: true),
+        _create('טיפוח אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.15, isSinking: true),
+      ] else if (maritalStatus == 'single' && childrenCount == 0) ...[
+        // רווק/ה ללא ילדים
+        _create('בגדים אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.40, isSinking: true),
+        _create('בילויים אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.45, isSinking: true),
+        _create('טיפוח אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.15, isSinking: true),
+      ] else ...[
+        // ברירת מחדל: נשוי/ה + ילדים
+        _create('בגדים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.19, isSinking: true),
+        _create('בילויים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.14, isSinking: true),
+        _create('בגדים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.09, isSinking: true),
+        _create('בילויים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.19, isSinking: true),
+        _create('טיפוח אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.15, isSinking: true),
+        _create('בגדים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
+        _create('בילויים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
+      ],
       
-      // === עתידיות (הוחזרו השמות המקוריים, עודכנו אחוזים בלבד) ===
+      // === עתידיות ===
       _create('מקדמה לבית', 'עתידיות', 'רכישות גדולות', 0, isSinking: true, allocationRatio: 0.67),
       _create('תנור גז', 'עתידיות', 'רכישות קטנות', 0, isSinking: true, allocationRatio: 0.07),
       _create('בר מצווה אליעזר', 'עתידיות', 'הפקת אירועים', 0, isSinking: true, allocationRatio: 0.11),
