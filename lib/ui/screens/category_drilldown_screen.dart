@@ -1,4 +1,4 @@
-// 🔒 STATUS: FIXED (Removed Percentage Option for Shopping Anchor in Edit Dialog)
+// 🔒 STATUS: FIXED (Added Exact Monthly Saving Allocation Amount for Unified Funds)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -127,20 +127,26 @@ class CategoryDrilldownScreen extends StatelessWidget {
                     double total = 0;
                     double totalBalance = 0;
                     double totalTarget = 0;
+                    double monthlySinkingTotal = 0;
                     bool hasTarget = false;
 
                     for (var e in items) {
                       int multiplier = e.isPerChild ? provider.childCount : 1;
                       total += e.monthlyAmount * multiplier;
                       totalBalance += (e.currentBalance ?? 0);
+                      
+                      if (e.isSinking) {
+                        monthlySinkingTotal += e.monthlyAmount * multiplier;
+                      }
+
                       if ((e.targetAmount ?? 0) > 0) {
                         totalTarget += e.targetAmount!;
                         hasTarget = true;
                       }
                     }
 
-                    // בדיקת קופות מאוחדות
-                    bool isUnified = ['רכב', 'ילדים - קבועות', 'אבא', 'אמא', 'ילדים - משתנות'].contains(parentName);
+                    // בדיקת קופות מאוחדות (כולל חגים)
+                    bool isUnified = ['רכב', 'ילדים - קבועות', 'אבא', 'אמא', 'ילדים - משתנות', 'חגים'].contains(parentName);
                     bool hasSinking = items.any((e) => e.isSinking);
 
                     return Card(
@@ -164,7 +170,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                               ),
                           ],
                         ),
-                        subtitle: (mainCategory == 'עתידיות' || (parentName == 'ילדים' && provider.childCount > 0)) 
+                        subtitle: (mainCategory == 'עתידיות' || (parentName == 'ילדים' && provider.childCount > 0) || (isUnified && hasSinking)) 
                           ? Padding(
                               padding: const EdgeInsets.only(top: 8.0),
                               child: Column(
@@ -187,8 +193,14 @@ class CategoryDrilldownScreen extends StatelessWidget {
                                       style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold),
                                     ),
                                   ],
+                                  if (isUnified && hasSinking && mainCategory != 'עתידיות') ...[
+                                    Text(
+                                      'להפרשה חודשית לקופה: ₪${monthlySinkingTotal.toStringAsFixed(0)}',
+                                      style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
                                   if (parentName == 'ילדים' && provider.childCount > 0) ...[
-                                    if (mainCategory == 'עתידיות') const SizedBox(height: 6),
+                                    if (mainCategory == 'עתידיות' || (isUnified && hasSinking)) const SizedBox(height: 6),
                                     Text(
                                       'עלות ממוצעת לילד יחיד: ₪${(total / provider.childCount).toStringAsFixed(0)}',
                                       style: TextStyle(fontSize: 12, color: Colors.purple[700], fontWeight: FontWeight.bold),
@@ -278,13 +290,18 @@ class SpecificExpensesScreen extends StatelessWidget {
     final currentExpenses = provider.expenses.where((e) => e.parentCategory == parentCategory).toList();
     
     double total = 0;
+    double totalSinkingMonthly = 0;
+
     for (var current in currentExpenses) {
         int multiplier = current.isPerChild ? provider.childCount : 1;
         total += current.monthlyAmount * multiplier;
+        if (current.isSinking) {
+            totalSinkingMonthly += current.monthlyAmount * multiplier;
+        }
     }
 
     bool isFixedOrIncome = (mainCategory == 'קבועות' || mainCategory == 'הכנסות');
-    bool isUnified = ['רכב', 'ילדים - קבועות', 'אבא', 'אמא', 'ילדים - משתנות'].contains(parentCategory);
+    bool isUnified = ['רכב', 'ילדים - קבועות', 'אבא', 'אמא', 'ילדים - משתנות', 'חגים'].contains(parentCategory);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -321,8 +338,16 @@ class SpecificExpensesScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('קופה נצברת מאוחדת:', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('₪${currentExpenses.fold(0.0, (s, e) => s + (e.currentBalance ?? 0)).toStringAsFixed(0)}', style: const TextStyle(color: Colors.green, fontSize: 22, fontWeight: FontWeight.bold)),
+                      const Text('להפרשה חודשית לקופה:', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text('₪${totalSinkingMonthly.toStringAsFixed(0)}', style: const TextStyle(color: Colors.green, fontSize: 22, fontWeight: FontWeight.bold)),
+                    ]
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('יתרה צבורה (נצבר עד כה):', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold, fontSize: 14)),
+                      Text('₪${currentExpenses.fold(0.0, (s, e) => s + (e.currentBalance ?? 0)).toStringAsFixed(0)}', style: const TextStyle(color: Colors.blueGrey, fontSize: 16, fontWeight: FontWeight.bold)),
                     ]
                   ),
                   const SizedBox(height: 12),
