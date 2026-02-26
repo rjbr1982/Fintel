@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Purged Pharm, Unified Birthdays, Updated Ratios ONLY)
+// 🔒 STATUS: EDITED (Added Optimistic UI Update for Freedom Settings to fix lag)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -144,6 +144,13 @@ class BudgetProvider with ChangeNotifier {
     required double yieldRate,
     required int frequency,
   }) async {
+    // 🚀 עדכון מיידי של הממשק (Optimistic UI Update) למניעת דיליי!
+    _manualTargetIncome = manualTarget;
+    _expectedYield = yieldRate;
+    _compoundingFrequency = frequency;
+    notifyListeners();
+
+    // ☁️ שמירה שקטה ל-Firebase ברקע
     if (manualTarget != null) {
       await DatabaseHelper.instance.saveSetting('manual_target_income', manualTarget);
     } else {
@@ -185,6 +192,8 @@ class BudgetProvider with ChangeNotifier {
     if (index == -1) return;
     
     final name = _expenses[index].name;
+    String nameForMatch = name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
+
     double defaultRatio = 0.0;
 
     final Map<String, double> defaultRatios = {
@@ -199,7 +208,7 @@ class BudgetProvider with ChangeNotifier {
       'רפואי': 0.02,
     };
 
-    defaultRatio = defaultRatios[name] ?? 0.0;
+    defaultRatio = defaultRatios[nameForMatch] ?? 0.0;
 
     final old = _expenses[index];
     final updated = Expense(
@@ -219,7 +228,6 @@ class BudgetProvider with ChangeNotifier {
     bool changed = false;
     final now = DateTime.now().toIso8601String();
 
-    // 1. חיווט אילן היוחסין
     final Map<String, Map<String, String>> syncRules = {
       'בגדים ילדים': {'cat': 'משתנות', 'parent': 'ילדים - משתנות'},
       'בילויים ילדים': {'cat': 'משתנות', 'parent': 'ילדים - משתנות'},
@@ -233,7 +241,6 @@ class BudgetProvider with ChangeNotifier {
       'קטנות לבית': {'cat': 'קבועות', 'parent': 'קטנות לבית'},
     };
 
-    // 2. אכיפת אחוזי ברירת המחדל החדשים (לא נוגע בערכים ידניים אם הוגדרו!)
     final Map<String, double> requiredRatios = {
       'מקדמה לבית': 0.67,
       'בר מצווה אליעזר': 0.11,
@@ -241,6 +248,16 @@ class BudgetProvider with ChangeNotifier {
       'תנור גז': 0.07,
       'הדברה': 0.02,
       'רפואי': 0.02,
+    };
+
+    final Map<String, double> defaultVariableRatios = {
+      'בגדים אבא': 0.19,
+      'בילויים אבא': 0.14,
+      'בגדים אמא': 0.09,
+      'בילויים אמא': 0.19,
+      'טיפוח אמא': 0.15,
+      'בגדים ילדים': 0.12,
+      'בילויים ילדים': 0.12,
     };
 
     final sinkingNames = [
@@ -261,7 +278,6 @@ class BudgetProvider with ChangeNotifier {
     for (int i = 0; i < _expenses.length; i++) {
       final e = _expenses[i];
       
-      // 🛑 השמדה מוחלטת של 'פארם וניקיון' למשתמשים קיימים
       if (e.name == 'פארם וניקיון') {
         await DatabaseHelper.instance.deleteExpense(e.id!);
         changed = true;
@@ -274,8 +290,10 @@ class BudgetProvider with ChangeNotifier {
       String newParent = e.parentCategory;
       bool newIsPerChild = e.isPerChild;
 
-      if (syncRules.containsKey(e.name)) {
-        final rule = syncRules[e.name]!;
+      String nameForMatch = e.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
+
+      if (syncRules.containsKey(nameForMatch)) {
+        final rule = syncRules[nameForMatch]!;
         if (e.category != rule['cat'] || e.parentCategory != rule['parent']) {
           newCat = rule['cat']!;
           newParent = rule['parent']!;
@@ -285,10 +303,18 @@ class BudgetProvider with ChangeNotifier {
       }
 
       double? newRatio = e.allocationRatio;
-      if (requiredRatios.containsKey(e.name)) {
-        if (newRatio != requiredRatios[e.name]) {
-          newRatio = requiredRatios[e.name];
+      if (requiredRatios.containsKey(nameForMatch)) {
+        if (newRatio != requiredRatios[nameForMatch]) {
+          newRatio = requiredRatios[nameForMatch];
           needsUpdate = true;
+        }
+      } else if (defaultVariableRatios.containsKey(nameForMatch)) {
+        double targetRatio = defaultVariableRatios[nameForMatch]!;
+        if (newRatio == null || newRatio == 0 || (newRatio * 100).round() == 10 || (newRatio * 100).round() == 14) {
+          if (newRatio != targetRatio) {
+            newRatio = targetRatio;
+            needsUpdate = true;
+          }
         }
       }
 
@@ -296,6 +322,10 @@ class BudgetProvider with ChangeNotifier {
                              newParent == 'חגים' || 
                              (newCat == 'משתנות' && newParent != 'קניות') ||
                              sinkingNames.contains(e.name);
+
+      if (e.name == 'דלק') {
+        shouldBeSinking = false;
+      }
 
       bool newIsSinking = e.isSinking;
       if (e.isSinking != shouldBeSinking) {
@@ -309,7 +339,6 @@ class BudgetProvider with ChangeNotifier {
           monthlyAmount: e.monthlyAmount, originalAmount: e.originalAmount, frequency: e.frequency,
           isSinking: newIsSinking, isPerChild: newIsPerChild,
           targetAmount: e.targetAmount, currentBalance: e.currentBalance, allocationRatio: newRatio,
-          // הערה: שומרים בקפידה על הנתונים הידניים של המשתמש:
           lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
         );
         await DatabaseHelper.instance.updateExpense(updated);
