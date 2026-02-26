@@ -1,4 +1,4 @@
-// 🔒 STATUS: FIXED (Resolved Note Truncation in Withdrawal History)
+// 🔒 STATUS: FIXED (Removed Percentage Option for Shopping Anchor in Edit Dialog)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -353,8 +353,10 @@ class SpecificExpensesScreen extends StatelessWidget {
                 final expense = currentExpenses[index];
                 final multiplier = expense.isPerChild ? provider.childCount : 1;
                 final displayAmount = expense.monthlyAmount * multiplier;
+                
                 bool isVariable = (expense.category == 'משתנות');
                 bool isFuture = (expense.category == 'עתידיות');
+                bool isAnchor = expense.name.trim() == 'קניות' || (isVariable && expense.parentCategory == 'קניות');
 
                 String timeText = '';
                 if (isFuture && (expense.targetAmount ?? 0) > 0) {
@@ -387,7 +389,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                     children: [
                       if (expense.isPerChild)
                         Text('₪${expense.monthlyAmount.toStringAsFixed(0)} ליחידה × ${provider.childCount} ילדים', style: TextStyle(fontSize: 12, color: Colors.orange[900], fontWeight: FontWeight.w600))
-                      else if ((isVariable || isFuture) && !expense.isLocked)
+                      else if ((isVariable || isFuture) && !expense.isLocked && !isAnchor)
                         Text('${((expense.allocationRatio ?? 0) * 100).toStringAsFixed(1)}% מהיתרה', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                       
                       if (!expense.isPerChild && expense.parentCategory == 'ילדים' && provider.childCount > 0) ...[
@@ -453,7 +455,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                         onPressed: () {
                           if (isFuture) {
                             _showFutureEditDialog(context, provider, expense);
-                          } else if (isVariable && expense.allocationRatio != null) {
+                          } else if (isVariable && (expense.allocationRatio != null || isAnchor)) {
                             _showSmartEditDialog(context, provider, expense);
                           } else {
                             _showEditDialog(context, provider, expense);
@@ -624,9 +626,12 @@ class SpecificExpensesScreen extends StatelessWidget {
     int multiplier = expense.isPerChild ? provider.childCount : 1;
     if (multiplier < 1) multiplier = 1;
 
+    // זיהוי עוגן הקניות כדי למנוע ממנו בחירת אחוזים
+    bool isAnchor = expense.name.trim() == 'קניות' || (expense.category == 'משתנות' && expense.parentCategory == 'קניות');
+
     final amountController = TextEditingController(text: expense.isLocked ? (expense.monthlyAmount * multiplier).toStringAsFixed(0) : "");
     final ratioController = TextEditingController(text: ((expense.allocationRatio ?? 0) * 100).toStringAsFixed(1));
-    bool isRatioMode = !expense.isLocked; 
+    bool isRatioMode = isAnchor ? false : !expense.isLocked; 
 
     showDialog(
       context: context,
@@ -650,13 +655,15 @@ class SpecificExpensesScreen extends StatelessWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ToggleButtons(
-                isSelected: [isRatioMode, !isRatioMode],
-                onPressed: (index) => setState(() => isRatioMode = index == 0),
-                borderRadius: BorderRadius.circular(10),
-                children: const [Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('אחוז')), Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('סכום'))],
-              ),
-              const SizedBox(height: 20),
+              if (!isAnchor) ...[
+                ToggleButtons(
+                  isSelected: [isRatioMode, !isRatioMode],
+                  onPressed: (index) => setState(() => isRatioMode = index == 0),
+                  borderRadius: BorderRadius.circular(10),
+                  children: const [Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('אחוז')), Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('סכום'))],
+                ),
+                const SizedBox(height: 20),
+              ],
               isRatioMode 
                 ? TextField(controller: ratioController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'אחוז מהיתרה', suffixText: '%', border: OutlineInputBorder()))
                 : TextField(controller: amountController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום קבוע (כולל)' : 'סכום קבוע', suffixText: '₪', border: const OutlineInputBorder())),
@@ -666,7 +673,7 @@ class SpecificExpensesScreen extends StatelessWidget {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
             ElevatedButton(
               onPressed: () {
-                if (isRatioMode) {
+                if (isRatioMode && !isAnchor) {
                   final val = double.tryParse(ratioController.text);
                   if (val != null) {
                     provider.updateExpenseRatio(expense.id!, val / 100);

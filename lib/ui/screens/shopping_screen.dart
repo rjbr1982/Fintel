@@ -1,9 +1,10 @@
-// 🔒 STATUS: EDITED (Added Delete Item functionality with Confirmation Dialog)
+// 🔒 STATUS: EDITED (Fixed 11,000 NIS Bug - Safely fetching the Shopping Anchor)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/shopping_provider.dart';
 import '../../providers/budget_provider.dart'; 
 import '../../data/shopping_model.dart';
+import '../../data/expense_model.dart';
 import '../widgets/global_header.dart';
 
 class ShoppingScreen extends StatefulWidget {
@@ -69,9 +70,18 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     final shoppingProvider = context.watch<ShoppingProvider>();
     final budgetProvider = context.watch<BudgetProvider>();
     
+    // 🛑 תוקן: שאיבה בטוחה של עוגן הקניות ללא קריסה למשכורת
     final groceryExpense = budgetProvider.expenses.firstWhere(
-      (e) => e.name == 'קניות',
-      orElse: () => budgetProvider.expenses.first,
+      (e) => e.name.trim() == 'קניות' || (e.category == 'משתנות' && e.parentCategory == 'קניות'),
+      orElse: () => Expense(
+        name: 'קניות',
+        category: 'משתנות',
+        parentCategory: 'קניות',
+        monthlyAmount: 0,
+        originalAmount: 0,
+        date: DateTime.now().toIso8601String(),
+        frequency: Frequency.MONTHLY,
+      ),
     );
     
     final double budgetLimit = groceryExpense.isLocked 

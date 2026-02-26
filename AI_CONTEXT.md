@@ -1,12 +1,24 @@
-# 🧠 קונטקסט טכני והנחיות פיתוח: דוחכם (Dohaham)
+[AI_CONTEXT_START]
+**Project**: Fintel (דוחכם) - SaaS/Web Financial Intelligence Application
+**Constitution Version**: 12.10 (Sinking Funds, Variable Ratios, Future Value)
+**Status**: Zero Warnings, Web-Ready, Firebase Integrated.
 
-## לוגיקות ליבה שעודכנו לאחרונה:
-* **מבנה משפחה (FamilyMembers):** המערכת מתבססת כעת על רשימה דינמית של אובייקטי `FamilyMember` (שם + שנת לידה) במקום משתנים קשיחים. יש לוודא שכל לוגיקה עתידית שקשורה למבוגרים/ילדים נשאבת מתוך הרשימה הדינמית הזו ב-`BudgetProvider`.
-* **חישוב הוצאות ילדים (isPerChild):**
-  מנגנון התצוגה מציג את הסכום הכולל (סכום לילד יחיד * מספר הילדים). עם זאת, *בזמן עריכה או יצירה*, המשתמש מקליד את הסכום הכולל, והמערכת מחלקת אותו במספר הילדים לפני השמירה מחדש כ-`monthlyAmount`.
-* **ניהול קופות (Sinking Funds / Unified Funds):**
-  היסטוריית המשיכות (`Withdrawals`) מנוהלת דרך רכיבי BottomSheet ייעודיים בתוך `category_drilldown_screen.dart`. יש להקפיד על כך שטקסטים ארוכים בהערות הפעולה מקבלים `softWrap: true` כדי למנוע שגיאות תצוגה.
-* **חוקת קוד (Code Constitution):**
-  * **Zero Warnings:** אין להשאיר משתנים לא בשימוש, Imports מיותרים, או אזהרות Linter.
-  * **הפרדת תצוגה ולוגיקה:** State management מנוהל אך ורק דרך `BudgetProvider`.
-  * **שפות:** ממשק המשתמש נכתב בעברית (RTL), אך רוב המחרוזות הקבועות כעת מוטמעות ישירות בקוד ולא דורשות שאיבה מ-`AppLocalizations` אלא אם צוין אחרת.
+**Recent Accomplishments (Last Session)**:
+1. **App Icon & Branding**: Fully integrated the official Fintel Icon via `flutter_launcher_icons` across Android and Web, including implementation in `login_screen.dart` and `global_header.dart`.
+2. **Smart Routing (`main.dart`)**: Upgraded `AuthGate` to check if the database is empty. Routes new/reset users to `OnboardingScreen` and existing users to `MainScreen`.
+3. **Dynamic Onboarding (`onboarding_screen.dart`)**: Built a complete multi-step onboarding flow for capturing:
+   - Full family members (Parents and Children with names & birth years).
+   - Vehicle type (None/Car/Motorcycle) + leasing costs.
+   - Anchor expenses (Rent, Supermarket, Electricity, Water).
+4. **Seed Engine Overhaul (`seed_service.dart`)**: Rewrote the generator to accept dynamic parameters from the Onboarding screen. Fixed 'originalAmount' tracking for anchor expenses and removed legacy items (e.g., Pharm/Cleaning). Initial sinking funds start cleanly at 0.
+5. **Provider & Reset Logic (`budget_provider.dart` & `global_header.dart`)**: 
+   - Removed hardcoded fallback seeding.
+   - Stopped auto-syncing categories if the DB is empty (preventing false "existing user" flags).
+   - Fixed `fullAppReset` (Factory Reset) to wipe data and immediately force-route the user back to the Onboarding screen.
+
+**Upcoming Mission (Next Session)**:
+Pending the architect's decision, focus will likely shift to one of the following core areas:
+- **Debt Management**: Integrating active debt impacts into the financial freedom algorithms.
+- **Main Dashboard**: Upgrading the visual representation of sinking funds, standard of living, and financial freedom timeline.
+- **Shopping Interface**: Building the detailed shopping list UI to sync dynamically with the defined frequencies (Weekly, Bi-Weekly, etc.).
+[AI_CONTEXT_END]

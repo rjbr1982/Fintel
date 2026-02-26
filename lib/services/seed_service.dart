@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Ratios, Holidays Seed, and Children Categories)
+// 🔒 STATUS: EDITED (Fixed Ratios, Removed Unwanted Renames, Fixed Children Category)
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
 import '../data/shopping_model.dart';
@@ -63,13 +63,13 @@ class SeedService {
       _create('אפליקציית כושר', 'קבועות', 'מדיה', 0),
       
       // ילדים - קבועות (כולן צוברות)
-      _create('שכר לימוד', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true),
-      _create('ציוד בית ספר', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
-      _create('חוגים', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true),
-      _create('מתנות לימי הולדת', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true), // תוקן: נוסף isPerChild לאיחוד הקטגוריה
-      _create('קייטנות', 'קבועות', 'ילדים', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
+      _create('שכר לימוד', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true),
+      _create('ציוד בית ספר', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
+      _create('חוגים', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true),
+      _create('מתנות לימי הולדת', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true),
+      _create('קייטנות', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
       
-      // חגים (הוזנו סכומי היעד השנתיים המדויקים, המערכת מחלקת ב-12 אוטומטית)
+      // חגים
       _create('ראש השנה', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
       _create('יום כיפור', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
       _create('סוכות', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
@@ -92,16 +92,16 @@ class SeedService {
       // === משתנות (קניות) ===
       _create('קניות', 'משתנות', 'קניות', supermarketAmount),
 
-      // === משתנות (אישיות - יחסי חלוקה תוקנו) ===
+      // === משתנות (אישיות) ===
       _create('בגדים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.19, isSinking: true),
       _create('בילויים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.14, isSinking: true),
       _create('בגדים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.09, isSinking: true),
       _create('בילויים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.19, isSinking: true),
       _create('טיפוח אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.15, isSinking: true),
-      _create('בגדים ילדים', 'משתנות', 'ילדים', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
-      _create('בילויים ילדים', 'משתנות', 'ילדים', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
+      _create('בגדים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
+      _create('בילויים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
       
-      // === עתידיות (יחסי חלוקה תוקנו) ===
+      // === עתידיות (הוחזרו השמות המקוריים, עודכנו אחוזים בלבד) ===
       _create('מקדמה לבית', 'עתידיות', 'רכישות גדולות', 0, isSinking: true, allocationRatio: 0.67),
       _create('תנור גז', 'עתידיות', 'רכישות קטנות', 0, isSinking: true, allocationRatio: 0.07),
       _create('בר מצווה אליעזר', 'עתידיות', 'הפקת אירועים', 0, isSinking: true, allocationRatio: 0.11),

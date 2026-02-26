@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Removed Hardcoded Seed, Fixed Auto-Sync bypass for Onboarding)
+// 🔒 STATUS: EDITED (Purged Pharm, Unified Birthdays, Updated Ratios ONLY)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -191,7 +191,7 @@ class BudgetProvider with ChangeNotifier {
       'בגדים אבא': 0.19, 'בילויים אבא': 0.14, 'בגדים אמא': 0.09,
       'בילויים אמא': 0.19, 'טיפוח אמא': 0.15, 'בגדים ילדים': 0.12,
       'בילויים ילדים': 0.12, 
-      'רכישות גדולות': 0.67, 
+      'מקדמה לבית': 0.67, 
       'בר מצווה אליעזר': 0.11,
       'חופשה שנתית': 0.11,
       'תנור גז': 0.07, 
@@ -214,21 +214,33 @@ class BudgetProvider with ChangeNotifier {
   }
 
   Future<void> _forceCategorySync() async {
-    // 🛑 תיקון קריטי: לא מסנכרנים קטגוריות למסד ריק, אחרת זה מכשיל את ה-Onboarding!
     if (_expenses.isEmpty) return;
 
     bool changed = false;
     final now = DateTime.now().toIso8601String();
+
+    // 1. חיווט אילן היוחסין
     final Map<String, Map<String, String>> syncRules = {
       'בגדים ילדים': {'cat': 'משתנות', 'parent': 'ילדים - משתנות'},
       'בילויים ילדים': {'cat': 'משתנות', 'parent': 'ילדים - משתנות'},
       'שכר לימוד': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
       'ציוד בית ספר': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
       'חוגים': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
-      'מתנות ימי הולדת': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
+      'מתנות לימי הולדת': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'}, 
+      'מתנות ימי הולדת': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'}, 
       'קייטנות': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
       'תספורת': {'cat': 'קבועות', 'parent': 'תספורת'},
       'קטנות לבית': {'cat': 'קבועות', 'parent': 'קטנות לבית'},
+    };
+
+    // 2. אכיפת אחוזי ברירת המחדל החדשים (לא נוגע בערכים ידניים אם הוגדרו!)
+    final Map<String, double> requiredRatios = {
+      'מקדמה לבית': 0.67,
+      'בר מצווה אליעזר': 0.11,
+      'חופשה שנתית': 0.11,
+      'תנור גז': 0.07,
+      'הדברה': 0.02,
+      'רפואי': 0.02,
     };
 
     final sinkingNames = [
@@ -248,11 +260,18 @@ class BudgetProvider with ChangeNotifier {
 
     for (int i = 0; i < _expenses.length; i++) {
       final e = _expenses[i];
-      bool needsUpdate = false;
       
+      // 🛑 השמדה מוחלטת של 'פארם וניקיון' למשתמשים קיימים
+      if (e.name == 'פארם וניקיון') {
+        await DatabaseHelper.instance.deleteExpense(e.id!);
+        changed = true;
+        continue;
+      }
+
+      bool needsUpdate = false;
+
       String newCat = e.category;
       String newParent = e.parentCategory;
-      bool newIsSinking = e.isSinking;
       bool newIsPerChild = e.isPerChild;
 
       if (syncRules.containsKey(e.name)) {
@@ -265,11 +284,20 @@ class BudgetProvider with ChangeNotifier {
         }
       }
 
+      double? newRatio = e.allocationRatio;
+      if (requiredRatios.containsKey(e.name)) {
+        if (newRatio != requiredRatios[e.name]) {
+          newRatio = requiredRatios[e.name];
+          needsUpdate = true;
+        }
+      }
+
       bool shouldBeSinking = newCat == 'עתידיות' || 
                              newParent == 'חגים' || 
                              (newCat == 'משתנות' && newParent != 'קניות') ||
                              sinkingNames.contains(e.name);
 
+      bool newIsSinking = e.isSinking;
       if (e.isSinking != shouldBeSinking) {
         newIsSinking = shouldBeSinking;
         needsUpdate = true;
@@ -280,15 +308,18 @@ class BudgetProvider with ChangeNotifier {
           id: e.id, name: e.name, category: newCat, parentCategory: newParent,
           monthlyAmount: e.monthlyAmount, originalAmount: e.originalAmount, frequency: e.frequency,
           isSinking: newIsSinking, isPerChild: newIsPerChild,
-          targetAmount: e.targetAmount, currentBalance: e.currentBalance, allocationRatio: e.allocationRatio,
+          targetAmount: e.targetAmount, currentBalance: e.currentBalance, allocationRatio: newRatio,
+          // הערה: שומרים בקפידה על הנתונים הידניים של המשתמש:
           lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
         );
         await DatabaseHelper.instance.updateExpense(updated);
-        _expenses[i] = updated;
         changed = true;
       }
     }
-    if (changed) _expenses = await DatabaseHelper.instance.getExpenses();
+    
+    if (changed) {
+      _expenses = await DatabaseHelper.instance.getExpenses();
+    }
   }
 
   void updateExternalDebtPayment(double amount) {
