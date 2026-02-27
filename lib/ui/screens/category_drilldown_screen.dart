@@ -1,11 +1,12 @@
-// 🔒 STATUS: EDITED (Integrated Dynamic Salary Toggle & Linked UI Gateway)
+// 🔒 STATUS: EDITED (Added isSinking Toggles to All Edit/Add Dialogs)
+// lib/ui/screens/category_drilldown_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
 import '../../utils/app_localizations.dart';
 import '../widgets/global_header.dart';
-import 'salary_engine_screen.dart'; // <-- הייבוא החדש למסך הסטטיסטיקה!
+import 'salary_engine_screen.dart';
 
 // פונקציית עזר להצגת תאריכים
 String _formatMonthYear(String isoString) {
@@ -358,7 +359,6 @@ class SpecificExpensesScreen extends StatelessWidget {
                       icon: const Icon(Icons.insights),
                       label: const Text('מנוע סטטיסטיקת שכר', style: TextStyle(fontWeight: FontWeight.bold)),
                       onPressed: () {
-                         // הניווט החדש למסך ממוצע השכר
                          Navigator.push(
                            context,
                            MaterialPageRoute(builder: (context) => const SalaryEngineScreen()),
@@ -564,47 +564,63 @@ class SpecificExpensesScreen extends StatelessWidget {
   void _showAddExpenseDialog(BuildContext context, BudgetProvider provider, String parentCat, String mainCat) {
     final nameController = TextEditingController();
     final amountController = TextEditingController();
+    bool isSinking = mainCat == 'עתידיות' || parentCat == 'חגים';
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('הוספת סעיף ($parentCat)'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הסעיף')),
-            const SizedBox(height: 10),
-            TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום חודשי כולל', suffixText: '₪')),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('הוספת סעיף ($parentCat)'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הסעיף')),
+              const SizedBox(height: 10),
+              TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום חודשי כולל', suffixText: '₪')),
+              const Divider(),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                subtitle: const Text('תוצג במסגרת הירוקה כחיסכון בצד', style: TextStyle(fontSize: 11)),
+                value: isSinking,
+                activeThumbColor: Colors.green,
+                onChanged: (val) {
+                  setDialogState(() { isSinking = val; });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+            ElevatedButton(
+              onPressed: () async {
+                final amount = double.tryParse(amountController.text) ?? 0.0;
+                if (nameController.text.isNotEmpty) {
+                  bool isChildCat = parentCat == 'ילדים' || parentCat == 'ילדים - קבועות';
+                  int multiplier = isChildCat ? provider.childCount : 1;
+                  if (multiplier < 1) multiplier = 1;
+
+                  final newExpense = Expense(
+                    name: nameController.text.trim(),
+                    category: mainCat,
+                    parentCategory: parentCat,
+                    monthlyAmount: amount / multiplier, 
+                    frequency: Frequency.MONTHLY,
+                    isLocked: true, 
+                    isPerChild: isChildCat,
+                    date: DateTime.now().toIso8601String(),
+                    isDynamicSalary: false, 
+                    isSinking: isSinking,
+                  );
+                  await provider.addExpense(newExpense);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                }
+              },
+              child: const Text('הוסף'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
-          ElevatedButton(
-            onPressed: () async {
-              final amount = double.tryParse(amountController.text) ?? 0.0;
-              if (nameController.text.isNotEmpty) {
-                bool isChildCat = parentCat == 'ילדים' || parentCat == 'ילדים - קבועות';
-                int multiplier = isChildCat ? provider.childCount : 1;
-                if (multiplier < 1) multiplier = 1;
-
-                final newExpense = Expense(
-                  name: nameController.text.trim(),
-                  category: mainCat,
-                  parentCategory: parentCat,
-                  monthlyAmount: amount / multiplier, 
-                  frequency: Frequency.MONTHLY,
-                  isLocked: true, 
-                  isPerChild: isChildCat,
-                  date: DateTime.now().toIso8601String(),
-                  isDynamicSalary: false, 
-                );
-                await provider.addExpense(newExpense);
-                if (ctx.mounted) Navigator.pop(ctx);
-              }
-            },
-            child: const Text('הוסף'),
-          ),
-        ],
       ),
     );
   }
@@ -623,6 +639,7 @@ class SpecificExpensesScreen extends StatelessWidget {
     final nameController = TextEditingController(text: expense.name); 
     final amountController = TextEditingController();
     Frequency selectedFreq = expense.frequency;
+    bool isSinking = expense.isSinking;
 
     // --- לוגיקת שכר דינמי ---
     bool isIncome = expense.category == 'הכנסות';
@@ -722,6 +739,20 @@ class SpecificExpensesScreen extends StatelessWidget {
                       }
                     },
                   ),
+                  
+                  if (!isIncome) ...[
+                    const Divider(),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11)),
+                      value: isSinking,
+                      activeThumbColor: Colors.green,
+                      onChanged: (val) {
+                        setDialogState(() { isSinking = val; });
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -748,7 +779,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                       parentCategory: expense.parentCategory,
                       monthlyAmount: (isIncome && isDynamic) ? avgSalary : monthly, 
                       frequency: selectedFreq, 
-                      isSinking: expense.isSinking, 
+                      isSinking: isSinking, 
                       isPerChild: expense.isPerChild,
                       allocationRatio: expense.allocationRatio, 
                       isLocked: expense.isLocked, 
@@ -756,6 +787,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                       date: expense.date,
                       isDynamicSalary: isDynamic,
                       salaryStartDate: startDateStr,
+                      targetAmount: expense.targetAmount,
+                      currentBalance: expense.currentBalance,
                     ));
                     
                     await provider.loadData();
@@ -780,6 +813,7 @@ class SpecificExpensesScreen extends StatelessWidget {
     final amountController = TextEditingController(text: expense.isLocked ? (expense.monthlyAmount * multiplier).toStringAsFixed(0) : "");
     final ratioController = TextEditingController(text: ((expense.allocationRatio ?? 0) * 100).toStringAsFixed(1));
     bool isRatioMode = isAnchor ? false : !expense.isLocked; 
+    bool isSinking = expense.isSinking;
 
     showDialog(
       context: context,
@@ -815,12 +849,45 @@ class SpecificExpensesScreen extends StatelessWidget {
               isRatioMode 
                 ? TextField(controller: ratioController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'אחוז מהיתרה', suffixText: '%', border: OutlineInputBorder()))
                 : TextField(controller: amountController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום קבוע (כולל)' : 'סכום קבוע', suffixText: '₪', border: const OutlineInputBorder())),
+              const Divider(height: 30),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11)),
+                value: isSinking,
+                activeThumbColor: Colors.green,
+                onChanged: (val) {
+                  setState(() { isSinking = val; });
+                },
+              ),
             ],
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                // קודם שומרים את סטטוס הצבירה
+                if (isSinking != expense.isSinking) {
+                  await provider.updateExpense(Expense(
+                    id: expense.id,
+                    name: expense.name,
+                    category: expense.category,
+                    parentCategory: expense.parentCategory,
+                    monthlyAmount: expense.monthlyAmount,
+                    frequency: expense.frequency,
+                    isSinking: isSinking,
+                    isPerChild: expense.isPerChild,
+                    allocationRatio: expense.allocationRatio,
+                    isLocked: expense.isLocked,
+                    manualAmount: expense.manualAmount,
+                    date: expense.date,
+                    isDynamicSalary: expense.isDynamicSalary,
+                    salaryStartDate: expense.salaryStartDate,
+                    targetAmount: expense.targetAmount,
+                    currentBalance: expense.currentBalance,
+                  ));
+                }
+
                 if (isRatioMode && !isAnchor) {
                   final val = double.tryParse(ratioController.text);
                   if (val != null) {
@@ -837,7 +904,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                     }
                   }
                 }
-                Navigator.pop(ctx);
+                if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text('עדכן'),
             ),
@@ -859,6 +926,7 @@ class SpecificExpensesScreen extends StatelessWidget {
     final monthsController = TextEditingController(); 
 
     int selectedMode = expense.isLocked ? 1 : 0; 
+    bool isSinking = expense.isSinking;
 
     showDialog(
       context: context,
@@ -906,13 +974,24 @@ class SpecificExpensesScreen extends StatelessWidget {
                   TextField(controller: amountController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום קבוע כולל' : 'סכום קבוע חודשי', suffixText: '₪', border: const OutlineInputBorder()))
                 else if (selectedMode == 2)
                   TextField(controller: monthsController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'חודשים נותרים ליעד', suffixText: 'חודשים', border: OutlineInputBorder(), helperText: 'המערכת תחשב ותנעל את הסכום החודשי')),
+                const Divider(height: 30),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11)),
+                  value: isSinking,
+                  activeThumbColor: Colors.green,
+                  onChanged: (val) {
+                    setState(() { isSinking = val; });
+                  },
+                ),
               ],
             ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 double? newManualAmount;
                 bool newIsLocked = selectedMode != 0;
                 double? newRatio = selectedMode == 0 ? (double.tryParse(ratioController.text) ?? 0) / 100 : expense.allocationRatio;
@@ -933,6 +1012,28 @@ class SpecificExpensesScreen extends StatelessWidget {
                   }
                 }
 
+                // שמירת סטטוס צוברת
+                if (isSinking != expense.isSinking) {
+                  await provider.updateExpense(Expense(
+                    id: expense.id,
+                    name: expense.name,
+                    category: expense.category,
+                    parentCategory: expense.parentCategory,
+                    monthlyAmount: expense.monthlyAmount,
+                    frequency: expense.frequency,
+                    isSinking: isSinking,
+                    isPerChild: expense.isPerChild,
+                    allocationRatio: expense.allocationRatio,
+                    isLocked: expense.isLocked,
+                    manualAmount: expense.manualAmount,
+                    date: expense.date,
+                    isDynamicSalary: expense.isDynamicSalary,
+                    salaryStartDate: expense.salaryStartDate,
+                    targetAmount: expense.targetAmount,
+                    currentBalance: expense.currentBalance,
+                  ));
+                }
+
                 if (newIsLocked && newManualAmount == null && selectedMode != 2) {
                   provider.resetExpenseToDefault(expense.id!);
                 } else {
@@ -946,7 +1047,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                     manualAmount: newManualAmount,
                   );
                 }
-                Navigator.pop(ctx);
+                if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text('עדכן יעד'),
             ),
@@ -1194,11 +1295,6 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
                     ),
                   );
                 },
-              ),
-              OutlinedButton.icon(
-                onPressed: () => _openWithdrawalDialog(null),
-                icon: const Icon(Icons.group, size: 18),
-                label: const Text('משיכה לכולם'),
               ),
             ],
           ),

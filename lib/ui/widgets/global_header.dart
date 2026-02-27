@@ -1,4 +1,5 @@
-// 🔒 STATUS: EDITED (Clean Action Menu & Brand Styling)
+// 🔒 STATUS: EDITED (Added Checking & Salary Actions to Menu)
+// lib/ui/widgets/global_header.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,8 +8,10 @@ import '../../utils/app_localizations.dart';
 import '../../services/ai_export_service.dart';
 import '../screens/onboarding_screen.dart';
 import '../screens/sinking_funds_screen.dart';
+import '../screens/checking_history_screen.dart';
+import '../screens/salary_engine_screen.dart';
 
-enum MenuAction { savings, ai, settings }
+enum MenuAction { savings, checking, salary, ai, settings }
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
@@ -94,6 +97,18 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                   MaterialPageRoute(builder: (context) => const SinkingFundsScreen()),
                 );
                 break;
+              case MenuAction.checking:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CheckingHistoryScreen()),
+                );
+                break;
+              case MenuAction.salary:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SalaryEngineScreen()),
+                );
+                break;
               case MenuAction.ai:
                 await AiExportService.generateAndCopy(context);
                 if (context.mounted) {
@@ -124,6 +139,27 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
             if (showSavingsIcon) const PopupMenuDivider(),
+            const PopupMenuItem<MenuAction>(
+              value: MenuAction.checking,
+              child: Row(
+                children: [
+                  Icon(Icons.account_balance_wallet_outlined, color: Colors.blueGrey, size: 22),
+                  SizedBox(width: 12),
+                  Text('מעקב יתרת עו"ש'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<MenuAction>(
+              value: MenuAction.salary,
+              child: Row(
+                children: [
+                  Icon(Icons.insights, color: Colors.blue, size: 22),
+                  SizedBox(width: 12),
+                  Text('מנוע סטטיסטיקת שכר'),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
             const PopupMenuItem<MenuAction>(
               value: MenuAction.ai,
               child: Row(

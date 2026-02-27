@@ -1,4 +1,5 @@
-// 🔒 STATUS: EDITED (Added Checking Account Tracking Button to Dashboard)
+// 🔒 STATUS: EDITED (Cleaned Dashboard UI)
+// lib/ui/screens/main_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -7,7 +8,6 @@ import '../../utils/app_localizations.dart';
 import '../widgets/global_header.dart'; 
 import 'pnl_screen.dart'; 
 import 'shopping_screen.dart';
-import 'checking_history_screen.dart'; // <--- הייבוא החדש
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -219,10 +219,7 @@ class _MainScreenState extends State<MainScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(loc?.get('appTitle') ?? 'Fintel', 
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2, color: Colors.grey[400])),
-                const SizedBox(height: 40),
-
+                // הוסר הטקסט "Fintel" כדי להשאיר דשבורד נקי
                 // כותרת יעד שניתנת לעריכה (דריסה ידנית)
                 InkWell(
                   onTap: () => _showFreedomSettingsDialog(context, budget),
@@ -311,22 +308,6 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                     ),
                   ),
-                  
-                const SizedBox(height: 30),
-
-                // 🌟 כפתור חדש - מעקב העו"ש
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const CheckingHistoryScreen()));
-                  },
-                  icon: const Icon(Icons.account_balance_wallet_outlined, color: Colors.blueGrey),
-                  label: const Text('מעקב יתרת עו"ש (בקרה)', style: TextStyle(color: Colors.blueGrey, fontSize: 16, fontWeight: FontWeight.w600)),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                    side: BorderSide(color: Colors.blueGrey.shade300, width: 1.5),
-                  ),
-                ),
               ],
             ),
           ),
