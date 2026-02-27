@@ -1,10 +1,21 @@
-// 🔒 STATUS: FIXED (Added Exact Monthly Saving Allocation Amount for Unified Funds)
+// 🔒 STATUS: EDITED (Integrated Dynamic Salary Toggle & Linked UI Gateway)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
 import '../../utils/app_localizations.dart';
 import '../widgets/global_header.dart';
+import 'salary_engine_screen.dart'; // <-- הייבוא החדש למסך הסטטיסטיקה!
+
+// פונקציית עזר להצגת תאריכים
+String _formatMonthYear(String isoString) {
+  try {
+    final date = DateTime.parse(isoString);
+    return '${date.month.toString().padLeft(2, '0')}/${date.year}';
+  } catch (e) {
+    return '';
+  }
+}
 
 // --- רמה 3: רשימת ראשי הוצאות (Parents) ---
 class CategoryDrilldownScreen extends StatelessWidget {
@@ -78,7 +89,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
             grouped[pCat]!.add(e);
           }
 
-          // סידור קשיח לעתידיות לפי הדרישה האסטרטגית
           var entries = grouped.entries.toList();
           if (mainCategory == 'עתידיות') {
             const futureOrder = ['רכישות גדולות', 'רכישות קטנות', 'הפקת אירועים', 'תיקונים', 'רפואי', 'חופשה שנתית'];
@@ -145,7 +155,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
                       }
                     }
 
-                    // בדיקת קופות מאוחדות (כולל חגים)
                     bool isUnified = ['רכב', 'ילדים - קבועות', 'אבא', 'אמא', 'ילדים - משתנות', 'חגים'].contains(parentName);
                     bool hasSinking = items.any((e) => e.isSinking);
 
@@ -331,6 +340,34 @@ class SpecificExpensesScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                
+                // --- כפתור מנוע השכר להכנסות ---
+                if (mainCategory == 'הכנסות') ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.withValues(alpha: 0.15), 
+                        foregroundColor: Colors.blue[800], 
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+                      ),
+                      icon: const Icon(Icons.insights),
+                      label: const Text('מנוע סטטיסטיקת שכר', style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: () {
+                         // הניווט החדש למסך ממוצע השכר
+                         Navigator.push(
+                           context,
+                           MaterialPageRoute(builder: (context) => const SalaryEngineScreen()),
+                         );
+                      },
+                    ),
+                  )
+                ],
+
                 if (isUnified && currentExpenses.any((e) => e.isSinking)) ...[
                   const SizedBox(height: 12),
                   const Divider(height: 1),
@@ -381,6 +418,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                 
                 bool isVariable = (expense.category == 'משתנות');
                 bool isFuture = (expense.category == 'עתידיות');
+                bool isIncome = (expense.category == 'הכנסות');
                 bool isAnchor = expense.name.trim() == 'קניות' || (isVariable && expense.parentCategory == 'קניות');
 
                 String timeText = '';
@@ -406,7 +444,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                   title: Row(
                     children: [
                       Text(expense.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
-                      if (expense.isLocked) const Padding(padding: EdgeInsets.only(right: 8.0), child: Icon(Icons.lock, size: 14, color: Colors.orange))
+                      if (expense.isLocked && !isIncome) const Padding(padding: EdgeInsets.only(right: 8.0), child: Icon(Icons.lock, size: 14, color: Colors.orange))
                     ],
                   ),
                   subtitle: Column(
@@ -417,6 +455,13 @@ class SpecificExpensesScreen extends StatelessWidget {
                       else if ((isVariable || isFuture) && !expense.isLocked && !isAnchor)
                         Text('${((expense.allocationRatio ?? 0) * 100).toStringAsFixed(1)}% מהיתרה', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                       
+                      // חיווי על משכורת דינמית
+                      if (isIncome && expense.isDynamicSalary)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text('מחושב אוטומטית ע"פ ממוצע שכר', style: TextStyle(fontSize: 11, color: Colors.blue[700], fontWeight: FontWeight.bold)),
+                        ),
+
                       if (!expense.isPerChild && expense.parentCategory == 'ילדים' && provider.childCount > 0) ...[
                         const SizedBox(height: 4),
                         Text(
@@ -535,7 +580,7 @@ class SpecificExpensesScreen extends StatelessWidget {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final amount = double.tryParse(amountController.text) ?? 0.0;
               if (nameController.text.isNotEmpty) {
                 bool isChildCat = parentCat == 'ילדים' || parentCat == 'ילדים - קבועות';
@@ -551,9 +596,10 @@ class SpecificExpensesScreen extends StatelessWidget {
                   isLocked: true, 
                   isPerChild: isChildCat,
                   date: DateTime.now().toIso8601String(),
+                  isDynamicSalary: false, 
                 );
-                provider.addExpense(newExpense);
-                Navigator.pop(ctx);
+                await provider.addExpense(newExpense);
+                if (ctx.mounted) Navigator.pop(ctx);
               }
             },
             child: const Text('הוסף'),
@@ -575,8 +621,24 @@ class SpecificExpensesScreen extends StatelessWidget {
     if (multiplier < 1) multiplier = 1;
     
     final nameController = TextEditingController(text: expense.name); 
-    final amountController = TextEditingController(text: (expense.monthlyAmount * factor * multiplier).toStringAsFixed(0));
+    final amountController = TextEditingController();
     Frequency selectedFreq = expense.frequency;
+
+    // --- לוגיקת שכר דינמי ---
+    bool isIncome = expense.category == 'הכנסות';
+    bool isDynamic = expense.isDynamicSalary;
+    String? startDateStr = expense.salaryStartDate;
+    double avgSalary = 0.0;
+    
+    if (isIncome && expense.id != null) {
+      avgSalary = provider.getAverageSalary(expense.id!);
+    }
+    
+    if (isIncome && isDynamic) {
+      amountController.text = (avgSalary * factor * multiplier).toStringAsFixed(0);
+    } else {
+      amountController.text = (expense.monthlyAmount * factor * multiplier).toStringAsFixed(0);
+    }
 
     showDialog(
       context: context,
@@ -585,57 +647,119 @@ class SpecificExpensesScreen extends StatelessWidget {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Text('עריכת סעיף'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController, 
-                  decoration: const InputDecoration(labelText: 'שם הסעיף')
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: amountController, 
-                  keyboardType: TextInputType.number, 
-                  decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום לתשלום (עבור כל הילדים)' : 'סכום לתשלום', suffixText: '₪')
-                ),
-                const SizedBox(height: 16),
-                DropdownButton<Frequency>(
-                  value: selectedFreq, isExpanded: true,
-                  items: const [DropdownMenuItem(value: Frequency.MONTHLY, child: Text('חודשי')), DropdownMenuItem(value: Frequency.BI_MONTHLY, child: Text('דו-חודשי')), DropdownMenuItem(value: Frequency.YEARLY, child: Text('שנתי'))],
-                  onChanged: (val) { 
-                    if (val != null) {
-                      setDialogState(() { selectedFreq = val; }); 
-                    }
-                  },
-                ),
-              ],
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController, 
+                    decoration: const InputDecoration(labelText: 'שם הסעיף')
+                  ),
+                  const SizedBox(height: 10),
+                  
+                  // בורר מצב להכנסות: ידני / דינמי
+                  if (isIncome) ...[
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('משכורת דינמית', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      subtitle: const Text('שאיבה ממוצעת מהיסטוריית עבודה', style: TextStyle(fontSize: 11)),
+                      value: isDynamic,
+                      activeThumbColor: Colors.blue,
+                      onChanged: (val) {
+                        setDialogState(() {
+                          isDynamic = val;
+                          if (isDynamic) {
+                            amountController.text = (avgSalary * factor * multiplier).toStringAsFixed(0);
+                          } else {
+                            amountController.text = (expense.monthlyAmount * factor * multiplier).toStringAsFixed(0);
+                          }
+                        });
+                      },
+                    ),
+                    if (isDynamic) ...[
+                       ListTile(
+                         contentPadding: EdgeInsets.zero,
+                         title: const Text('חודש תחילת עבודה:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                         subtitle: Text(startDateStr != null ? _formatMonthYear(startDateStr!) : 'מתחילת השנה'),
+                         trailing: const Icon(Icons.edit_calendar, size: 20, color: Colors.blue),
+                         onTap: () async {
+                           DateTime initial = startDateStr != null ? DateTime.parse(startDateStr!) : DateTime.now();
+                           final date = await showDatePicker(
+                             context: context,
+                             initialDate: initial,
+                             firstDate: DateTime(2000),
+                             lastDate: DateTime.now(),
+                           );
+                           if (date != null) {
+                             setDialogState(() {
+                               startDateStr = DateTime(date.year, date.month, 1).toIso8601String();
+                             });
+                           }
+                         }
+                       ),
+                    ],
+                    const Divider(),
+                  ],
+
+                  TextField(
+                    controller: amountController, 
+                    keyboardType: TextInputType.number, 
+                    enabled: !(isIncome && isDynamic), // ננעל לעריכה חופשית אם דינמי
+                    decoration: InputDecoration(
+                      labelText: expense.isPerChild ? 'סכום לתשלום (עבור כל הילדים)' : (isIncome ? 'סכום חודשי' : 'סכום לתשלום'), 
+                      suffixText: '₪',
+                      filled: isIncome && isDynamic,
+                      fillColor: Colors.grey[100]
+                    )
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButton<Frequency>(
+                    value: selectedFreq, isExpanded: true,
+                    items: const [DropdownMenuItem(value: Frequency.MONTHLY, child: Text('חודשי')), DropdownMenuItem(value: Frequency.BI_MONTHLY, child: Text('דו-חודשי')), DropdownMenuItem(value: Frequency.YEARLY, child: Text('שנתי'))],
+                    onChanged: (isIncome && isDynamic) ? null : (val) { 
+                      if (val != null) {
+                        setDialogState(() { selectedFreq = val; }); 
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   final val = double.tryParse(amountController.text);
                   final finalName = nameController.text.trim().isNotEmpty ? nameController.text.trim() : expense.name;
                   
-                  if (val != null) {
-                    double monthly = val;
+                  if (val != null || (isIncome && isDynamic)) {
+                    double monthly = val ?? 0;
                     if (selectedFreq == Frequency.YEARLY) {
-                      monthly = val / 12;
+                      monthly = monthly / 12;
                     } else if (selectedFreq == Frequency.BI_MONTHLY) {
-                      monthly = val / 2;
+                      monthly = monthly / 2;
                     }
-                    
                     monthly = monthly / multiplier;
 
-                    provider.updateExpense(Expense(
+                    await provider.updateExpense(Expense(
                       id: expense.id, 
                       name: finalName, 
                       category: expense.category, 
                       parentCategory: expense.parentCategory,
-                      monthlyAmount: monthly, frequency: selectedFreq, isSinking: expense.isSinking, isPerChild: expense.isPerChild,
-                      allocationRatio: expense.allocationRatio, isLocked: expense.isLocked, manualAmount: expense.manualAmount, date: expense.date,
+                      monthlyAmount: (isIncome && isDynamic) ? avgSalary : monthly, 
+                      frequency: selectedFreq, 
+                      isSinking: expense.isSinking, 
+                      isPerChild: expense.isPerChild,
+                      allocationRatio: expense.allocationRatio, 
+                      isLocked: expense.isLocked, 
+                      manualAmount: expense.manualAmount, 
+                      date: expense.date,
+                      isDynamicSalary: isDynamic,
+                      salaryStartDate: startDateStr,
                     ));
-                    Navigator.pop(ctx);
+                    
+                    await provider.loadData();
+                    if (ctx.mounted) Navigator.pop(ctx);
                   }
                 },
                 child: const Text('שמור'),
@@ -651,7 +775,6 @@ class SpecificExpensesScreen extends StatelessWidget {
     int multiplier = expense.isPerChild ? provider.childCount : 1;
     if (multiplier < 1) multiplier = 1;
 
-    // זיהוי עוגן הקניות כדי למנוע ממנו בחירת אחוזים
     bool isAnchor = expense.name.trim() == 'קניות' || (expense.category == 'משתנות' && expense.parentCategory == 'קניות');
 
     final amountController = TextEditingController(text: expense.isLocked ? (expense.monthlyAmount * multiplier).toStringAsFixed(0) : "");
@@ -1072,6 +1195,11 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
                   );
                 },
               ),
+              OutlinedButton.icon(
+                onPressed: () => _openWithdrawalDialog(null),
+                icon: const Icon(Icons.group, size: 18),
+                label: const Text('משיכה לכולם'),
+              ),
             ],
           ),
         ),
@@ -1256,7 +1384,6 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
     double totalCurrentBalance = widget.expenses.fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
     bool isKidsVariable = widget.parentCategory == 'ילדים - משתנות';
     
-    // סינון ילדים מתוך רשימת בני המשפחה
     final kids = widget.provider.familyMembers.where((fm) => (DateTime.now().year - fm.birthYear) <= 25).toList();
 
     return Padding(

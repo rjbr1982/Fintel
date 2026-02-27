@@ -1,4 +1,4 @@
-// 🔒 STATUS: NEW (Sinking Funds Center)
+// 🔒 STATUS: EDITED (Fixed Unified Funds to show only a single total balance edit field per Rule 4.4.6)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -121,7 +121,7 @@ class SinkingFundsScreen extends StatelessWidget {
                               showModalBottomSheet(
                                 context: context, isScrollControlled: true,
                                 shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                                builder: (ctx) => _UnifiedFundBottomSheetFromCenter(provider: provider, parentCategory: entry.key, expenses: entry.value),
+                                builder: (ctx) => _UnifiedFundBottomSheetFromCenter(parentCategory: entry.key, originalExpenses: entry.value),
                               );
                             },
                           ),
@@ -153,7 +153,7 @@ class SinkingFundsScreen extends StatelessWidget {
                               showModalBottomSheet(
                                 context: context, isScrollControlled: true,
                                 shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                                builder: (ctx) => _SinkingFundBottomSheetFromCenter(provider: provider, expense: expense),
+                                builder: (ctx) => _SinkingFundBottomSheetFromCenter(expense: expense),
                               );
                             },
                           ),
@@ -173,15 +173,14 @@ class SinkingFundsScreen extends StatelessWidget {
 }
 
 // =========================================================================
-// פאנלי המשיכה (עותק מותאם למרכז החסכונות)
+// פאנלי המשיכה והעריכה (משתמשים ב-Watch כדי להתעדכן בזמן אמת מעריכות)
 // =========================================================================
 
 class _UnifiedFundBottomSheetFromCenter extends StatefulWidget {
-  final BudgetProvider provider;
   final String parentCategory;
-  final List<Expense> expenses;
+  final List<Expense> originalExpenses;
 
-  const _UnifiedFundBottomSheetFromCenter({required this.provider, required this.parentCategory, required this.expenses});
+  const _UnifiedFundBottomSheetFromCenter({required this.parentCategory, required this.originalExpenses});
 
   @override
   State<_UnifiedFundBottomSheetFromCenter> createState() => _UnifiedFundBottomSheetFromCenterState();
@@ -200,10 +199,11 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
   }
 
   Future<void> _loadWithdrawals() async {
+    final provider = Provider.of<BudgetProvider>(context, listen: false);
     List<Withdrawal> all = [];
-    for (var e in widget.expenses) {
+    for (var e in widget.originalExpenses) {
       if (e.id != null) {
-        final w = await widget.provider.getWithdrawalsForExpense(e.id!);
+        final w = await provider.getWithdrawalsForExpense(e.id!);
         all.addAll(w);
       }
     }
@@ -212,18 +212,29 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
   }
 
   void _handleWithdrawal() async {
+    final provider = Provider.of<BudgetProvider>(context, listen: false);
     final amt = double.tryParse(_amountController.text);
-    if (amt != null && amt > 0 && widget.expenses.isNotEmpty && widget.expenses.first.id != null) {
-      await widget.provider.addWithdrawal(widget.expenses.first.id!, amt, _noteController.text.trim());
+    if (amt != null && amt > 0 && widget.originalExpenses.isNotEmpty && widget.originalExpenses.first.id != null) {
+      await provider.addWithdrawal(widget.originalExpenses.first.id!, amt, _noteController.text.trim());
       _amountController.clear();
       _noteController.clear();
       _loadWithdrawals();
     }
   }
 
+  void _showEditUnifiedDialog(List<Expense> currentExpenses) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _EditUnifiedBalancesDialog(expenses: currentExpenses, parentCategory: widget.parentCategory),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    double totalCurrentBalance = widget.expenses.fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
+    // האזנה אקטיבית לשינויים כדי שהיתרה תתעדכן מיד אחרי שמירת העריכה
+    final provider = Provider.of<BudgetProvider>(context);
+    final currentExpenses = provider.expenses.where((e) => widget.originalExpenses.any((we) => we.id == e.id)).toList();
+    double totalCurrentBalance = currentExpenses.fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
     
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
@@ -243,7 +254,19 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                      Text('₪${totalCurrentBalance.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
+                      Row(
+                        children: [
+                          Text('₪${totalCurrentBalance.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _showEditUnifiedDialog(currentExpenses),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4.0),
+                              child: Icon(Icons.edit, color: Colors.green, size: 20),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ],
@@ -275,7 +298,7 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
                   leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.green : Colors.redAccent),
                   title: Text('₪${w.amount.abs().toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.redAccent)),
                   subtitle: Text('${w.note}\n${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12)),
-                  trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18), onPressed: () async { await widget.provider.deleteWithdrawal(w); _loadWithdrawals(); }),
+                  trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18), onPressed: () async { await provider.deleteWithdrawal(w); _loadWithdrawals(); }),
                 );
               },
             ),
@@ -288,10 +311,8 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
 }
 
 class _SinkingFundBottomSheetFromCenter extends StatefulWidget {
-  final BudgetProvider provider;
   final Expense expense;
-
-  const _SinkingFundBottomSheetFromCenter({required this.provider, required this.expense});
+  const _SinkingFundBottomSheetFromCenter({required this.expense});
 
   @override
   State<_SinkingFundBottomSheetFromCenter> createState() => _SinkingFundBottomSheetFromCenterState();
@@ -310,23 +331,33 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
   }
 
   Future<void> _loadWithdrawals() async {
-    final data = await widget.provider.getWithdrawalsForExpense(widget.expense.id!);
+    final provider = Provider.of<BudgetProvider>(context, listen: false);
+    final data = await provider.getWithdrawalsForExpense(widget.expense.id!);
     if (mounted) setState(() { _withdrawals = data; _isLoading = false; });
   }
 
   void _handleWithdrawal() async {
+    final provider = Provider.of<BudgetProvider>(context, listen: false);
     final amt = double.tryParse(_amountController.text);
     if (amt != null && amt > 0) {
-      await widget.provider.addWithdrawal(widget.expense.id!, amt, _noteController.text.trim());
+      await provider.addWithdrawal(widget.expense.id!, amt, _noteController.text.trim());
       _amountController.clear();
       _noteController.clear();
       _loadWithdrawals();
     }
   }
 
+  void _showEditIndividualDialog(Expense currentExpense) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _EditIndividualBalanceDialog(expense: currentExpense),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currentExpense = widget.provider.expenses.firstWhere((e) => e.id == widget.expense.id, orElse: () => widget.expense);
+    final provider = Provider.of<BudgetProvider>(context);
+    final currentExpense = provider.expenses.firstWhere((e) => e.id == widget.expense.id, orElse: () => widget.expense);
     
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
@@ -346,7 +377,19 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                      Text('₪${(currentExpense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue)),
+                      Row(
+                        children: [
+                          Text('₪${(currentExpense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue)),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _showEditIndividualDialog(currentExpense),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4.0),
+                              child: Icon(Icons.edit, color: Colors.blue, size: 20),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ],
@@ -378,7 +421,7 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
                   leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.green : Colors.redAccent),
                   title: Text('₪${w.amount.abs().toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.redAccent)),
                   subtitle: Text('${w.note}\n${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12)),
-                  trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18), onPressed: () async { await widget.provider.deleteWithdrawal(w); _loadWithdrawals(); }),
+                  trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18), onPressed: () async { await provider.deleteWithdrawal(w); _loadWithdrawals(); }),
                 );
               },
             ),
@@ -386,6 +429,128 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
           ],
         ),
       ),
+    );
+  }
+}
+
+// =========================================================================
+// דיאלוגים לעריכת יתרות (עם ניהול State ל-Controllers)
+// =========================================================================
+
+class _EditIndividualBalanceDialog extends StatefulWidget {
+  final Expense expense;
+  const _EditIndividualBalanceDialog({required this.expense});
+
+  @override
+  State<_EditIndividualBalanceDialog> createState() => _EditIndividualBalanceDialogState();
+}
+
+class _EditIndividualBalanceDialogState extends State<_EditIndividualBalanceDialog> {
+  late TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: (widget.expense.currentBalance ?? 0).toStringAsFixed(0));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('עריכת יתרה צבורה'),
+      content: TextField(
+        controller: _ctrl,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(labelText: 'סכום צבור חדש', suffixText: '₪'),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+        ElevatedButton(
+          onPressed: () async {
+            final val = double.tryParse(_ctrl.text);
+            if (val != null) {
+              await Provider.of<BudgetProvider>(context, listen: false).setExpenseCurrentBalance(widget.expense.id!, val);
+              if (!context.mounted) return;
+              Navigator.pop(context);
+            }
+          },
+          child: const Text('שמור'),
+        ),
+      ],
+    );
+  }
+}
+
+// שונה לניהול סכום אחד כולל במקום פירוט תתי-סעיפים (לפי סעיף 4.4.6 בחוקה)
+class _EditUnifiedBalancesDialog extends StatefulWidget {
+  final List<Expense> expenses;
+  final String parentCategory;
+  const _EditUnifiedBalancesDialog({required this.expenses, required this.parentCategory});
+
+  @override
+  State<_EditUnifiedBalancesDialog> createState() => _EditUnifiedBalancesDialogState();
+}
+
+class _EditUnifiedBalancesDialogState extends State<_EditUnifiedBalancesDialog> {
+  late TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    double totalCurrent = widget.expenses.fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
+    _ctrl = TextEditingController(text: totalCurrent.toStringAsFixed(0));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('עריכת יתרה - ${widget.parentCategory}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('הזן את הסכום הכולל שנצבר בקופה זו:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _ctrl,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'סכום צבור כולל', suffixText: '₪', border: OutlineInputBorder()),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+        ElevatedButton(
+          onPressed: () async {
+            final val = double.tryParse(_ctrl.text);
+            if (val != null) {
+              final provider = Provider.of<BudgetProvider>(context, listen: false);
+              // שיוך כל הסכום לסעיף הראשון, ואיפוס השאר, כדי לשמור על קופה מאוחדת
+              for (int i = 0; i < widget.expenses.length; i++) {
+                if (i == 0) {
+                  await provider.setExpenseCurrentBalance(widget.expenses[i].id!, val);
+                } else {
+                  await provider.setExpenseCurrentBalance(widget.expenses[i].id!, 0);
+                }
+              }
+              if (!context.mounted) return;
+              Navigator.pop(context);
+            }
+          },
+          child: const Text('שמור'),
+        ),
+      ],
     );
   }
 }

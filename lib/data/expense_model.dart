@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Withdrawal Model for Sinking Funds)
+// 🔒 STATUS: EDITED (Added SalaryRecord & Dynamic Salary Fields)
 // ignore_for_file: constant_identifier_names
 
 // הגדרת האפשרויות לתדירות התשלום
@@ -31,7 +31,7 @@ class FamilyMember {
   }
 }
 
-// --- מודל הוצאה ---
+// --- מודל הוצאה / הכנסה ---
 class Expense {
   final int? id;
   final String name;          
@@ -52,6 +52,10 @@ class Expense {
   final bool isLocked;        
   final double? manualAmount; 
 
+  // --- שדות מנוע ממוצע שכר (NEW) ---
+  final bool isDynamicSalary;
+  final String? salaryStartDate;
+
   final String date; 
 
   Expense({
@@ -70,6 +74,8 @@ class Expense {
     this.lastUpdateDate,
     this.isLocked = false, 
     this.manualAmount,
+    this.isDynamicSalary = false,
+    this.salaryStartDate,
     required this.date,
   }) : originalAmount = originalAmount ?? monthlyAmount;
 
@@ -90,6 +96,8 @@ class Expense {
       'lastUpdateDate': lastUpdateDate,
       'isLocked': isLocked ? 1 : 0,
       'manualAmount': manualAmount,
+      'isDynamicSalary': isDynamicSalary ? 1 : 0,
+      'salaryStartDate': salaryStartDate,
       'date': date,
     };
   }
@@ -111,12 +119,14 @@ class Expense {
       lastUpdateDate: map['lastUpdateDate'],
       isLocked: (map['isLocked'] ?? 0) == 1,
       manualAmount: (map['manualAmount'] as num?)?.toDouble(),
+      isDynamicSalary: (map['isDynamicSalary'] ?? 0) == 1,
+      salaryStartDate: map['salaryStartDate'],
       date: map['date'] ?? DateTime.now().toIso8601String(),
     );
   }
 }
 
-// --- מודל משיכה מהוצאה צוברת (NEW) ---
+// --- מודל משיכה מהוצאה צוברת ---
 class Withdrawal {
   final int? id;
   final int expenseId;
@@ -149,6 +159,43 @@ class Withdrawal {
       amount: (map['amount'] as num).toDouble(),
       date: map['date'] ?? '',
       note: map['note'] ?? '',
+    );
+  }
+}
+
+// --- מודל תיעוד ממוצע שכר (NEW) ---
+class SalaryRecord {
+  final int? id;
+  final int expenseId; // משויך להכנסה מהסוג 'משכורת'
+  final String monthYear; // בפורמט: YYYY-MM
+  final double netAmount;
+  final double hours;
+
+  SalaryRecord({
+    this.id,
+    required this.expenseId,
+    required this.monthYear,
+    required this.netAmount,
+    required this.hours,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'expenseId': expenseId,
+      'monthYear': monthYear,
+      'netAmount': netAmount,
+      'hours': hours,
+    };
+  }
+
+  factory SalaryRecord.fromMap(Map<String, dynamic> map) {
+    return SalaryRecord(
+      id: map['id'],
+      expenseId: map['expenseId'],
+      monthYear: map['monthYear'] ?? '',
+      netAmount: (map['netAmount'] as num).toDouble(),
+      hours: (map['hours'] as num).toDouble(),
     );
   }
 }

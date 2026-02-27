@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Merged Original Header with Sinking Funds Button)
+// 🔒 STATUS: EDITED (Clean Action Menu & Brand Styling)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,18 +6,20 @@ import '../../providers/budget_provider.dart';
 import '../../utils/app_localizations.dart';
 import '../../services/ai_export_service.dart';
 import '../screens/onboarding_screen.dart';
-import '../screens/sinking_funds_screen.dart'; // <-- הייבוא החדש למסך הקופות!
+import '../screens/sinking_funds_screen.dart';
+
+enum MenuAction { savings, ai, settings }
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
   final bool showBackButton;
-  final bool showSavingsIcon; // <-- נוסף כדי לאפשר הסתרה של הכפתור כשכבר נמצאים במסך הקופה
+  final bool showSavingsIcon;
 
   const GlobalHeader({
     super.key,
     this.title,
     this.showBackButton = true,
-    this.showSavingsIcon = true, // ברירת מחדל: מציג את הכפתור
+    this.showSavingsIcon = true,
   });
 
   @override
@@ -28,6 +30,9 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
     final budget = context.watch<BudgetProvider>();
     final loc = AppLocalizations.of(context);
     final canPop = Navigator.of(context).canPop();
+
+    // צבע המותג Fintel
+    const brandBlue = Color(0xFF00A3FF);
 
     return AppBar(
       backgroundColor: Colors.white,
@@ -65,55 +70,83 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
       ),
       
       actions: [
-        // --- הכפתור החדש של מרכז החסכונות ---
-        if (showSavingsIcon)
-          Padding(
-            padding: const EdgeInsets.only(left: 8.0),
-            child: IconButton(
-              icon: const Icon(Icons.savings_outlined, color: Colors.green, size: 28),
-              tooltip: 'מרכז החסכונות והקופות',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SinkingFundsScreen()),
-                );
-              },
-            ),
-          ),
-        // ------------------------------------
-
-        IconButton(
-          icon: const Icon(Icons.psychology, color: Colors.deepPurple),
-          tooltip: 'ייצוא נתונים ל-AI',
-          onPressed: () async {
-            await AiExportService.generateAndCopy(context);
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('הנתונים הועתקו בהצלחה! ניתן להדביק בצ\'אט עם ה-AI.'),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 3),
-                ),
-              );
-            }
-          },
-        ),
-
+        // כפתור חזרה מהירה לדשבורד (תמיד גלוי במסכים פנימיים - סעיף 5.6.3)
         if (canPop)
           IconButton(
-            icon: const Icon(Icons.dashboard_outlined, color: Colors.blueGrey),
+            icon: const Icon(Icons.dashboard_outlined, color: brandBlue),
             tooltip: 'חזרה לדשבורד',
             onPressed: () {
               Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
             },
           ),
         
-        IconButton(
-          icon: const Icon(Icons.settings, color: Colors.blueGrey),
-          tooltip: 'הגדרות מערכת',
-          onPressed: () => _showMainSettingsDialog(context, budget),
+        // תפריט פעולות מאוחד (Action Menu)
+        PopupMenuButton<MenuAction>(
+          icon: const Icon(Icons.more_vert, color: brandBlue),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          offset: const Offset(0, 40),
+          tooltip: 'תפריט פעולות',
+          onSelected: (MenuAction action) async {
+            switch (action) {
+              case MenuAction.savings:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SinkingFundsScreen()),
+                );
+                break;
+              case MenuAction.ai:
+                await AiExportService.generateAndCopy(context);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('הנתונים הועתקו בהצלחה! ניתן להדביק בצ\'אט עם ה-AI.'),
+                      backgroundColor: Colors.green,
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
+                break;
+              case MenuAction.settings:
+                _showMainSettingsDialog(context, budget);
+                break;
+            }
+          },
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<MenuAction>>[
+            if (showSavingsIcon)
+              const PopupMenuItem<MenuAction>(
+                value: MenuAction.savings,
+                child: Row(
+                  children: [
+                    Icon(Icons.savings_outlined, color: Colors.green, size: 22),
+                    SizedBox(width: 12),
+                    Text('מרכז החסכונות'),
+                  ],
+                ),
+              ),
+            if (showSavingsIcon) const PopupMenuDivider(),
+            const PopupMenuItem<MenuAction>(
+              value: MenuAction.ai,
+              child: Row(
+                children: [
+                  Icon(Icons.psychology, color: Colors.deepPurple, size: 22),
+                  SizedBox(width: 12),
+                  Text('ייצוא נתונים ל-AI'),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem<MenuAction>(
+              value: MenuAction.settings,
+              child: Row(
+                children: [
+                  Icon(Icons.settings, color: Colors.blueGrey, size: 22),
+                  SizedBox(width: 12),
+                  Text('הגדרות מערכת'),
+                ],
+              ),
+            ),
+          ],
         ),
-        
         const SizedBox(width: 4),
       ],
     );
@@ -140,12 +173,10 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
               _showFutureVsFinancialDialog(context, budget);
           }),
           const Divider(),
-          // מנגנון ההתנתקות החדש:
           _buildSettingsTile(ctx, Icons.logout, 'התנתקות מהחשבון (Log Out)', () async {
               Navigator.pop(ctx);
               await FirebaseAuth.instance.signOut();
               if (context.mounted) {
-                // ניתוב מחדש לשער (AuthGate) שיזהה שהמשתמש התנתק ויציג מסך התחברות
                 Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
               }
           }),
@@ -305,8 +336,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
             onPressed: () async {
               await budget.fullAppReset();
               if (ctx.mounted) {
-                Navigator.pop(ctx); // סוגר את חלונית האישור
-                // פקודת הניווט שזורקת ישירות למסך הקליטה לאחר איפוס
+                Navigator.pop(ctx);
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const OnboardingScreen()),
                   (route) => false,

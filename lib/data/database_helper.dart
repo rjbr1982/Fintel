@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Checking Account History CRUD & Streams)
+// 🔒 STATUS: EDITED (Added Salary Records CRUD & Streams)
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,7 +6,7 @@ import 'expense_model.dart';
 import 'debt_model.dart';
 import 'asset_model.dart'; 
 import 'shopping_model.dart';
-import 'checking_model.dart'; // <--- הייבוא החדש
+import 'checking_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -56,10 +56,15 @@ class DatabaseHelper {
     return _userCollection('app_settings').snapshots();
   }
 
-  // זרם עו"ש
   Stream<List<CheckingEntry>> streamCheckingHistory() {
     return _userCollection('checking_history').orderBy('date', descending: true).snapshots().map((snap) =>
         snap.docs.map((doc) => CheckingEntry.fromMap(doc.data() as Map<String, dynamic>)).toList());
+  }
+
+  // זרם היסטוריית שכר (NEW)
+  Stream<List<SalaryRecord>> streamSalaryRecords() {
+    return _userCollection('salary_records').snapshots().map((snap) =>
+        snap.docs.map((doc) => SalaryRecord.fromMap(doc.data() as Map<String, dynamic>)).toList());
   }
 
   // ==========================================
@@ -111,10 +116,11 @@ class DatabaseHelper {
     await _deleteCollection('family_members');
     await _deleteCollection('withdrawals'); 
     await _deleteCollection('checking_history'); 
+    await _deleteCollection('salary_records'); // NEW
   }
 
   // ==========================================
-  // CRUD פעולות חד פעמיות
+  // CRUD פעולות
   // ==========================================
 
   Future<int> insertFamilyMember(FamilyMember fm) async {
@@ -266,6 +272,32 @@ class DatabaseHelper {
 
   Future<int> deleteCheckingEntry(int id) async {
     await _userCollection('checking_history').doc(id.toString()).delete();
+    return id;
+  }
+
+  // ==========================================
+  // CRUD למנוע שכר (NEW)
+  // ==========================================
+  Future<List<SalaryRecord>> getSalaryRecords() async {
+    final snap = await _userCollection('salary_records').get();
+    return snap.docs.map((doc) => SalaryRecord.fromMap(doc.data() as Map<String, dynamic>)).toList();
+  }
+
+  Future<int> insertSalaryRecord(SalaryRecord r) async {
+    final id = r.id ?? _generateId();
+    final map = r.toMap();
+    map['id'] = id;
+    await _userCollection('salary_records').doc(id.toString()).set(map);
+    return id;
+  }
+
+  Future<int> updateSalaryRecord(SalaryRecord r) async {
+    await _userCollection('salary_records').doc(r.id.toString()).update(r.toMap());
+    return r.id ?? 0;
+  }
+
+  Future<int> deleteSalaryRecord(int id) async {
+    await _userCollection('salary_records').doc(id.toString()).delete();
     return id;
   }
 }
