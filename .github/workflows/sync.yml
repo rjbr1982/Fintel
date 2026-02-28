@@ -2,7 +2,7 @@ name: Sync to Google Drive
 on:
   push:
     branches:
-      - main  # או master
+      - main  # אם הבראנץ' שלך הוא master, שנה את המילה main ל-master
 
 jobs:
   deploy:
