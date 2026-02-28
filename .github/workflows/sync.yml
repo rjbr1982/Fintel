@@ -2,7 +2,7 @@ name: Sync to Google Drive
 on:
   push:
     branches:
-      - main  # אם הבראנץ' שלך הוא master, שנה את המילה main ל-master
+      - main  # אם הבראנץ' שלך הוא master, שנה ל-master
 
 jobs:
   deploy:
@@ -18,4 +18,4 @@ jobs:
           RCLONE_CONFIG_DRIVE_SCOPE: drive
           RCLONE_CONFIG_DRIVE_SERVICE_ACCOUNT_CREDENTIALS: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
         with:
-          args: sync ./ drive: --drive-root-folder-id=1VpYEaFwf76Ad_cHoQGwGzbjvgEinQtUf --drive-use-trash=false --exclude "/.git/**" --exclude "/build/**" --exclude "/.dart_tool/**" --exclude "/.idea/**"
+          args: 'sync ./ drive: --drive-root-folder-id=1VpYEaFwf76Ad_cHoQGwGzbjvgEinQtUf --drive-use-trash=false --exclude "/.git/**" --exclude "/build/**" --exclude "/.dart_tool/**" --exclude "/.idea/**"'
