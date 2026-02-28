@@ -2,7 +2,7 @@ name: Sync to Google Drive
 on:
   push:
     branches:
-      - main  # אם הבראנץ' הראשי שלך נקרא master, שנה ל-master
+      - main  # או master בהתאם למה שיש אצלך
 
 jobs:
   deploy:
@@ -16,6 +16,6 @@ jobs:
         env:
           RCLONE_CONFIG_DRIVE_TYPE: drive
           RCLONE_CONFIG_DRIVE_SCOPE: drive
-          RCLONE_CONFIG_DRIVE_SERVICE_ACCOUNT_CONTENTS: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
+          RCLONE_CONFIG_DRIVE_SERVICE_ACCOUNT_CREDENTIALS: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
         with:
           args: sync ./ drive:Fintel_Source/ --drive-use-trash=false --exclude "/.git/**" --exclude "/build/**" --exclude "/.dart_tool/**" --exclude "/.idea/**"
