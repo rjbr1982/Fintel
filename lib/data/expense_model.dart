@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added SalaryRecord & Dynamic Salary Fields)
+// 🔒 STATUS: EDITED (Added isCustom flag for Flexible Model Principle 4.7)
 // ignore_for_file: constant_identifier_names
 
 // הגדרת האפשרויות לתדירות התשלום
@@ -52,9 +52,12 @@ class Expense {
   final bool isLocked;        
   final double? manualAmount; 
 
-  // --- שדות מנוע ממוצע שכר (NEW) ---
+  // --- שדות מנוע ממוצע שכר ---
   final bool isDynamicSalary;
   final String? salaryStartDate;
+
+  // --- שדה תשתית גמישה (NEW) ---
+  final bool isCustom; // האם מדובר בהוצאה שיצר המשתמש (ניתנת למחיקה)?
 
   final String date; 
 
@@ -76,6 +79,7 @@ class Expense {
     this.manualAmount,
     this.isDynamicSalary = false,
     this.salaryStartDate,
+    this.isCustom = false, // ברירת מחדל: נתוני מערכת מוגנים (Seed)
     required this.date,
   }) : originalAmount = originalAmount ?? monthlyAmount;
 
@@ -98,6 +102,7 @@ class Expense {
       'manualAmount': manualAmount,
       'isDynamicSalary': isDynamicSalary ? 1 : 0,
       'salaryStartDate': salaryStartDate,
+      'isCustom': isCustom ? 1 : 0,
       'date': date,
     };
   }
@@ -121,6 +126,7 @@ class Expense {
       manualAmount: (map['manualAmount'] as num?)?.toDouble(),
       isDynamicSalary: (map['isDynamicSalary'] ?? 0) == 1,
       salaryStartDate: map['salaryStartDate'],
+      isCustom: (map['isCustom'] ?? 0) == 1,
       date: map['date'] ?? DateTime.now().toIso8601String(),
     );
   }
@@ -163,11 +169,11 @@ class Withdrawal {
   }
 }
 
-// --- מודל תיעוד ממוצע שכר (NEW) ---
+// --- מודל תיעוד ממוצע שכר ---
 class SalaryRecord {
   final int? id;
-  final int expenseId; // משויך להכנסה מהסוג 'משכורת'
-  final String monthYear; // בפורמט: YYYY-MM
+  final int expenseId; 
+  final String monthYear; 
   final double netAmount;
   final double hours;
 

@@ -1,26 +1,18 @@
-# 📂 סטטוס פרויקט (Project Status)
+# Project Status - Fintel
 
-## 📌 תאריך עדכון אחרון
-סיום סשן - מנוע ממוצע שכר (Salary Engine) וניקוי ממשק משתמש.
+## Current Technical State
+- **Sync Architecture:** GitHub Actions -> Rclone -> Google Drive -> Make.com Webhook.
+- **Output Artifact:** `Fintel_Brain.txt` (Unified knowledge source).
+- **Primary Branch:** main.
+- **Linter Status:** Zero Warnings Policy (5.4) enforced.
 
-## ✅ מה בוצע (Completed in this session):
-1. **עיצוב מחדש (Global Header):** הסרגל העליון נוקה. הפעולות אוגדו לתפריט נפתח (Action Menu) לשמירה על ממשק "קנבס נקי".
-2. **מבנה נתונים לשכר:** נוצר מודל `SalaryRecord` המאזין בזמן אמת ל-Firestore. למודל ההוצאות/הכנסות התווספו תכונות חדשות למעקב דינמי וחודש תחילת עבודה.
-3. **מנוע חכם (BudgetProvider):** שולבה לוגיקה לחישוב שכר ממוצע לפי "חודשי עבודה בפועל" וחישוב שווי שעת עבודה.
-4. **דשבורד שכר (Salary Engine Screen):** נבנה מסך סטטיסטיקה ייעודי עם יכולת הזנת נתוני נטו/שעות, תצוגת נתוני YTD מול תחזית שנתית, וגרפים (Bar Charts) מובנים שמראים מגמות שכר לאורך זמן.
-5. **אינטגרציה לתקציב:** שדה ההכנסות בתזרים תומך כעת בבחירה בין "סכום ידני" ל"משכורת דינמית" הנשאבת אוטומטית ממנוע הסטטיסטיקה ומונעת גירעון סמוי.
+## Strategic Decision Log (6.6)
+| תאריך | החלטה ארכיטקטונית | נימוק ואילוץ |
+| :--- | :--- | :--- |
+| 01/03/26 | הקמת גשר "מוח פינטל" | הצורך להנגיש מידע טכני ליועץ אסטרטגי (Gemini) ללא גישה ל-Git. |
+| 01/03/26 | הפרדת זהויות Jam/Gemini | מניעת בלבול בין הנחיות פיתוח קשיחות להצעות שיווקיות גמישות. |
+| 01/03/26 | סנכרון תיקיית שורש (Root) | אילוץ: היועץ זקוק ל-project_status.md כדי להבין את ההקשר המלא. |
 
-## 📁 קבצים שעודכנו / נוצרו:
-- 🟡 `lib/ui/widgets/global_header.dart` (ניקוי ועיצוב)
-- 🟡 `lib/data/expense_model.dart` (הוספת מודל שכר)
-- 🟡 `lib/data/database_helper.dart` (CRUD שכר)
-- 🟡 `lib/providers/budget_provider.dart` (לוגיקה ו-Streams)
-- 🟡 `lib/ui/screens/category_drilldown_screen.dart` (מתג דינמי)
-- 🟢 `lib/ui/screens/salary_engine_screen.dart` (קובץ חדש - דשבורד ממוצע שכר)
-
-## 📖 סטטוס חוקה:
-מעודכנת - גרסה 12.14 (הוטמע סעיף 4.19: מנוע ממוצע שכר).
-
-## 🚀 הצעדים הבאים (Next Steps):
-- [ ] פרויקט לוקליזציה (Globalization) - עקירת Hardcoded Strings והכנה לריבוי שפות (בהמשך).
-- [ ] פיתוח ובדיקת מודול ה"מנמיכות" (חיסול חובות בשיטת כדור השלג).
+## Pending Tasks
+- [ ] בדיקת תקינות הקובץ המאוחד (Fintel_Brain.txt) לאחר Push ראשון.
+- [ ] המשך פיתוח לוגיקת ה-15% ומנוע החירות (4.14).

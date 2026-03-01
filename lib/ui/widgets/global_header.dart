@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Checking & Salary Actions to Menu)
+// 🔒 STATUS: EDITED (Fixed Linter Warnings - withOpacity & activeColor deprecations)
 // lib/ui/widgets/global_header.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -34,7 +34,6 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
     final loc = AppLocalizations.of(context);
     final canPop = Navigator.of(context).canPop();
 
-    // צבע המותג Fintel
     const brandBlue = Color(0xFF00A3FF);
 
     return AppBar(
@@ -73,7 +72,6 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
       ),
       
       actions: [
-        // כפתור חזרה מהירה לדשבורד (תמיד גלוי במסכים פנימיים - סעיף 5.6.3)
         if (canPop)
           IconButton(
             icon: const Icon(Icons.dashboard_outlined, color: brandBlue),
@@ -83,7 +81,6 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
             },
           ),
         
-        // תפריט פעולות מאוחד (Action Menu)
         PopupMenuButton<MenuAction>(
           icon: const Icon(Icons.more_vert, color: brandBlue),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -191,51 +188,89 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   void _showMainSettingsDialog(BuildContext context, BudgetProvider budget) {
     showDialog(
       context: context,
-      builder: (ctx) => SimpleDialog(
-        title: const Text('הגדרות מערכת', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
-        children: [
-          _buildSettingsTile(ctx, Icons.family_restroom_rounded, 'הגדרות משפחה', () {
-              Navigator.pop(ctx);
-              _showFamilySettingsDialog(context, budget);
-          }),
-          const Divider(),
-          _buildSettingsTile(ctx, Icons.pie_chart_outline, 'אחוז משתנות (רמת חיים)', () {
-              Navigator.pop(ctx);
-              _showRatioSettingsDialog(context, budget);
-          }),
-          const Divider(),
-          _buildSettingsTile(ctx, Icons.balance, 'חלוקת שארית (עתידיות/פיננסיות)', () {
-              Navigator.pop(ctx);
-              _showFutureVsFinancialDialog(context, budget);
-          }),
-          const Divider(),
-          _buildSettingsTile(ctx, Icons.logout, 'התנתקות מהחשבון (Log Out)', () async {
-              Navigator.pop(ctx);
-              await FirebaseAuth.instance.signOut();
-              if (context.mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
-              }
-          }),
-          const Divider(),
-          _buildSettingsTile(ctx, Icons.restore, 'איפוס כל הנתונים (Factory Reset)', () {
-              Navigator.pop(ctx);
-              _showFactoryResetConfirm(context, budget);
-          }, color: Colors.red[700]),
-        ],
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.settings_outlined, color: Colors.blueGrey, size: 28),
+                  SizedBox(width: 10),
+                  Text('הגדרות מערכת', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87)),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildSettingsCard(ctx, Icons.family_restroom_rounded, 'הגדרות משפחה וישויות', () {
+                  Navigator.pop(ctx);
+                  _showFamilySettingsDialog(context, budget);
+              }, Colors.blue),
+              _buildSettingsCard(ctx, Icons.pie_chart_outline, 'אחוז משתנות (רמת חיים)', () {
+                  Navigator.pop(ctx);
+                  _showRatioSettingsDialog(context, budget);
+              }, Colors.orange),
+              _buildSettingsCard(ctx, Icons.balance, 'חלוקת שארית (עתידיות/פיננסיות)', () {
+                  Navigator.pop(ctx);
+                  _showFutureVsFinancialDialog(context, budget);
+              }, Colors.purple),
+              
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Divider(height: 1),
+              ),
+              
+              _buildSettingsCard(ctx, Icons.logout, 'התנתקות מהחשבון (Log Out)', () async {
+                  Navigator.pop(ctx);
+                  await FirebaseAuth.instance.signOut();
+                  if (context.mounted) {
+                    Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+                  }
+              }, Colors.blueGrey),
+              _buildSettingsCard(ctx, Icons.restore, 'איפוס כל הנתונים', () {
+                  Navigator.pop(ctx);
+                  _showFactoryResetConfirm(context, budget);
+              }, Colors.red),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildSettingsTile(BuildContext ctx, IconData icon, String text, VoidCallback onTap, {Color? color}) {
-    return SimpleDialogOption(
-      onPressed: onTap,
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-      child: Row(
-        children: [
-          Icon(icon, color: color ?? Colors.blueGrey, size: 22),
-          const SizedBox(width: 16),
-          Text(text, style: TextStyle(fontSize: 16, color: color)),
-        ],
+  Widget _buildSettingsCard(BuildContext ctx, IconData icon, String text, VoidCallback onTap, Color iconColor) {
+    return Card(
+      elevation: 0,
+      color: iconColor.withValues(alpha: 0.05),
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: iconColor.withValues(alpha: 0.1))
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: iconColor.withValues(alpha: 0.15),
+                radius: 18,
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(text, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.blueGrey[900])),
+              ),
+              Icon(Icons.arrow_forward_ios, size: 14, color: Colors.blueGrey[300]),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -249,10 +284,11 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('חלוקת יתרת החיסכון'),
+              const Text('חלוקת יתרת החיסכון', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               IconButton(
                 icon: const Icon(Icons.refresh, color: Colors.blue),
                 onPressed: () {
@@ -320,10 +356,11 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('הגדרת רמת חיים'),
+            const Text('הגדרת רמת חיים', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             IconButton(
               icon: const Icon(Icons.refresh, color: Colors.blue),
               onPressed: () {
@@ -338,7 +375,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text('אחוז מההכנסה הפנויה להוצאות משתנות.', style: TextStyle(fontSize: 13, color: Colors.grey)),
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
             TextField(controller: controller, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'אחוז הקצאה', suffixText: '%', border: OutlineInputBorder())),
           ],
         ),
@@ -363,10 +400,11 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('⚠️ אזהרה: איפוס נתונים'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('⚠️ אזהרה: איפוס נתונים', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
         content: const Text('פעולה זו תמחק הכל ותחזיר את האפליקציה למצב התחלתי. לא ניתן לבטל!'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול', style: TextStyle(color: Colors.blueGrey))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
@@ -379,7 +417,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                 );
               }
             },
-            child: const Text('אפס הכל', style: TextStyle(color: Colors.white)),
+            child: const Text('אפס הכל', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -392,50 +430,91 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('הגדרות משפחה', textAlign: TextAlign.center),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('הגדרות משפחה וישויות', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
             content: SizedBox(
               width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('מספר ילדים:'),
-                      Row(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          IconButton(onPressed: budget.childCount > 0 ? () { budget.setChildCount(budget.childCount - 1); setDialogState(() {}); } : null, icon: const Icon(Icons.remove_circle_outline)),
-                          Text('${budget.childCount}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          IconButton(onPressed: () { budget.setChildCount(budget.childCount + 1); setDialogState(() {}); }, icon: const Icon(Icons.add_circle_outline)),
+                          const Text('מספר ילדים:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Row(
+                            children: [
+                              IconButton(onPressed: budget.childCount > 0 ? () { budget.setChildCount(budget.childCount - 1); setDialogState(() {}); } : null, icon: const Icon(Icons.remove_circle_outline, color: Colors.blue)),
+                              Text('${budget.childCount}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
+                              IconButton(onPressed: () { budget.setChildCount(budget.childCount + 1); setDialogState(() {}); }, icon: const Icon(Icons.add_circle_outline, color: Colors.blue)),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Flexible(
-                    child: ListView.builder(
+                    ),
+                    const SizedBox(height: 16),
+                    ListView.builder(
                       shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
                       itemCount: budget.familyMembers.length,
                       itemBuilder: (context, index) {
                         final member = budget.familyMembers[index];
-                        return ListTile(
-                          title: Text(member.name),
-                          subtitle: Text('גיל: ${member.age}'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red), 
-                            onPressed: () async { 
-                              if (member.id != null) { 
-                                await budget.removeFamilyMember(member.id!); 
-                                if (ctx.mounted) setDialogState(() {}); 
-                              } 
-                            }
+                        return Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey[200]!)),
+                          child: ListTile(
+                            leading: CircleAvatar(backgroundColor: Colors.orange[50], child: const Icon(Icons.person, color: Colors.orange)),
+                            title: Text(member.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('גיל: ${member.age}'),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent), 
+                              onPressed: () async { 
+                                if (member.id != null) { 
+                                  await budget.removeFamilyMember(member.id!); 
+                                  if (ctx.mounted) setDialogState(() {}); 
+                                } 
+                              }
+                            ),
                           ),
                         );
                       },
                     ),
-                  ),
-                  ElevatedButton(onPressed: () => _showAddMemberDialog(context, budget, setDialogState), child: const Text('הוסף בן משפחה')),
-                ],
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey[900], foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                      icon: const Icon(Icons.person_add, size: 18),
+                      label: const Text('הוסף בן משפחה'),
+                      onPressed: () => _showAddMemberDialog(context, budget, setDialogState)
+                    ),
+                    const Divider(height: 30),
+                    const Text('ניהול ישויות בתקציב המשתנות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('תקציב אבא פעיל'),
+                      value: budget.isFatherActive,
+                      activeThumbColor: Colors.green,
+                      onChanged: (val) { budget.toggleEntityActive('father', val); setDialogState((){}); },
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('תקציב אמא פעיל'),
+                      value: budget.isMotherActive,
+                      activeThumbColor: Colors.green,
+                      onChanged: (val) { budget.toggleEntityActive('mother', val); setDialogState((){}); },
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('תקציב ילדים פעיל'),
+                      value: budget.isKidsActive,
+                      activeThumbColor: Colors.green,
+                      onChanged: (val) { budget.toggleEntityActive('kids', val); setDialogState((){}); },
+                    ),
+                  ],
+                ),
               ),
             ),
             actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('סגור'))],
@@ -451,12 +530,14 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('בן משפחה חדש'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('בן משפחה חדש', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם')),
-            TextField(controller: yearController, decoration: const InputDecoration(labelText: 'שנת לידה'), keyboardType: TextInputType.number),
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם מלא', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: yearController, decoration: const InputDecoration(labelText: 'שנת לידה (למשל 2015)', border: OutlineInputBorder()), keyboardType: TextInputType.number),
           ],
         ),
         actions: [

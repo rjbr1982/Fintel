@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Removed Unused Import)
+// 🔒 STATUS: EDITED (Fixed Text Color & Converted Add Button to FAB)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -188,6 +188,12 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: const GlobalHeader(title: 'מנוע ממוצע שכר'),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddRecordDialog(context, provider, selectedExpense.id!),
+        backgroundColor: Colors.blue[900],
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('הזן חודש', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -203,10 +209,11 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                     value: _selectedExpenseId,
                     isExpanded: true,
                     icon: const Icon(Icons.work_outline, color: Colors.blue),
+                    style: const TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Heebo'),
                     items: incomeExpenses.map((e) {
                       return DropdownMenuItem<int>(
                         value: e.id,
-                        child: Text(e.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        child: Text(e.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -287,18 +294,7 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
               ],
 
               // היסטוריית חודשים
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('היסטוריית דיווחי שכר', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[900], foregroundColor: Colors.white),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('הזן חודש'),
-                    onPressed: () => _showAddRecordDialog(context, provider, selectedExpense.id!),
-                  )
-                ],
-              ),
+              const Text('היסטוריית דיווחי שכר', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               const SizedBox(height: 12),
 
               if (myRecords.isEmpty)
@@ -335,7 +331,9 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                       ),
                     );
                   }
-                )
+                ),
+                
+              const SizedBox(height: 60), // מרווח לכפתור הצף
             ],
           ),
         ),

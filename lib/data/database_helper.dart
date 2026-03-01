@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Salary Records CRUD & Streams)
+// 🔒 STATUS: VERIFIED (Implicitly supports new isCustom field via toMap/fromMap)
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -61,7 +61,6 @@ class DatabaseHelper {
         snap.docs.map((doc) => CheckingEntry.fromMap(doc.data() as Map<String, dynamic>)).toList());
   }
 
-  // זרם היסטוריית שכר (NEW)
   Stream<List<SalaryRecord>> streamSalaryRecords() {
     return _userCollection('salary_records').snapshots().map((snap) =>
         snap.docs.map((doc) => SalaryRecord.fromMap(doc.data() as Map<String, dynamic>)).toList());
@@ -116,7 +115,7 @@ class DatabaseHelper {
     await _deleteCollection('family_members');
     await _deleteCollection('withdrawals'); 
     await _deleteCollection('checking_history'); 
-    await _deleteCollection('salary_records'); // NEW
+    await _deleteCollection('salary_records'); 
   }
 
   // ==========================================
@@ -248,9 +247,9 @@ class DatabaseHelper {
 
   Future<List<Withdrawal>> getWithdrawals(int expenseId) async {
     final snap = await _userCollection('withdrawals')
-        .where('expenseId', isEqualTo: expenseId)
-        .orderBy('date', descending: true)
-        .get();
+      .where('expenseId', isEqualTo: expenseId)
+      .orderBy('date', descending: true)
+      .get();
     return snap.docs.map((doc) => Withdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
   }
 
@@ -276,7 +275,7 @@ class DatabaseHelper {
   }
 
   // ==========================================
-  // CRUD למנוע שכר (NEW)
+  // CRUD למנוע שכר 
   // ==========================================
   Future<List<SalaryRecord>> getSalaryRecords() async {
     final snap = await _userCollection('salary_records').get();
