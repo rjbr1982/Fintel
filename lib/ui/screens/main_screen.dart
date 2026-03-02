@@ -1,5 +1,4 @@
-// 🔒 STATUS: EDITED (Cleaned Dashboard UI)
-// lib/ui/screens/main_screen.dart
+// 🔒 STATUS: EDITED (Updated Welcome Dialog to explicitly list 0-amount expenses dynamically)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -10,7 +9,10 @@ import 'pnl_screen.dart';
 import 'shopping_screen.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final bool showWelcomeDialog; 
+  final bool showDebtTask; 
+
+  const MainScreen({super.key, this.showWelcomeDialog = false, this.showDebtTask = false});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -26,7 +28,102 @@ class _MainScreenState extends State<MainScreen> {
       if (mounted) {
         await context.read<DebtProvider>().loadDebts();
       }
+      
+      // הקפצת הנחיתה הרכה אם הגענו מהאשף
+      if (widget.showWelcomeDialog && mounted) {
+        _showSoftLandingDialog(context);
+      }
     });
+  }
+
+  void _showSoftLandingDialog(BuildContext context) {
+    final budget = context.read<BudgetProvider>();
+    final hasKids = budget.childCount > 0; // בדיקה דינמית אם יש ילדים
+
+    // בניית טקסט ההסבר לסעיפי האפס בצורה דינמית ומפורטת
+    String zeroAmountDesc = 'הסעיפים האישיים הבאים נוצרו עבורך עם סכום 0, והם ממתינים לעדכון שלך בקטגוריית ה"קבועות":\n'
+        '• קופת חולים וביטוחים\n'
+        '• מנויים דיגיטליים\n'
+        '• תספורת\n'
+        '• תרומות / מעשרות';
+        
+    if (hasKids) {
+      zeroAmountDesc += '\n• הוצאות ילדים: שכר לימוד, חוגים, קייטנות, ציוד ומתנות';
+    }
+    
+    zeroAmountDesc += '\n\n* הערה: אם סעיף מסוים אינו רלוונטי עבורך, פשוט השאר אותו על 0 או מחק אותו.';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Column(
+          children: [
+            Icon(Icons.celebration, color: Colors.amber, size: 40),
+            SizedBox(height: 10),
+            Text('ברוכים הבאים לחירות הפיננסית!', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('המערכת בנתה עבורך תקציב אוטומטי מלא המבוסס על מודל "דוחכם". כעת, מומלץ לבצע את משימות הכיול הבאות:', style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
+              const SizedBox(height: 20),
+              
+              _buildTaskRow('1', 'כיול הוצאות דיור', 'כנס לקטגוריות קבועות -> דיור, ועדכן את שכר הדירה/משכנתא האמיתי שלך.'),
+              const SizedBox(height: 15),
+              
+              // המשימה המפורטת החדשה
+              _buildTaskRow('2', 'השלמת הוצאות חסרות (סכום 0)', zeroAmountDesc),
+              const SizedBox(height: 15),
+
+              _buildTaskRow('3', 'בניית עוגן קניות', 'כנס לכפתור העגלה ובדוק את רשימת הקניות. המחיר הכולל יקבע את גובה כלל רמת החיים שלך.'),
+              
+              if (widget.showDebtTask) ...[
+                const SizedBox(height: 15),
+                _buildTaskRow('4', 'טעינת מנוע הצלף', 'הצהרת שיש לך חובות. כנס למסך תזרים -> מנמיכות, והזן את ההלוואות שלך כדי שהמערכת תחסל אותן עבורך.'),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00A3FF),
+              minimumSize: const Size(double.infinity, 45),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('הבנתי, בוא נתחיל', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskRow(String num, String title, String desc) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(radius: 12, backgroundColor: Colors.blue[50], child: Text(num, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue))),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
+              const SizedBox(height: 4),
+              Text(desc, style: const TextStyle(fontSize: 13, color: Colors.grey, height: 1.4)),
+            ],
+          ),
+        )
+      ],
+    );
   }
 
   void _showFreedomSettingsDialog(BuildContext context, BudgetProvider budget) {
@@ -43,6 +140,7 @@ class _MainScreenState extends State<MainScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
+              backgroundColor: Colors.white, surfaceTintColor: Colors.transparent,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               title: const Text('הגדרות מנוע החירות', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
@@ -61,7 +159,7 @@ class _MainScreenState extends State<MainScreen> {
                     const SizedBox(height: 10),
                     TextField(
                       controller: capitalCtrl,
-                      readOnly: true, // מונע עריכה ידנית כי זה נשאב דינמית מהנכסים
+                      readOnly: true, 
                       decoration: const InputDecoration(
                         labelText: 'הון עצמי נוכחי (נשאב מהנכסים)',
                         prefixIcon: Icon(Icons.account_balance_wallet),
@@ -145,6 +243,7 @@ class _MainScreenState extends State<MainScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
+          backgroundColor: Colors.white, surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text('גילאי המשפחה בשנת $targetYear', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
           content: Column(
@@ -186,7 +285,6 @@ class _MainScreenState extends State<MainScreen> {
     final loc = AppLocalizations.of(context);
     final budget = context.watch<BudgetProvider>();
 
-    // שימוש במנוע החירות החדש לחישוב השנה (סעיף 10.8)
     int? monthsToFreedom = budget.calculateMonthsToFreedom();
     
     String yearText = "∞";
@@ -219,8 +317,6 @@ class _MainScreenState extends State<MainScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // הוסר הטקסט "Fintel" כדי להשאיר דשבורד נקי
-                // כותרת יעד שניתנת לעריכה (דריסה ידנית)
                 InkWell(
                   onTap: () => _showFreedomSettingsDialog(context, budget),
                   borderRadius: BorderRadius.circular(10),
@@ -243,7 +339,6 @@ class _MainScreenState extends State<MainScreen> {
                 
                 const SizedBox(height: 50),
 
-                // כרטיס שנת החירות הפיננסית
                 InkWell(
                   onTap: () {
                     if (targetYear != null) {
@@ -283,7 +378,6 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                 ),
 
-                // חיווי אזהרה חינוכית (ריבית חסרת סיכון) - סעיף 10.8.5
                 if (budget.expectedYield <= 4.0)
                   Padding(
                     padding: const EdgeInsets.only(top: 20.0),

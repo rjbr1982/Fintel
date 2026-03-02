@@ -1,9 +1,10 @@
-// 🔒 STATUS: EDITED (Fixed 3 positional arguments error and removed setChildCount)
+// 🔒 STATUS: EDITED (Fixed Dropdown deprecations & sync with new SeedService)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../services/seed_service.dart';
-import '../../data/expense_model.dart'; // <--- Added for FamilyRole
+import '../../data/expense_model.dart';
+import '../../data/database_helper.dart';
 import 'main_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -17,49 +18,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentStep = 0;
   bool _isLoading = false;
 
-  // --- משתני סטטוס אישי ---
+  // --- שלב 1: זהות וסטטוס ---
+  String _gender = 'male'; // 'male', 'female'
   String _maritalStatus = 'married'; // 'single', 'married'
   
-  // --- משתני משפחה דינמיים ---
+  // --- שלב 2: משפחה ---
+  bool _hasKids = false;
   final List<Map<String, TextEditingController>> _adults = [
-    {
-      'name': TextEditingController(text: 'אבא'),
-      'year': TextEditingController(text: (DateTime.now().year - 30).toString()),
-    },
-    {
-      'name': TextEditingController(text: 'אמא'),
-      'year': TextEditingController(text: (DateTime.now().year - 30).toString()),
-    }
+    {'name': TextEditingController(text: 'אבא'), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())},
+    {'name': TextEditingController(text: 'אמא'), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())}
   ];
-  
   final List<Map<String, TextEditingController>> _children = [];
 
-  // --- רכבים ---
-  String _vehicleType = 'car'; // 'none', 'car', 'motorcycle'
-  final _leasingCtrl = TextEditingController(text: '0'); 
+  // --- שלב 3: הכנסות ---
+  final _income1Ctrl = TextEditingController(text: ''); 
+  final _income2Ctrl = TextEditingController(text: ''); 
 
-  // --- מגורים והוצאות עוגן ---
-  String _housingType = 'rent'; // 'rent', 'mortgage'
-  final _housingCtrl = TextEditingController(text: '3500'); // מחליף את _rentCtrl
-  final _supermarketCtrl = TextEditingController(text: '2500');
-  final _electricityCtrl = TextEditingController(text: '350'); 
-  final _waterCtrl = TextEditingController(text: '110'); 
+  // --- שלב 4: תשתית ומגורים ---
+  String _housingType = 'rent'; // 'rent', 'mortgage', 'none'
+  String _vehicleType = 'car'; // 'none', 'car', 'two_cars', 'motorcycle'
+
+  // --- שלב 5: מאקרו ---
+  bool _hasDebts = false;
+  bool _includeReligion = true;
 
   @override
   void dispose() {
-    for (var adult in _adults) {
-      adult['name']?.dispose();
-      adult['year']?.dispose();
-    }
-    for (var child in _children) {
-      child['name']?.dispose();
-      child['year']?.dispose();
-    }
-    _housingCtrl.dispose();
-    _supermarketCtrl.dispose();
-    _electricityCtrl.dispose();
-    _waterCtrl.dispose();
-    _leasingCtrl.dispose();
+    for (var adult in _adults) { adult['name']?.dispose(); adult['year']?.dispose(); }
+    for (var child in _children) { child['name']?.dispose(); child['year']?.dispose(); }
+    _income1Ctrl.dispose();
+    _income2Ctrl.dispose();
     super.dispose();
   }
 
@@ -67,16 +55,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() {
       _maritalStatus = status;
       if (status == 'single') {
-        if (_adults.length > 1) {
-          _adults.removeRange(1, _adults.length);
-        }
+        if (_adults.length > 1) { _adults.removeRange(1, _adults.length); }
         _adults[0]['name']!.text = 'אישי';
       } else {
         if (_adults.length < 2) {
-          _adults.add({
-            'name': TextEditingController(text: 'אמא'),
-            'year': TextEditingController(text: (DateTime.now().year - 30).toString()),
-          });
+          _adults.add({'name': TextEditingController(text: 'אמא'), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())});
         }
         _adults[0]['name']!.text = 'אבא';
         _adults[1]['name']!.text = 'אמא';
@@ -96,22 +79,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _completeOnboarding() async {
     setState(() => _isLoading = true);
     
-    final housingCost = double.tryParse(_housingCtrl.text) ?? 3500;
-    final supermarket = double.tryParse(_supermarketCtrl.text) ?? 2500;
-    final electricity = double.tryParse(_electricityCtrl.text) ?? 350;
-    final water = double.tryParse(_waterCtrl.text) ?? 110;
-    final leasing = double.tryParse(_leasingCtrl.text) ?? 0;
+    final income1 = double.tryParse(_income1Ctrl.text) ?? 0.0;
+    final income2 = _maritalStatus == 'married' ? (double.tryParse(_income2Ctrl.text) ?? 0.0) : 0.0;
 
     await SeedService.generateInitialData(
       maritalStatus: _maritalStatus, 
       vehicleType: _vehicleType,
       housingType: _housingType,    
-      leasingCost: leasing,
-      housingAmount: housingCost,    
-      supermarketAmount: supermarket,
-      electricityAmount: electricity,
-      waterAmount: water,
-      childrenCount: _children.length, 
+      childrenCount: _hasKids ? _children.length : 0, 
+      income1: income1,
+      income2: income2,
+      includeReligion: _includeReligion,
     );
 
     if (!mounted) return;
@@ -121,47 +99,66 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     for (var adult in _adults) {
       final name = adult['name']!.text.trim();
       if (name.isNotEmpty) {
-        // הוספת מבוגר כהורה (FamilyRole.parent)
         await budget.addFamilyMember(name, int.tryParse(adult['year']!.text) ?? (DateTime.now().year - 30), FamilyRole.parent);
       }
     }
     
-    for (var child in _children) {
-      final name = child['name']!.text.trim();
-      if (name.isNotEmpty) {
-        // הוספת ילד (FamilyRole.child)
-        await budget.addFamilyMember(name, int.tryParse(child['year']!.text) ?? DateTime.now().year, FamilyRole.child);
+    if (_hasKids) {
+      for (var child in _children) {
+        final name = child['name']!.text.trim();
+        if (name.isNotEmpty) {
+          await budget.addFamilyMember(name, int.tryParse(child['year']!.text) ?? DateTime.now().year, FamilyRole.child);
+        }
       }
     }
 
-    // הוסר `budget.setChildCount` מכיוון שהספירה כעת דינמית במודל
+    // שמירת סטטוס חובות למנוע הצלף
+    if (_hasDebts) {
+      await DatabaseHelper.instance.saveSetting('has_active_debts', 1.0);
+      budget.updateHasActiveDebts(true);
+    }
 
     await budget.loadData();
 
     if (mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainScreen()),
+        MaterialPageRoute(builder: (_) => MainScreen(showWelcomeDialog: true, showDebtTask: _hasDebts)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    bool isMale = _gender == 'male';
+    String welcomeText = isMale ? 'ברוך הבא לדוחכם' : 'ברוכה הבאה לדוחכם';
+    String continueText = isMale ? 'המשך' : 'המשכי';
+    String finishText = isMale ? 'מוכן! צור לי תקציב' : 'מוכנה! צור לי תקציב';
+
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
-        title: const Text('ברוכים הבאים לדוחכם', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(welcomeText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
       ),
       body: _isLoading 
-        ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A3FF)))
+        ? Center(child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: Color(0xFF00A3FF)),
+              const SizedBox(height: 20),
+              Text(
+                isMale ? 'בונה את התקציב החכם שלך...' : 'בונה את התקציב החכם שלך...',
+                style: const TextStyle(color: Colors.white, fontSize: 16)
+              )
+            ],
+          ))
         : Stepper(
             currentStep: _currentStep,
             physics: const BouncingScrollPhysics(),
             onStepContinue: () {
-              if (_currentStep < 3) { 
+              if (_currentStep < 4) { 
                 setState(() => _currentStep += 1);
               } else {
                 _completeOnboarding();
@@ -173,165 +170,218 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               }
             },
             controlsBuilder: (context, details) {
-              final isLastStep = _currentStep == 3;
+              final isLastStep = _currentStep == 4;
               return Padding(
-                padding: const EdgeInsets.only(top: 24.0),
+                padding: const EdgeInsets.only(top: 30.0, bottom: 20),
                 child: Row(
                   children: [
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: isLastStep ? Colors.green : const Color(0xFF00A3FF),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
                         ),
                         onPressed: details.onStepContinue,
-                        child: Text(isLastStep ? 'התחל לעבוד!' : 'המשך', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                        child: Text(isLastStep ? finishText : continueText, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                       ),
                     ),
                     if (_currentStep > 0) const SizedBox(width: 12),
                     if (_currentStep > 0)
                       TextButton(
                         onPressed: details.onStepCancel,
-                        child: const Text('חזור', style: TextStyle(color: Colors.grey)),
+                        child: const Text('חזור', style: TextStyle(color: Colors.grey, fontSize: 16)),
                       ),
                   ],
                 ),
               );
             },
             steps: [
+              // --- שלב 1 ---
               Step(
-                title: const Text('סטטוס אישי', style: TextStyle(fontSize: 18)),
+                title: const Text('היכרות וסטטוס', style: TextStyle(fontSize: 18, color: Colors.white)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('מהו הסטטוס הזוגי שלך?', style: TextStyle(color: Colors.grey)),
-                    const SizedBox(height: 16),
+                    const Text('איך תעדיף/י שאפנה אליך?', style: TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 12),
                     SegmentedButton<String>(
                       segments: const [
-                        ButtonSegment(value: 'single', icon: Icon(Icons.person), label: Text('רווק/ה (יחיד)')),
-                        ButtonSegment(value: 'married', icon: Icon(Icons.people), label: Text('בזוגיות / נשוי/ה')),
+                        ButtonSegment(value: 'male', label: Text('זכר')),
+                        ButtonSegment(value: 'female', label: Text('נקבה')),
+                      ],
+                      selected: {_gender},
+                      onSelectionChanged: (val) => setState(() => _gender = val.first),
+                    ),
+                    const SizedBox(height: 30),
+                    Text(isMale ? 'מה הסטטוס האישי שלך?' : 'מה הסטטוס האישי שלך?', style: const TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 12),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'single', icon: Icon(Icons.person), label: Text('רווק/ה')),
+                        ButtonSegment(value: 'married', icon: Icon(Icons.people), label: Text('נשוי/אה')),
                       ],
                       selected: {_maritalStatus},
-                      onSelectionChanged: (Set<String> newSelection) {
-                        _updateMaritalStatus(newSelection.first);
-                      },
+                      onSelectionChanged: (val) => _updateMaritalStatus(val.first),
                     ),
-                    const SizedBox(height: 24),
-                    const Text('מבוגרים אחראיים:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
-                    const SizedBox(height: 12),
-                    ..._adults.asMap().entries.map((entry) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: _buildFamilyRow(
-                          entry.value['name']!, 
-                          entry.value['year']!, 
-                          'שם פרטי', 
-                          showDelete: false, 
-                        ),
-                      );
-                    }),
                   ],
                 ),
                 isActive: _currentStep >= 0,
               ),
 
+              // --- שלב 2 ---
               Step(
-                title: const Text('ילדים ותלויים', style: TextStyle(fontSize: 18)),
+                title: const Text('הרכב משפחתי', style: TextStyle(fontSize: 18, color: Colors.white)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('כמה ילדים יש לך?', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                    Text(isMale ? 'האם יש לך ילדים?' : 'האם יש לך ילדים?', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
                     const SizedBox(height: 12),
-                    if (_children.isEmpty)
-                      const Text('ללא ילדים.', style: TextStyle(color: Colors.grey, fontSize: 14)),
-                    ..._children.asMap().entries.map((entry) {
-                      int idx = entry.key;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: _buildFamilyRow(
-                          entry.value['name']!, 
-                          entry.value['year']!, 
-                          'שם ילד ${idx + 1}', 
-                          showDelete: true,
-                          onDelete: () => setState(() => _children.removeAt(idx)),
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _addChildField,
-                      icon: const Icon(Icons.add),
-                      label: const Text('הוסף ילד'),
-                      style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF00A3FF)),
+                    SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment(value: false, label: Text('לא')),
+                        ButtonSegment(value: true, label: Text('כן')),
+                      ],
+                      selected: {_hasKids},
+                      onSelectionChanged: (val) {
+                        setState(() { 
+                          _hasKids = val.first;
+                          if (_hasKids && _children.isEmpty) _addChildField();
+                        });
+                      },
                     ),
+                    if (_hasKids) ...[
+                      const SizedBox(height: 20),
+                      ..._children.asMap().entries.map((entry) {
+                        int idx = entry.key;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: _buildFamilyRow(
+                            entry.value['name']!, 
+                            entry.value['year']!, 
+                            'שם הילד/ה', 
+                            showDelete: true,
+                            onDelete: () => setState(() => _children.removeAt(idx)),
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _addChildField,
+                        icon: const Icon(Icons.add),
+                        label: const Text('הוסף ילד'),
+                        style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF00A3FF), side: const BorderSide(color: Color(0xFF00A3FF))),
+                      ),
+                    ]
                   ],
                 ),
                 isActive: _currentStep >= 1,
               ),
 
+              // --- שלב 3 ---
               Step(
-                title: const Text('כלי רכב וניידות', style: TextStyle(fontSize: 18)),
+                title: const Text('מקורות הכנסה', style: TextStyle(fontSize: 18, color: Colors.white)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('איזה כלי רכב עיקרי ברשותך?', style: TextStyle(color: Colors.grey)),
-                    const SizedBox(height: 16),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'none', icon: Icon(Icons.directions_walk), label: Text('תחב"צ')),
-                        ButtonSegment(value: 'motorcycle', icon: Icon(Icons.motorcycle), label: Text('אופנוע')),
-                        ButtonSegment(value: 'car', icon: Icon(Icons.directions_car), label: Text('רכב פרטי')),
-                      ],
-                      selected: {_vehicleType},
-                      onSelectionChanged: (Set<String> newSelection) {
-                        setState(() { _vehicleType = newSelection.first; });
-                      },
-                    ),
-                    if (_vehicleType == 'car') ...[
-                      const SizedBox(height: 20),
-                      TextField(
-                        controller: _leasingCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'הלוואה/ליסינג חודשי (השאר 0 אם אין)',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.monetization_on_outlined),
-                        ),
-                      ),
-                    ],
+                    const Text('כדי שהתקציב יהיה מציאותי, נצטרך הערכה גסה של ההכנסות. אפשר לתקן זאת תמיד.', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                    const SizedBox(height: 20),
+                    if (_maritalStatus == 'single') ...[
+                      _buildSetupField('משכורת / הכנסה אישית (משוער)', _income1Ctrl),
+                    ] else ...[
+                      _buildSetupField('הכנסת הבעל (משוער לחודש)', _income1Ctrl),
+                      const SizedBox(height: 10),
+                      _buildSetupField('הכנסת האישה (משוער לחודש)', _income2Ctrl),
+                    ]
                   ],
                 ),
                 isActive: _currentStep >= 2,
               ),
 
+              // --- שלב 4 ---
               Step(
-                title: const Text('מגורים והוצאות בסיס', style: TextStyle(fontSize: 18)),
+                title: const Text('מגורים וניידות', style: TextStyle(fontSize: 18, color: Colors.white)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('מהו סטטוס המגורים שלך?', style: TextStyle(color: Colors.grey)),
-                    const SizedBox(height: 16),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'rent', icon: Icon(Icons.vpn_key_outlined), label: Text('שכירות')),
-                        ButtonSegment(value: 'mortgage', icon: Icon(Icons.home_outlined), label: Text('משכנתא')),
-                      ],
-                      selected: {_housingType},
-                      onSelectionChanged: (Set<String> newSelection) {
-                        setState(() { _housingType = newSelection.first; });
-                      },
+                    const Text('מה מצב המגורים שלכם?', style: TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 12),
+                    InputDecorator(
+                      decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _housingType,
+                          dropdownColor: Colors.grey[900],
+                          style: const TextStyle(color: Colors.white),
+                          isExpanded: true,
+                          items: const [
+                            DropdownMenuItem(value: 'rent', child: Text('שכירות')),
+                            DropdownMenuItem(value: 'mortgage', child: Text('בעלי נכס (משכנתא)')),
+                            DropdownMenuItem(value: 'none', child: Text('ללא עלות דיור')),
+                          ],
+                          onChanged: (val) => setState(() => _housingType = val!),
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 20),
-                    const Text('כוונן את ההוצאות הבסיסיות (ניתן לשנות תמיד):', style: TextStyle(color: Colors.grey)),
-                    const SizedBox(height: 16),
-                    _buildSetupField(_housingType == 'rent' ? 'שכירות (חודשי)' : 'משכנתא (חודשי)', _housingCtrl),
-                    _buildSetupField('קניות בסופר (חודשי)', _supermarketCtrl),
-                    _buildSetupField('חשמל (דו-חודשי)', _electricityCtrl),
-                    _buildSetupField('מים (דו-חודשי)', _waterCtrl),
+                    const SizedBox(height: 24),
+                    const Text('איך אתם מתניידים ביומיום?', style: TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 12),
+                    InputDecorator(
+                      decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _vehicleType,
+                          dropdownColor: Colors.grey[900],
+                          style: const TextStyle(color: Colors.white),
+                          isExpanded: true,
+                          items: const [
+                            DropdownMenuItem(value: 'car', child: Text('רכב פרטי אחד')),
+                            DropdownMenuItem(value: 'two_cars', child: Text('שני רכבים')),
+                            DropdownMenuItem(value: 'motorcycle', child: Text('קטנוע / אופנוע')),
+                            DropdownMenuItem(value: 'none', child: Text('תחבורה ציבורית בלבד')),
+                          ],
+                          onChanged: (val) => setState(() => _vehicleType = val!),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 isActive: _currentStep >= 3,
+              ),
+
+              // --- שלב 5 ---
+              Step(
+                title: const Text('הגדרות מאקרו', style: TextStyle(fontSize: 18, color: Colors.white)),
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('האם יש לכם כיום חובות פעילים?', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                    const Text('(הלוואות, מינוס עמוק, או תשלומים באשראי)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    const SizedBox(height: 12),
+                    SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment(value: false, label: Text('לא, אנחנו נקיים')),
+                        ButtonSegment(value: true, label: Text('כן, יש חובות')),
+                      ],
+                      selected: {_hasDebts},
+                      onSelectionChanged: (val) => setState(() => _hasDebts = val.first),
+                    ),
+                    const SizedBox(height: 30),
+                    const Text('האם לכלול הוצאות מסורת וחגי ישראל?', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                    const Text('(חגים ומועדים יוזנו אוטומטית לקופות חסכון שוטפות)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    const SizedBox(height: 12),
+                    SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment(value: true, label: Text('כן, הוסף')),
+                        ButtonSegment(value: false, label: Text('לא, תודה')),
+                      ],
+                      selected: {_includeReligion},
+                      onSelectionChanged: (val) => setState(() => _includeReligion = val.first),
+                    ),
+                  ],
+                ),
+                isActive: _currentStep >= 4,
               ),
             ],
           ),
@@ -344,11 +394,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: TextField(
         controller: controller,
         keyboardType: TextInputType.number,
+        style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           labelText: label,
+          labelStyle: const TextStyle(color: Colors.grey),
           border: const OutlineInputBorder(),
+          enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
           isDense: true,
           suffixText: '₪',
+          suffixStyle: const TextStyle(color: Colors.white),
         ),
       ),
     );
@@ -361,7 +415,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           flex: 3,
           child: TextField(
             controller: nameCtrl,
-            decoration: InputDecoration(labelText: nameLabel, isDense: true, border: const OutlineInputBorder()),
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(labelText: nameLabel, labelStyle: const TextStyle(color: Colors.grey), isDense: true, border: const OutlineInputBorder(), enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24))),
           ),
         ),
         const SizedBox(width: 8),
@@ -370,7 +425,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: TextField(
             controller: yearCtrl,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'שנת לידה', isDense: true, border: OutlineInputBorder()),
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(labelText: 'שנת לידה', labelStyle: TextStyle(color: Colors.grey), isDense: true, border: OutlineInputBorder(), enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24))),
           ),
         ),
         if (showDelete) ...[
