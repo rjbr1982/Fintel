@@ -1,0 +1,28 @@
+name: Sync Fintel Brain to Drive
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build_and_send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Create Fintel Brain File
+        run: |
+          echo "=== FINTEL PROJECT STATUS ===" > Fintel_Brain.txt
+          date >> Fintel_Brain.txt
+          echo -e "\n--- Status Report ---" >> Fintel_Brain.txt
+          cat project_status.md >> Fintel_Brain.txt || echo "No project_status.md found" >> Fintel_Brain.txt
+          
+          echo -e "\n\n=== SOURCE CODE (LIB FOLDER) ===" >> Fintel_Brain.txt
+          # אוסף את כל קבצי ה-Dart מתיקיית ה-lib ומוסיף את השם של כל קובץ לפני התוכן שלו
+          find lib -type f -name "*.dart" -exec echo -e "\n\nFILE: {} \n-----------------------" \; -exec cat {} \; >> Fintel_Brain.txt
+
+      - name: Send to Make Webhook
+        run: |
+          curl -X POST -F "file=@Fintel_Brain.txt" "https://hook.eu1.make.com/oru7a1k3gdwkvfirx41waqs4yx3apdxp"
