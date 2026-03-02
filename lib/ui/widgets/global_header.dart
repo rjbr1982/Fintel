@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Redesigned Family Settings with Pencil Icon & Role Selector)
+// 🔒 STATUS: EDITED (Added Divider in Popup Menu)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -146,6 +146,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                 ],
               ),
             ),
+            const PopupMenuDivider(), // <-- הקו המפריד שביקשת!
             const PopupMenuItem<MenuAction>(
               value: MenuAction.salary,
               child: Row(
@@ -491,7 +492,6 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // סעיף 7.1.1: תצוגה בלבד של מספר הילדים, ללא אפשרות שינוי
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
@@ -520,7 +520,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                               child: Icon(isParent ? Icons.person : Icons.child_care, color: isParent ? Colors.blue : Colors.purple)
                             ),
                             title: Text(member.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('${isParent ? "הורה" : "ילד"} | גיל: ${member.age}'),
+                            subtitle: Text('${isParent ? "הורה" : "ילד"} | שנת לידה: ${member.birthYear}'),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [

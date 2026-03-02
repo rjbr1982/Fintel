@@ -1,8 +1,7 @@
-// 🔒 STATUS: EDITED (Replaced BarChart with Smooth Area Mountain Chart)
+// 🔒 STATUS: EDITED (Fixed Linter Warning - bracket if statements & removed unused import)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui' as ui;
-import 'dart:math' as math;
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
 import '../../data/database_helper.dart';
@@ -17,6 +16,7 @@ class SalaryEngineScreen extends StatefulWidget {
 
 class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
   int? _selectedExpenseId;
+  int _selectedRange = 6; // 3, 6, 12, 0 (0 means All)
 
   String _formatMonthYear(String isoDate) {
     try {
@@ -105,22 +105,21 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
   Widget _buildMountainChart(List<SalaryRecord> records, bool isHourly) {
     if (records.isEmpty) return const SizedBox.shrink();
     
-    // מיון מהישן לחדש כדי שהגרף יזרום מימין (ישן) לשמאל (חדש) בעברית
+    // סידור מהישן לחדש
     var sortedRecords = List<SalaryRecord>.from(records);
     sortedRecords.sort((a, b) => DateTime.parse(a.monthYear).compareTo(DateTime.parse(b.monthYear)));
     
-    // רוחב דינמי המאפשר גלילה (לפחות 60 פיקסלים לכל חודש)
-    double calculatedWidth = math.max(MediaQuery.of(context).size.width - 64, sortedRecords.length * 60.0);
+    // סינון לפי הטווח שנבחר
+    if (_selectedRange > 0 && sortedRecords.length > _selectedRange) {
+      sortedRecords = sortedRecords.sublist(sortedRecords.length - _selectedRange);
+    }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      reverse: true, // מתחיל את הגלילה מהצד השמאלי (העדכני ביותר)
-      child: SizedBox(
-        height: 200,
-        width: calculatedWidth,
-        child: CustomPaint(
-          painter: _MountainChartPainter(sortedRecords, isHourly),
-        ),
+    // הגרף נמתח או מתכווץ לרוחב המסך הקיים, ללא גלילה
+    return SizedBox(
+      height: 200,
+      width: double.infinity,
+      child: CustomPaint(
+        painter: _MountainChartPainter(sortedRecords, isHourly),
       ),
     );
   }
@@ -247,18 +246,45 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
               const SizedBox(height: 30),
               
               if (myRecords.isNotEmpty) ...[
-                const Text('מגמת שכר נטו (תצוגת כלל החודשים)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('מגמות וסטטיסטיקה', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    // סרגל טווחים (Toggles)
+                    ToggleButtons(
+                      borderRadius: BorderRadius.circular(8),
+                      constraints: const BoxConstraints(minHeight: 30, minWidth: 50),
+                      fillColor: Colors.blue.withValues(alpha: 0.1),
+                      selectedColor: Colors.blue[900],
+                      color: Colors.blueGrey,
+                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      isSelected: [_selectedRange == 3, _selectedRange == 6, _selectedRange == 12, _selectedRange == 0],
+                      onPressed: (idx) {
+                        setState(() {
+                          if (idx == 0) { _selectedRange = 3; }
+                          else if (idx == 1) { _selectedRange = 6; }
+                          else if (idx == 2) { _selectedRange = 12; }
+                          else if (idx == 3) { _selectedRange = 0; }
+                        });
+                      },
+                      children: const [Text('3ח\''), Text('6ח\''), Text('שנה'), Text('הכל')],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                const Text('גרף שכר נטו', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
+                const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 30, 16, 16),
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
                   child: _buildMountainChart(myRecords, false),
                 ),
                 const SizedBox(height: 24),
-                const Text('מגמת תעריף שעתי (תצוגת כלל החודשים)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 12),
+                const Text('גרף תעריף שעתי', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
+                const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 30, 16, 16),
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
                   child: _buildMountainChart(myRecords, true),
                 ),
@@ -342,7 +368,7 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
 }
 
 // ============================================================================
-// ציור גרף ההרים (Area Chart) - נקי, דינמי ונגלל
+// ציור גרף ההרים (Area Chart) - נקי וללא גלילה (נדחס לרוחב המסך)
 // ============================================================================
 class _MountainChartPainter extends CustomPainter {
   final List<SalaryRecord> records;
@@ -388,22 +414,17 @@ class _MountainChartPainter extends CustomPainter {
     final path = Path();
     final fillPath = Path();
     
-    // רווח בין הנקודות (גריד)
+    // רווח בין הנקודות - מתפרס על כל הרוחב
     double stepX = size.width / (records.length > 1 ? records.length - 1 : 1);
-    
-    // בגלל שעברית היא RTL, הגרף מרונדר מימין לשמאל במסכים כאלה.
-    // אבל Canvas מרונדר תמיד LTR (נקודת 0,0 היא שמאלה למעלה).
-    // לכן הקודקודים יהיו משמאל לימין. ה-SingleChildScrollView שהוספנו הופך את התצוגה.
     
     List<Offset> points = [];
     for (int i = 0; i < records.length; i++) {
       double v = isHourly ? (records[i].netAmount / records[i].hours) : records[i].netAmount;
-      double x = size.width - (i * stepX); // היפוך כיוון ככה שהחדש בשמאל והישן בימין
-      double y = size.height - 30 - (((v - bottomBase) / range) * (size.height - 60)); // מרווח מלמעלה ומלמטה
+      double x = size.width - (i * stepX); // משמאל לימין כדי להתאים ל-RTL
+      double y = size.height - 30 - (((v - bottomBase) / range) * (size.height - 60));
       points.add(Offset(x, y));
     }
 
-    // ציור קו הגל ושטח ההרים
     if (points.length == 1) {
       path.moveTo(0, points[0].dy);
       path.lineTo(size.width, points[0].dy);
@@ -417,7 +438,6 @@ class _MountainChartPainter extends CustomPainter {
       fillPath.lineTo(points[0].dx, points[0].dy);
       
       for (int i = 1; i < points.length; i++) {
-        // ניתן להשתמש ב-lineTo לקווים חדים או cubicTo לעקומות, בחרתי ב-lineTo למראה מודרני מדוייק
         path.lineTo(points[i].dx, points[i].dy);
         fillPath.lineTo(points[i].dx, points[i].dy);
       }
@@ -427,22 +447,21 @@ class _MountainChartPainter extends CustomPainter {
     canvas.drawPath(fillPath, fillPaint);
     canvas.drawPath(path, paintLine);
 
-    // ציור נקודות וטקסט
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
     for (int i = 0; i < points.length; i++) {
-      canvas.drawCircle(points[i], 5, Paint()..color = Colors.white);
-      canvas.drawCircle(points[i], 5, paintLine..style = PaintingStyle.stroke);
+      canvas.drawCircle(points[i], 4, Paint()..color = Colors.white);
+      canvas.drawCircle(points[i], 4, paintLine..style = PaintingStyle.stroke);
 
       double v = isHourly ? (records[i].netAmount / records[i].hours) : records[i].netAmount;
       String label = isHourly ? '₪${v.toStringAsFixed(1)}' : '${(v / 1000).toStringAsFixed(1)}k';
       
-      textPainter.text = TextSpan(text: label, style: const TextStyle(color: Colors.black87, fontSize: 11, fontWeight: FontWeight.bold));
+      textPainter.text = TextSpan(text: label, style: const TextStyle(color: Colors.black87, fontSize: 10, fontWeight: FontWeight.bold));
       textPainter.layout();
-      textPainter.paint(canvas, Offset(points[i].dx - textPainter.width / 2, points[i].dy - 22));
+      textPainter.paint(canvas, Offset(points[i].dx - textPainter.width / 2, points[i].dy - 20));
       
       DateTime d = DateTime.parse(records[i].monthYear);
       String dateLabel = '${d.month.toString().padLeft(2,'0')}/${d.year.toString().substring(2)}';
-      textPainter.text = TextSpan(text: dateLabel, style: const TextStyle(color: Colors.grey, fontSize: 11));
+      textPainter.text = TextSpan(text: dateLabel, style: const TextStyle(color: Colors.grey, fontSize: 10));
       textPainter.layout();
       textPainter.paint(canvas, Offset(points[i].dx - textPainter.width / 2, size.height - 15));
     }
