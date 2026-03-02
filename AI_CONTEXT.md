@@ -9,15 +9,17 @@ Please read this context carefully before making any suggestions.
 - **Design Philosophy:** E-Myth. Everything must be automated based on initial rules. No double-entry of data.
 
 ### Where we left off:
-1. We successfully implemented a **Role-Based Family System**. Every family member is defined as either a `Parent` or a `Child` via an enum (`FamilyRole`).
-2. The `childCount` is no longer a saved integer; it is a dynamic getter in `BudgetProvider` that counts members with `FamilyRole.child`.
-3. The Linter is currently **100% clean**. We have strict rules regarding `use_build_context_synchronously`. You MUST use `if (!context.mounted) return;` after any `await` inside a widget or dialog. Do NOT use just `if (!mounted)` if the context belongs to the `build` method parameter.
-4. Git branch is fully updated and clean.
+1. We successfully separated children's variable expenses and vehicle expenses into **distinct, dynamic entities** instead of shared pools. They are now presented in the UI using Accordions (ExpansionTile), and each has its own dedicated withdrawal fund.
+2. The `BudgetProvider` now includes a cleanup sweeper that automatically deletes a child's variable expenses if their role is changed to `Parent`.
+3. Replaced the static BarChart in the Salary Engine with a **Cumulative Average Area (Mountain) Chart** that calculates true chronological averages, complete with a time-range filter (3m, 6m, 1y, All).
+4. Added an aggressive Cache-Busting timestamp mechanism to the Web build (`index.html`) to prevent stale loads.
+5. The Linter is currently **100% clean** (0 issues).
+6. Git branch is fully updated and clean.
 
 ### Operating Rules:
 - Do not guess the code. If you need to modify a file, ask me to paste the current version first (Read-Before-Write).
-- Provide full files for copying, not snippets (unless proposing a draft).
+- Provide full files for copying, not snippets.
 - Maintain the Hebrew localization and UI text.
 - Do not remove the `// 🔒 STATUS: EDITED` comments at the top of the files.
 
-Awaiting your confirmation that you have read this context, and then we will begin!
+Awaiting your confirmation that you have read this context, and then we will begin  

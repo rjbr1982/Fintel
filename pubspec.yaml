@@ -42,15 +42,17 @@ dev_dependencies:
 # הגדרות מחולל האייקונים (Web + Mobile)
 flutter_launcher_icons:
   android: "launcher_icon"
-  ios: false
-  image_path: "assets/icon/icon.png"
+  ios: true
+  image_path: "assets/icon/Fintel_Icon.png"
   web:
     generate: true
-    image_path: "assets/icon/icon.png"
+    image_path: "assets/icon/Fintel_Icon.png"
+    background_color: "#121212"
+    theme_color: "#121212"
 
 flutter:
   uses-material-design: true
   
   # הנגשת התיקייה לשימוש בתוך הקוד
   assets:
-    - assets/icon/icon.png
+    - assets/icon/Fintel_Icon.png

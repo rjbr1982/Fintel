@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added cleanup logic for valid child names in variable expenses)
+// 🔒 STATUS: EDITED (Added collision prevention for children named as parents & strict category mapping)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -267,13 +267,17 @@ class BudgetProvider with ChangeNotifier {
       ratios = { 'בגדים אבא': 0.19, 'בילויים אבא': 0.14, 'בגדים אמא': 0.09, 'בילויים אמא': 0.19, 'טיפוח אמא': 0.15 };
     }
 
-    // הקצאה שמית לכל ילד בנפרד (כך שהסה"כ יישאר 24%)
     if (cCount > 0) {
       double clothesRatio = 0.12 / cCount;
       double funRatio = 0.12 / cCount;
       for (var kid in kids) {
-        ratios['בגדים ${kid.name}'] = clothesRatio;
-        ratios['בילויים ${kid.name}'] = funRatio;
+        String safeName = kid.name;
+        // מניעת התנגשות אם המשתמש קרא לילד בשם של קטגוריית אם (אבא, אמא, אישי)
+        if (safeName == 'אבא' || safeName == 'אמא' || safeName == 'אישי') {
+          safeName = '$safeName (ילד)';
+        }
+        ratios['בגדים $safeName'] = clothesRatio;
+        ratios['בילויים $safeName'] = funRatio;
       }
     }
     return ratios;
@@ -338,12 +342,18 @@ class BudgetProvider with ChangeNotifier {
     bool changed = false;
     final now = DateTime.now().toIso8601String();
 
+    // רשימת הילדים החוקיים עם הגנה על השמות
+    final validChildNames = _familyMembers.where((m) => m.role == FamilyRole.child).map((m) {
+      String n = m.name;
+      if (n == 'אבא' || n == 'אמא' || n == 'אישי') n = '$n (ילד)';
+      return n;
+    }).toList();
+
     // --- ניקוי ילדים שהפכו להורים מתוך משתנות הילדים ---
-    final validChildNames = _familyMembers.where((m) => m.role == FamilyRole.child).map((m) => m.name).toList();
     for (int i = _expenses.length - 1; i >= 0; i--) {
       final e = _expenses[i];
       if (e.parentCategory == 'ילדים - משתנות' && e.name != 'בגדים ילדים' && e.name != 'בילויים ילדים') {
-        bool isValid = validChildNames.any((childName) => e.name.contains(childName));
+        bool isValid = validChildNames.any((childName) => e.name == 'בגדים $childName' || e.name == 'בילויים $childName');
         if (!isValid) {
           await DatabaseHelper.instance.deleteExpense(e.id!);
           _expenses.removeAt(i);
@@ -384,7 +394,13 @@ class BudgetProvider with ChangeNotifier {
     };
 
     final Map<String, double> targetVariableRatios = _getDynamicVariableRatios();
-    final kidsNames = _familyMembers.where((m) => m.role == FamilyRole.child).map((m) => m.name).toList();
+    
+    // מערך שמות ההוצאות הייעודי לילדים למניעת התנגשויות
+    List<String> allKidsVarExpenses = [];
+    for(var n in validChildNames) {
+       allKidsVarExpenses.add('בגדים $n');
+       allKidsVarExpenses.add('בילויים $n');
+    }
 
     for (int i = 0; i < _expenses.length; i++) {
       final e = _expenses[i];
@@ -465,7 +481,7 @@ class BudgetProvider with ChangeNotifier {
     for (var entry in targetVariableRatios.entries) {
       if (entry.value > 0 && !_expenses.any((e) => e.name == entry.key)) {
         String parentCat;
-        if (kidsNames.any((name) => entry.key.contains(name))) {
+        if (allKidsVarExpenses.contains(entry.key)) {
            parentCat = 'ילדים - משתנות';
         } else if (entry.key.contains('אישי')) {
            parentCat = 'אישי';

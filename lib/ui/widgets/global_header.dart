@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Divider in Popup Menu)
+// 🔒 STATUS: EDITED (Fixed App Icon path to match Fintel_Icon.png)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -54,7 +54,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: Image.asset(
-              'assets/icon/icon.png',
+              'assets/icon/Fintel_Icon.png', // הנתיב תוקן לשם החדש
               width: 28,
               height: 28,
               fit: BoxFit.cover,
@@ -146,7 +146,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                 ],
               ),
             ),
-            const PopupMenuDivider(), // <-- הקו המפריד שביקשת!
+            const PopupMenuDivider(),
             const PopupMenuItem<MenuAction>(
               value: MenuAction.salary,
               child: Row(

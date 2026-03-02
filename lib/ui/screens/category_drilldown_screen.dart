@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Contrast in Dynamic Salary TextField & Fixed Linter Warning)
+// 🔒 STATUS: EDITED (Wrapped all dialogs in ThemeData.light() to prevent dark-mode invisible text issues)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -37,22 +37,25 @@ class CategoryDrilldownScreen extends StatelessWidget {
     final controller = TextEditingController(text: oldName);
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text("שינוי שם: $oldName"),
-        content: TextField(controller: controller, decoration: const InputDecoration(labelText: 'שם קבוצה חדש'), autofocus: true),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ביטול")),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty && controller.text != oldName) {
-                provider.renameParentCategory(oldName, controller.text);
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text("עדכן"),
-          ),
-        ],
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text("שינוי שם: $oldName"),
+          content: TextField(controller: controller, decoration: const InputDecoration(labelText: 'שם קבוצה חדש'), autofocus: true),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ביטול")),
+            ElevatedButton(
+              onPressed: () {
+                if (controller.text.isNotEmpty && controller.text != oldName) {
+                  provider.renameParentCategory(oldName, controller.text);
+                  Navigator.pop(ctx);
+                }
+              },
+              child: const Text("עדכן"),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -61,31 +64,34 @@ class CategoryDrilldownScreen extends StatelessWidget {
     final nameController = TextEditingController();
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('הוספת קבוצה חדשה - $mainCat'),
-        content: TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הקבוצה החדשה')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.isNotEmpty) {
-                final newExpense = Expense(
-                  name: 'סעיף ראשון - ${nameController.text}',
-                  category: mainCat,
-                  parentCategory: nameController.text.trim(),
-                  monthlyAmount: 0,
-                  isLocked: false,
-                  isCustom: true,
-                  date: DateTime.now().toIso8601String(),
-                );
-                await provider.addExpense(newExpense);
-                if (ctx.mounted) Navigator.pop(ctx);
-              }
-            },
-            child: const Text('הוסף'),
-          )
-        ]
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('הוספת קבוצה חדשה - $mainCat'),
+          content: TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הקבוצה החדשה')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isNotEmpty) {
+                  final newExpense = Expense(
+                    name: 'סעיף ראשון - ${nameController.text}',
+                    category: mainCat,
+                    parentCategory: nameController.text.trim(),
+                    monthlyAmount: 0,
+                    isLocked: false,
+                    isCustom: true,
+                    date: DateTime.now().toIso8601String(),
+                  );
+                  await provider.addExpense(newExpense);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                }
+              },
+              child: const Text('הוסף'),
+            )
+          ]
+        ),
       )
     );
   }
@@ -351,7 +357,10 @@ class CategoryDrilldownScreen extends StatelessWidget {
                                   showModalBottomSheet(
                                     context: context, isScrollControlled: true,
                                     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                                    builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: parentName, expenses: items),
+                                    builder: (ctx) => Theme(
+                                      data: ThemeData.light(),
+                                      child: _UnifiedFundBottomSheet(provider: provider, parentCategory: parentName, expenses: items)
+                                    ),
                                   );
                                 }
                               ),
@@ -398,39 +407,42 @@ class SpecificExpensesScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('הוספת רכב חדש'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'כינוי הרכב (למשל: מאזדה 3)')),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: selectedType, 
-                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'סוג רכב'),
-                items: const [
-                  DropdownMenuItem(value: 'car', child: Text('מכונית פרטית')),
-                  DropdownMenuItem(value: 'motorcycle', child: Text('קטנוע / אופנוע')),
-                ],
-                onChanged: (val) {
-                  if (val != null) { setDialogState(() => selectedType = val); }
-                }
+        builder: (context, setDialogState) => Theme(
+          data: ThemeData.light(),
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('הוספת רכב חדש'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'כינוי הרכב (למשל: מאזדה 3)')),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedType, 
+                  decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'סוג רכב'),
+                  items: const [
+                    DropdownMenuItem(value: 'car', child: Text('מכונית פרטית')),
+                    DropdownMenuItem(value: 'motorcycle', child: Text('קטנוע / אופנוע')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) { setDialogState(() => selectedType = val); }
+                  }
+                )
+              ]
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (nameController.text.isNotEmpty) {
+                    await provider.addVehicleTemplate(nameController.text.trim(), selectedType);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  }
+                },
+                child: const Text('הוסף רכב'),
               )
             ]
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameController.text.isNotEmpty) {
-                  await provider.addVehicleTemplate(nameController.text.trim(), selectedType);
-                  if (ctx.mounted) Navigator.pop(ctx);
-                }
-              },
-              child: const Text('הוסף רכב'),
-            )
-          ]
         )
       )
     );
@@ -440,28 +452,31 @@ class SpecificExpensesScreen extends StatelessWidget {
     final ctrl = TextEditingController(text: oldName == 'כללי' ? '' : oldName);
     showDialog(
       context: context,
-      builder: (c) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('שינוי כינוי רכב'),
-        content: TextField(controller: ctrl, decoration: const InputDecoration(labelText: 'כינוי חדש (למשל: סובארו)')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('ביטול')),
-          ElevatedButton(onPressed: () async {
-             String newVName = ctrl.text.trim();
-             if (newVName.isNotEmpty && newVName != oldName) {
-               for (var e in items) {
-                 String newExName;
-                 if (oldName == 'כללי' || !e.name.contains('($oldName)')) {
-                    newExName = '${e.name.replaceAll(RegExp(r'\s*\(.*?\)'), '').trim()} ($newVName)';
-                 } else {
-                    newExName = e.name.replaceAll('($oldName)', '($newVName)');
+      builder: (c) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('שינוי כינוי רכב'),
+          content: TextField(controller: ctrl, decoration: const InputDecoration(labelText: 'כינוי חדש (למשל: סובארו)')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(c), child: const Text('ביטול')),
+            ElevatedButton(onPressed: () async {
+               String newVName = ctrl.text.trim();
+               if (newVName.isNotEmpty && newVName != oldName) {
+                 for (var e in items) {
+                   String newExName;
+                   if (oldName == 'כללי' || !e.name.contains('($oldName)')) {
+                      newExName = '${e.name.replaceAll(RegExp(r'\s*\(.*?\)'), '').trim()} ($newVName)';
+                   } else {
+                      newExName = e.name.replaceAll('($oldName)', '($newVName)');
+                   }
+                   await provider.updateFutureExpenseDetails(e.id!, name: newExName);
                  }
-                 await provider.updateFutureExpenseDetails(e.id!, name: newExName);
+                 if (c.mounted) Navigator.pop(c);
                }
-               if (c.mounted) Navigator.pop(c);
-             }
-          }, child: const Text('שמור')),
-        ]
+            }, child: const Text('שמור')),
+          ]
+        ),
       )
     );
   }
@@ -493,7 +508,7 @@ class SpecificExpensesScreen extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               leading: CircleAvatar(backgroundColor: Colors.purple[50], child: Icon(Icons.child_care, color: Colors.purple[400])),
-              title: Text(childName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              title: Text(childName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black)),
               subtitle: Text('צבור אישי: ₪${childBalance.toStringAsFixed(0)} | תקציב: ₪${childTotal.toStringAsFixed(0)}', style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
               children: [
                 Container(
@@ -510,7 +525,10 @@ class SpecificExpensesScreen extends StatelessWidget {
                             showModalBottomSheet(
                               context: context, isScrollControlled: true,
                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                              builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: 'ילדים: $childName', expenses: items),
+                              builder: (ctx) => Theme(
+                                data: ThemeData.light(),
+                                child: _UnifiedFundBottomSheet(provider: provider, parentCategory: 'ילדים: $childName', expenses: items)
+                              ),
                             );
                           }
                         )
@@ -556,7 +574,7 @@ class SpecificExpensesScreen extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               leading: CircleAvatar(backgroundColor: Colors.blue[50], child: Icon(Icons.directions_car, color: Colors.blue[400])),
-              title: Text(vehicleName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              title: Text(vehicleName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black)),
               subtitle: Text('צבור: ₪${vehicleBalance.toStringAsFixed(0)} | עלות חודשית: ₪${vehicleTotal.toStringAsFixed(0)}', style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
               children: [
                 Container(
@@ -573,7 +591,10 @@ class SpecificExpensesScreen extends StatelessWidget {
                             showModalBottomSheet(
                               context: context, isScrollControlled: true,
                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                              builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: 'רכב: $vehicleName', expenses: items.where((e)=>e.isSinking).toList()),
+                              builder: (ctx) => Theme(
+                                data: ThemeData.light(),
+                                child: _UnifiedFundBottomSheet(provider: provider, parentCategory: 'רכב: $vehicleName', expenses: items.where((e)=>e.isSinking).toList())
+                              ),
                             );
                           }
                         )
@@ -583,13 +604,16 @@ class SpecificExpensesScreen extends StatelessWidget {
                       IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), tooltip: 'מחק רכב זה', onPressed: () async {
                         bool? confirm = await showDialog(
                           context: context,
-                          builder: (c) => AlertDialog(
-                            title: const Text('מחיקת רכב'),
-                            content: Text('האם למחוק את כל ההוצאות המשויכות לרכב "$vehicleName"?'),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('ביטול')),
-                              ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(c, true), child: const Text('מחק רכב', style: TextStyle(color: Colors.white))),
-                            ]
+                          builder: (c) => Theme(
+                            data: ThemeData.light(),
+                            child: AlertDialog(
+                              title: const Text('מחיקת רכב'),
+                              content: Text('האם למחוק את כל ההוצאות המשויכות לרכב "$vehicleName"?'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('ביטול')),
+                                ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(c, true), child: const Text('מחק רכב', style: TextStyle(color: Colors.white))),
+                              ]
+                            ),
                           )
                         );
                         if (confirm == true) {
@@ -704,7 +728,10 @@ class SpecificExpensesScreen extends StatelessWidget {
                 showModalBottomSheet(
                   context: context, isScrollControlled: true,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  builder: (ctx) => _SinkingFundBottomSheet(provider: provider, expense: expense),
+                  builder: (ctx) => Theme(
+                    data: ThemeData.light(),
+                    child: _SinkingFundBottomSheet(provider: provider, expense: expense)
+                  ),
                 );
               },
             ),
@@ -845,7 +872,10 @@ class SpecificExpensesScreen extends StatelessWidget {
                       onPressed: () => showModalBottomSheet(
                         context: context, isScrollControlled: true,
                         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                        builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: parentCategory, expenses: currentExpenses),
+                        builder: (ctx) => Theme(
+                          data: ThemeData.light(),
+                          child: _UnifiedFundBottomSheet(provider: provider, parentCategory: parentCategory, expenses: currentExpenses)
+                        ),
                       ),
                     ),
                   )
@@ -881,64 +911,67 @@ class SpecificExpensesScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('הוספת סעיף ($parentCat)'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הסעיף')),
-              const SizedBox(height: 10),
-              TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום חודשי כולל', suffixText: '₪')),
-              const Divider(),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: const Text('תוצג במסגרת הירוקה כחיסכון בצד', style: TextStyle(fontSize: 11)),
-                value: isSinking,
-                activeThumbColor: Colors.green,
-                onChanged: (val) {
-                  setDialogState(() { isSinking = val; });
+        builder: (context, setDialogState) => Theme(
+          data: ThemeData.light(),
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text('הוספת סעיף ($parentCat)'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הסעיף')),
+                const SizedBox(height: 10),
+                TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום חודשי כולל', suffixText: '₪')),
+                const Divider(),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('תוצג במסגרת הירוקה כחיסכון בצד', style: TextStyle(fontSize: 11)),
+                  value: isSinking,
+                  activeThumbColor: Colors.green,
+                  onChanged: (val) {
+                    setDialogState(() { isSinking = val; });
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+              ElevatedButton(
+                onPressed: () async {
+                  final amount = double.tryParse(amountController.text) ?? 0.0;
+                  if (nameController.text.isNotEmpty) {
+                    bool isChildCat = parentCat == 'ילדים - קבועות';
+                    int multiplier = isChildCat ? provider.childCount : 1;
+                    if (multiplier < 1) { multiplier = 1; }
+                    
+                    bool isLocked = true;
+                    if (mainCat == 'משתנות' || mainCat == 'עתידיות') {
+                      isLocked = false; 
+                    }
+
+                    final newExpense = Expense(
+                      name: nameController.text.trim(),
+                      category: mainCat,
+                      parentCategory: parentCat,
+                      monthlyAmount: amount / multiplier, 
+                      frequency: Frequency.MONTHLY,
+                      isLocked: isLocked, 
+                      isPerChild: isChildCat,
+                      date: DateTime.now().toIso8601String(),
+                      isDynamicSalary: false, 
+                      isSinking: isSinking,
+                      isCustom: true, 
+                      allocationRatio: 0.0,
+                    );
+                    await provider.addExpense(newExpense);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  }
                 },
+                child: const Text('הוסף'),
               ),
             ],
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
-            ElevatedButton(
-              onPressed: () async {
-                final amount = double.tryParse(amountController.text) ?? 0.0;
-                if (nameController.text.isNotEmpty) {
-                  bool isChildCat = parentCat == 'ילדים - קבועות';
-                  int multiplier = isChildCat ? provider.childCount : 1;
-                  if (multiplier < 1) { multiplier = 1; }
-                  
-                  bool isLocked = true;
-                  if (mainCat == 'משתנות' || mainCat == 'עתידיות') {
-                    isLocked = false; 
-                  }
-
-                  final newExpense = Expense(
-                    name: nameController.text.trim(),
-                    category: mainCat,
-                    parentCategory: parentCat,
-                    monthlyAmount: amount / multiplier, 
-                    frequency: Frequency.MONTHLY,
-                    isLocked: isLocked, 
-                    isPerChild: isChildCat,
-                    date: DateTime.now().toIso8601String(),
-                    isDynamicSalary: false, 
-                    isSinking: isSinking,
-                    isCustom: true, 
-                    allocationRatio: 0.0,
-                  );
-                  await provider.addExpense(newExpense);
-                  if (ctx.mounted) Navigator.pop(ctx);
-                }
-              },
-              child: const Text('הוסף'),
-            ),
-          ],
         ),
       ),
     );
@@ -974,109 +1007,116 @@ class SpecificExpensesScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('עריכת סעיף'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הסעיף')),
-                  const SizedBox(height: 10),
-                  
-                  if (isIncome) ...[
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('משכורת דינמית', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      subtitle: const Text('שאיבה ממוצעת מהיסטוריית עבודה', style: TextStyle(fontSize: 11)),
-                      value: isDynamic, activeThumbColor: Colors.blue,
-                      onChanged: (val) {
-                        setDialogState(() {
-                          isDynamic = val;
-                          amountController.text = isDynamic ? (avgSalary * factor * multiplier).toStringAsFixed(0) : (expense.monthlyAmount * factor * multiplier).toStringAsFixed(0);
-                        });
-                      },
-                    ),
-                    if (isDynamic) ...[
-                       ListTile(
-                         contentPadding: EdgeInsets.zero,
-                         title: const Text('חודש תחילת עבודה:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                         subtitle: Text(startDateStr != null ? _formatMonthYear(startDateStr!) : 'מתחילת השנה'),
-                         trailing: const Icon(Icons.edit_calendar, size: 20, color: Colors.blue),
-                         onTap: () async {
-                           DateTime initial = startDateStr != null ? DateTime.parse(startDateStr!) : DateTime.now();
-                           final date = await showDatePicker(context: context, initialDate: initial, firstDate: DateTime(2000), lastDate: DateTime.now());
-                           if (date != null) { setDialogState(() => startDateStr = DateTime(date.year, date.month, 1).toIso8601String()); }
-                         }
-                       ),
-                    ],
-                    const Divider(),
-                  ],
-
-                  TextField(
-                    controller: amountController, 
-                    keyboardType: TextInputType.number, 
-                    readOnly: (isIncome && isDynamic),
-                    style: TextStyle(
-                      color: (isIncome && isDynamic) ? Colors.blueGrey[900] : Colors.black,
-                      fontWeight: (isIncome && isDynamic) ? FontWeight.bold : FontWeight.normal,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: expense.isPerChild ? 'סכום לתשלום (עבור כל הילדים)' : (isIncome ? 'סכום חודשי' : 'סכום לתשלום'), 
-                      suffixText: '₪',
-                      filled: false, 
-                      prefixIcon: (isIncome && isDynamic) ? const Icon(Icons.lock, size: 16, color: Colors.blueGrey) : null,
-                      border: const OutlineInputBorder()
-                    )
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButton<Frequency>(
-                    value: selectedFreq, isExpanded: true,
-                    items: const [DropdownMenuItem(value: Frequency.MONTHLY, child: Text('חודשי')), DropdownMenuItem(value: Frequency.BI_MONTHLY, child: Text('דו-חודשי')), DropdownMenuItem(value: Frequency.YEARLY, child: Text('שנתי'))],
-                    onChanged: (isIncome && isDynamic) ? null : (val) { if (val != null) { setDialogState(() => selectedFreq = val); } },
-                  ),
-                  
-                  if (!isIncome) ...[
-                    const Divider(),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11)),
-                      value: isSinking, activeThumbColor: Colors.green,
-                      onChanged: (val) { setDialogState(() => isSinking = val); },
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
-              ElevatedButton(
-                onPressed: () async {
-                  final val = double.tryParse(amountController.text);
-                  final finalName = nameController.text.trim().isNotEmpty ? nameController.text.trim() : expense.name;
-                  
-                  if (val != null || (isIncome && isDynamic)) {
-                    double monthly = val ?? 0;
-                    if (selectedFreq == Frequency.YEARLY) { monthly = monthly / 12; }
-                    else if (selectedFreq == Frequency.BI_MONTHLY) { monthly = monthly / 2; }
-                    monthly = monthly / multiplier;
-
-                    await provider.updateExpense(Expense(
-                      id: expense.id, name: finalName, category: expense.category, parentCategory: expense.parentCategory,
-                      monthlyAmount: (isIncome && isDynamic) ? avgSalary : monthly, frequency: selectedFreq, 
-                      isSinking: isSinking, isPerChild: expense.isPerChild, allocationRatio: expense.allocationRatio, 
-                      isLocked: expense.isLocked, manualAmount: expense.manualAmount, date: expense.date,
-                      isDynamicSalary: isDynamic, salaryStartDate: startDateStr, targetAmount: expense.targetAmount, currentBalance: expense.currentBalance, isCustom: expense.isCustom,
-                    ));
+          return Theme(
+            data: ThemeData.light(),
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text('עריכת סעיף'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הסעיף')),
+                    const SizedBox(height: 10),
                     
-                    await provider.loadData();
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  }
-                },
-                child: const Text('שמור'),
+                    if (isIncome) ...[
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('משכורת דינמית', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        subtitle: const Text('שאיבה ממוצעת מהיסטוריית עבודה', style: TextStyle(fontSize: 11)),
+                        value: isDynamic, activeThumbColor: Colors.blue,
+                        onChanged: (val) {
+                          setDialogState(() {
+                            isDynamic = val;
+                            amountController.text = isDynamic ? (avgSalary * factor * multiplier).toStringAsFixed(0) : (expense.monthlyAmount * factor * multiplier).toStringAsFixed(0);
+                          });
+                        },
+                      ),
+                      if (isDynamic) ...[
+                         ListTile(
+                           contentPadding: EdgeInsets.zero,
+                           title: const Text('חודש תחילת עבודה:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                           subtitle: Text(startDateStr != null ? _formatMonthYear(startDateStr!) : 'מתחילת השנה'),
+                           trailing: const Icon(Icons.edit_calendar, size: 20, color: Colors.blue),
+                           onTap: () async {
+                             DateTime initial = startDateStr != null ? DateTime.parse(startDateStr!) : DateTime.now();
+                             final date = await showDatePicker(
+                               context: context, initialDate: initial, firstDate: DateTime(2000), lastDate: DateTime.now(),
+                               builder: (context, child) => Theme(data: ThemeData.light(), child: child!),
+                             );
+                             if (date != null) { setDialogState(() => startDateStr = DateTime(date.year, date.month, 1).toIso8601String()); }
+                           }
+                         ),
+                      ],
+                      const Divider(),
+                    ],
+
+                    TextField(
+                      controller: amountController, 
+                      keyboardType: TextInputType.number, 
+                      readOnly: (isIncome && isDynamic),
+                      style: TextStyle(
+                        color: (isIncome && isDynamic) ? Colors.blueGrey[900] : Colors.black,
+                        fontWeight: (isIncome && isDynamic) ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: expense.isPerChild ? 'סכום לתשלום (עבור כל הילדים)' : (isIncome ? 'סכום חודשי' : 'סכום לתשלום'), 
+                        suffixText: '₪',
+                        filled: (isIncome && isDynamic), 
+                        fillColor: Colors.grey[100],
+                        prefixIcon: (isIncome && isDynamic) ? const Icon(Icons.lock, size: 16, color: Colors.blueGrey) : null,
+                        border: const OutlineInputBorder()
+                      )
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButton<Frequency>(
+                      value: selectedFreq, isExpanded: true,
+                      items: const [DropdownMenuItem(value: Frequency.MONTHLY, child: Text('חודשי')), DropdownMenuItem(value: Frequency.BI_MONTHLY, child: Text('דו-חודשי')), DropdownMenuItem(value: Frequency.YEARLY, child: Text('שנתי'))],
+                      onChanged: (isIncome && isDynamic) ? null : (val) { if (val != null) { setDialogState(() => selectedFreq = val); } },
+                    ),
+                    
+                    if (!isIncome) ...[
+                      const Divider(),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11)),
+                        value: isSinking, activeThumbColor: Colors.green,
+                        onChanged: (val) { setDialogState(() => isSinking = val); },
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ],
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+                ElevatedButton(
+                  onPressed: () async {
+                    final val = double.tryParse(amountController.text);
+                    final finalName = nameController.text.trim().isNotEmpty ? nameController.text.trim() : expense.name;
+                    
+                    if (val != null || (isIncome && isDynamic)) {
+                      double monthly = val ?? 0;
+                      if (selectedFreq == Frequency.YEARLY) { monthly = monthly / 12; }
+                      else if (selectedFreq == Frequency.BI_MONTHLY) { monthly = monthly / 2; }
+                      monthly = monthly / multiplier;
+
+                      await provider.updateExpense(Expense(
+                        id: expense.id, name: finalName, category: expense.category, parentCategory: expense.parentCategory,
+                        monthlyAmount: (isIncome && isDynamic) ? avgSalary : monthly, frequency: selectedFreq, 
+                        isSinking: isSinking, isPerChild: expense.isPerChild, allocationRatio: expense.allocationRatio, 
+                        isLocked: expense.isLocked, manualAmount: expense.manualAmount, date: expense.date,
+                        isDynamicSalary: isDynamic, salaryStartDate: startDateStr, targetAmount: expense.targetAmount, currentBalance: expense.currentBalance, isCustom: expense.isCustom,
+                      ));
+                      
+                      await provider.loadData();
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    }
+                  },
+                  child: const Text('שמור'),
+                ),
+              ],
+            ),
           );
         }
       ),
@@ -1097,68 +1137,71 @@ class SpecificExpensesScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(child: Text('כיול ${expense.name}', style: const TextStyle(fontSize: 18))),
-              IconButton(
-                icon: const Icon(Icons.refresh, color: Colors.blue),
-                tooltip: 'חזרה לברירת מחדל',
-                onPressed: () {
-                  provider.resetExpenseToDefault(expense.id!, isSinking: isSinking);
-                  Navigator.pop(ctx);
-                },
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!isAnchor) ...[
-                ToggleButtons(
-                  isSelected: [isRatioMode, !isRatioMode],
-                  onPressed: (index) => setState(() => isRatioMode = index == 0),
-                  borderRadius: BorderRadius.circular(10),
-                  children: const [Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('אחוז')), Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('סכום'))],
+        builder: (context, setState) => Theme(
+          data: ThemeData.light(),
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(child: Text('כיול ${expense.name}', style: const TextStyle(fontSize: 18))),
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.blue),
+                  tooltip: 'חזרה לברירת מחדל',
+                  onPressed: () {
+                    provider.resetExpenseToDefault(expense.id!, isSinking: isSinking);
+                    Navigator.pop(ctx);
+                  },
                 ),
-                const SizedBox(height: 20),
               ],
-              isRatioMode 
-                ? TextField(controller: ratioController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'אחוז מהיתרה', suffixText: '%', border: OutlineInputBorder()))
-                : TextField(controller: amountController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום קבוע (כולל)' : 'סכום קבוע', suffixText: '₪', border: const OutlineInputBorder())),
-              const Divider(height: 30),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11)),
-                value: isSinking, activeThumbColor: Colors.green,
-                onChanged: (val) { setState(() => isSinking = val); },
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!isAnchor) ...[
+                  ToggleButtons(
+                    isSelected: [isRatioMode, !isRatioMode],
+                    onPressed: (index) => setState(() => isRatioMode = index == 0),
+                    borderRadius: BorderRadius.circular(10),
+                    children: const [Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('אחוז')), Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('סכום'))],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                isRatioMode 
+                  ? TextField(controller: ratioController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'אחוז מהיתרה', suffixText: '%', border: OutlineInputBorder()))
+                  : TextField(controller: amountController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום קבוע (כולל)' : 'סכום קבוע', suffixText: '₪', border: const OutlineInputBorder())),
+                const Divider(height: 30),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11)),
+                  value: isSinking, activeThumbColor: Colors.green,
+                  onChanged: (val) { setState(() => isSinking = val); },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (isRatioMode && !isAnchor) {
+                    final val = double.tryParse(ratioController.text);
+                    if (val != null) { await provider.updateExpenseRatio(expense.id!, val / 100, isSinking: isSinking); }
+                  } else {
+                    final valText = amountController.text.trim();
+                    if (valText.isEmpty) {
+                      await provider.resetExpenseToDefault(expense.id!, isSinking: isSinking);
+                    } else {
+                      final val = double.tryParse(valText);
+                      if (val != null) { await provider.lockExpenseAmount(expense.id!, val / multiplier, isSinking: isSinking); }
+                    }
+                  }
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+                child: const Text('עדכן'),
               ),
             ],
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
-            ElevatedButton(
-              onPressed: () async {
-                if (isRatioMode && !isAnchor) {
-                  final val = double.tryParse(ratioController.text);
-                  if (val != null) { await provider.updateExpenseRatio(expense.id!, val / 100, isSinking: isSinking); }
-                } else {
-                  final valText = amountController.text.trim();
-                  if (valText.isEmpty) {
-                    await provider.resetExpenseToDefault(expense.id!, isSinking: isSinking);
-                  } else {
-                    final val = double.tryParse(valText);
-                    if (val != null) { await provider.lockExpenseAmount(expense.id!, val / multiplier, isSinking: isSinking); }
-                  }
-                }
-                if (ctx.mounted) Navigator.pop(ctx);
-              },
-              child: const Text('עדכן'),
-            ),
-          ],
         ),
       ),
     );
@@ -1181,88 +1224,91 @@ class SpecificExpensesScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Flexible(child: Text('הגדרת יעד', style: TextStyle(fontSize: 18))),
-              IconButton(
-                icon: const Icon(Icons.refresh, color: Colors.blue), tooltip: 'חזרה לברירת מחדל',
-                onPressed: () { provider.resetExpenseToDefault(expense.id!, isSinking: isSinking); Navigator.pop(ctx); },
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+        builder: (context, setState) => Theme(
+          data: ThemeData.light(),
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם היעד')),
-                const SizedBox(height: 10),
-                TextField(controller: targetController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום היעד הסופי', suffixText: '₪')),
-                const SizedBox(height: 10),
-                TextField(controller: balanceController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'נצבר כיום', suffixText: '₪')),
-                const Divider(height: 30),
-                ToggleButtons(
-                  isSelected: [selectedMode == 0, selectedMode == 1, selectedMode == 2],
-                  onPressed: (index) => setState(() => selectedMode = index),
-                  borderRadius: BorderRadius.circular(10),
-                  children: const [
-                    Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('אחוז')), 
-                    Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('סכום')),
-                    Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('תקופה'))
-                  ],
-                ),
-                const SizedBox(height: 15),
-                if (selectedMode == 0) TextField(controller: ratioController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'אחוז מהחיסכון', suffixText: '%', border: OutlineInputBorder()))
-                else if (selectedMode == 1) TextField(controller: amountController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום קבוע כולל' : 'סכום קבוע חודשי', suffixText: '₪', border: const OutlineInputBorder()))
-                else if (selectedMode == 2) TextField(controller: monthsController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'חודשים נותרים ליעד', suffixText: 'חודשים', border: OutlineInputBorder(), helperText: 'המערכת תחשב ותנעל את הסכום החודשי')),
-                const Divider(height: 30),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero, title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11)),
-                  value: isSinking, activeThumbColor: Colors.green,
-                  onChanged: (val) { setState(() => isSinking = val); },
+                const Flexible(child: Text('הגדרת יעד', style: TextStyle(fontSize: 18))),
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.blue), tooltip: 'חזרה לברירת מחדל',
+                  onPressed: () { provider.resetExpenseToDefault(expense.id!, isSinking: isSinking); Navigator.pop(ctx); },
                 ),
               ],
             ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
-            ElevatedButton(
-              onPressed: () async {
-                double? newManualAmount;
-                bool newIsLocked = selectedMode != 0;
-                double? newRatio = selectedMode == 0 ? (double.tryParse(ratioController.text) ?? 0) / 100 : expense.allocationRatio;
-
-                if (selectedMode == 1) {
-                  newManualAmount = double.tryParse(amountController.text);
-                  if (newManualAmount != null) { newManualAmount = newManualAmount / multiplier; }
-                } else if (selectedMode == 2) {
-                  int? months = int.tryParse(monthsController.text);
-                  double target = double.tryParse(targetController.text) ?? 0;
-                  double balance = double.tryParse(balanceController.text) ?? 0;
-                  if (months != null && months > 0) {
-                    newManualAmount = (target - balance) / months;
-                    if (newManualAmount < 0) { newManualAmount = 0; }
-                    newManualAmount = newManualAmount / multiplier;
-                  }
-                }
-
-                if (newIsLocked && newManualAmount == null && selectedMode != 2) {
-                  await provider.resetExpenseToDefault(expense.id!, isSinking: isSinking);
-                } else {
-                  await provider.updateFutureExpenseDetails(
-                    expense.id!, name: nameController.text.trim().isNotEmpty ? nameController.text.trim() : expense.name,
-                    target: double.tryParse(targetController.text), balance: double.tryParse(balanceController.text),
-                    ratio: newRatio, isLocked: newIsLocked, manualAmount: newManualAmount, isSinking: isSinking,
-                  );
-                }
-                if (ctx.mounted) Navigator.pop(ctx);
-              },
-              child: const Text('עדכן יעד'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם היעד')),
+                  const SizedBox(height: 10),
+                  TextField(controller: targetController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום היעד הסופי', suffixText: '₪')),
+                  const SizedBox(height: 10),
+                  TextField(controller: balanceController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'נצבר כיום', suffixText: '₪')),
+                  const Divider(height: 30),
+                  ToggleButtons(
+                    isSelected: [selectedMode == 0, selectedMode == 1, selectedMode == 2],
+                    onPressed: (index) => setState(() => selectedMode = index),
+                    borderRadius: BorderRadius.circular(10),
+                    children: const [
+                      Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('אחוז')), 
+                      Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('סכום')),
+                      Padding(padding: EdgeInsets.symmetric(horizontal: 10), child: Text('תקופה'))
+                    ],
+                  ),
+                  const SizedBox(height: 15),
+                  if (selectedMode == 0) TextField(controller: ratioController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'אחוז מהחיסכון', suffixText: '%', border: OutlineInputBorder()))
+                  else if (selectedMode == 1) TextField(controller: amountController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום קבוע כולל' : 'סכום קבוע חודשי', suffixText: '₪', border: const OutlineInputBorder()))
+                  else if (selectedMode == 2) TextField(controller: monthsController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'חודשים נותרים ליעד', suffixText: 'חודשים', border: OutlineInputBorder(), helperText: 'המערכת תחשב ותנעל את הסכום החודשי')),
+                  const Divider(height: 30),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero, title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11)),
+                    value: isSinking, activeThumbColor: Colors.green,
+                    onChanged: (val) { setState(() => isSinking = val); },
+                  ),
+                ],
+              ),
             ),
-          ],
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+              ElevatedButton(
+                onPressed: () async {
+                  double? newManualAmount;
+                  bool newIsLocked = selectedMode != 0;
+                  double? newRatio = selectedMode == 0 ? (double.tryParse(ratioController.text) ?? 0) / 100 : expense.allocationRatio;
+  
+                  if (selectedMode == 1) {
+                    newManualAmount = double.tryParse(amountController.text);
+                    if (newManualAmount != null) { newManualAmount = newManualAmount / multiplier; }
+                  } else if (selectedMode == 2) {
+                    int? months = int.tryParse(monthsController.text);
+                    double target = double.tryParse(targetController.text) ?? 0;
+                    double balance = double.tryParse(balanceController.text) ?? 0;
+                    if (months != null && months > 0) {
+                      newManualAmount = (target - balance) / months;
+                      if (newManualAmount < 0) { newManualAmount = 0; }
+                      newManualAmount = newManualAmount / multiplier;
+                    }
+                  }
+  
+                  if (newIsLocked && newManualAmount == null && selectedMode != 2) {
+                    await provider.resetExpenseToDefault(expense.id!, isSinking: isSinking);
+                  } else {
+                    await provider.updateFutureExpenseDetails(
+                      expense.id!, name: nameController.text.trim().isNotEmpty ? nameController.text.trim() : expense.name,
+                      target: double.tryParse(targetController.text), balance: double.tryParse(balanceController.text),
+                      ratio: newRatio, isLocked: newIsLocked, manualAmount: newManualAmount, isSinking: isSinking,
+                    );
+                  }
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+                child: const Text('עדכן יעד'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1365,7 +1411,10 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
                 onPressed: () {
                   showDialog(
                     context: context,
-                    builder: (ctx) => _EditUnifiedBalancesDialog(expenses: widget.expenses, parentCategory: widget.parentCategory)
+                    builder: (ctx) => Theme(
+                      data: ThemeData.light(),
+                      child: _EditUnifiedBalancesDialog(expenses: widget.expenses, parentCategory: widget.parentCategory)
+                    )
                   ).then((_) {
                     if (mounted) _loadWithdrawals();
                   });
@@ -1614,7 +1663,10 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
                     onPressed: () {
                       showDialog(
                         context: context,
-                        builder: (ctx) => _EditIndividualBalanceDialog(expense: currentExpense)
+                        builder: (ctx) => Theme(
+                          data: ThemeData.light(),
+                          child: _EditIndividualBalanceDialog(expense: currentExpense)
+                        )
                       ).then((_) {
                         if (mounted) _loadWithdrawals();
                       });
