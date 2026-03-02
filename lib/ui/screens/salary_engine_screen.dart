@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Linter Warning - bracket if statements & removed unused import)
+// 🔒 STATUS: EDITED (Added Cumulative Average Math, Range Toggles & History Accordion)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui' as ui;
@@ -105,13 +105,35 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
   Widget _buildMountainChart(List<SalaryRecord> records, bool isHourly) {
     if (records.isEmpty) return const SizedBox.shrink();
     
-    // סידור מהישן לחדש
+    // סידור מהישן לחדש (כדי לחשב את הממוצעים לאורך ציר הזמן)
     var sortedRecords = List<SalaryRecord>.from(records);
     sortedRecords.sort((a, b) => DateTime.parse(a.monthYear).compareTo(DateTime.parse(b.monthYear)));
     
-    // סינון לפי הטווח שנבחר
+    // חישוב הממוצע המצטבר (Cumulative Average) לכל נקודת זמן
+    List<double> cumulativeValues = [];
+    double runningNet = 0;
+    double runningHours = 0;
+    
+    for (int i = 0; i < sortedRecords.length; i++) {
+      runningNet += sortedRecords[i].netAmount;
+      runningHours += sortedRecords[i].hours;
+      
+      double val;
+      if (isHourly) {
+        val = runningHours > 0 ? runningNet / runningHours : 0;
+      } else {
+        val = runningNet / (i + 1); // הממוצע חלקי כמות החודשים שהיו עד כה
+      }
+      cumulativeValues.add(val);
+    }
+
+    // סינון לפי הטווח שנבחר (למשל רק 6 אחרונים)
+    List<SalaryRecord> displayRecords = sortedRecords;
+    List<double> displayValues = cumulativeValues;
+
     if (_selectedRange > 0 && sortedRecords.length > _selectedRange) {
-      sortedRecords = sortedRecords.sublist(sortedRecords.length - _selectedRange);
+      displayRecords = sortedRecords.sublist(sortedRecords.length - _selectedRange);
+      displayValues = cumulativeValues.sublist(cumulativeValues.length - _selectedRange);
     }
 
     // הגרף נמתח או מתכווץ לרוחב המסך הקיים, ללא גלילה
@@ -119,7 +141,7 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
       height: 200,
       width: double.infinity,
       child: CustomPaint(
-        painter: _MountainChartPainter(sortedRecords, isHourly),
+        painter: _MountainChartPainter(displayRecords, displayValues, isHourly),
       ),
     );
   }
@@ -141,6 +163,8 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
     }
 
     final selectedExpense = incomeExpenses.firstWhere((e) => e.id == _selectedExpenseId);
+    
+    // רשימה הפוכה (מהחדש לישן) עבור רשימת ההיסטוריה ההגיונית
     final myRecords = provider.salaryRecords.where((r) => r.expenseId == _selectedExpenseId).toList();
     myRecords.sort((a, b) => DateTime.parse(b.monthYear).compareTo(DateTime.parse(a.monthYear)));
 
@@ -261,10 +285,15 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                       isSelected: [_selectedRange == 3, _selectedRange == 6, _selectedRange == 12, _selectedRange == 0],
                       onPressed: (idx) {
                         setState(() {
-                          if (idx == 0) { _selectedRange = 3; }
-                          else if (idx == 1) { _selectedRange = 6; }
-                          else if (idx == 2) { _selectedRange = 12; }
-                          else if (idx == 3) { _selectedRange = 0; }
+                          if (idx == 0) {
+                            _selectedRange = 3;
+                          } else if (idx == 1) {
+                            _selectedRange = 6;
+                          } else if (idx == 2) {
+                            _selectedRange = 12;
+                          } else if (idx == 3) {
+                            _selectedRange = 0;
+                          }
                         });
                       },
                       children: const [Text('3ח\''), Text('6ח\''), Text('שנה'), Text('הכל')],
@@ -273,7 +302,7 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                 ),
                 const SizedBox(height: 16),
                 
-                const Text('גרף שכר נטו', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
+                const Text('גרף ממוצע שכר נטו', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.fromLTRB(16, 30, 16, 16),
@@ -281,7 +310,7 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                   child: _buildMountainChart(myRecords, false),
                 ),
                 const SizedBox(height: 24),
-                const Text('גרף תעריף שעתי', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
+                const Text('גרף ממוצע תעריף שעתי', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.fromLTRB(16, 30, 16, 16),
@@ -291,44 +320,52 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                 const SizedBox(height: 30),
               ],
 
-              const Text('היסטוריית דיווחי שכר', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              const SizedBox(height: 12),
-
-              if (myRecords.isEmpty)
-                const Center(child: Padding(padding: EdgeInsets.all(30), child: Text('טרם הוזנו נתונים היסטוריים', style: TextStyle(color: Colors.grey))))
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: myRecords.length,
-                  itemBuilder: (ctx, i) {
-                    final r = myRecords[i];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey[300]!)),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.blue[50],
-                          child: const Icon(Icons.receipt_long, color: Colors.blue),
-                        ),
-                        title: Text('חודש: ${_formatMonthYear(r.monthYear)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('${r.hours.toStringAsFixed(1)} שעות עבודה'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('₪${r.netAmount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green)),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                              onPressed: () => DatabaseHelper.instance.deleteSalaryRecord(r.id!),
-                            )
-                          ],
-                        ),
+              // חלונית ההיסטוריה הנסתרת (אקורדיון)
+              Card(
+                elevation: 0,
+                margin: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey[300]!)),
+                child: ExpansionTile(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  leading: const Icon(Icons.history, color: Colors.blueGrey),
+                  title: const Text('היסטוריית דיווחי שכר', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  children: [
+                    const Divider(height: 1),
+                    if (myRecords.isEmpty)
+                      const Padding(padding: EdgeInsets.all(30), child: Text('טרם הוזנו נתונים היסטוריים', style: TextStyle(color: Colors.grey)))
+                    else
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: myRecords.length,
+                        separatorBuilder: (ctx, i) => const Divider(height: 1),
+                        itemBuilder: (ctx, i) {
+                          final r = myRecords[i];
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.blue[50],
+                              child: const Icon(Icons.receipt_long, color: Colors.blue),
+                            ),
+                            title: Text('חודש: ${_formatMonthYear(r.monthYear)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('${r.hours.toStringAsFixed(1)} שעות עבודה'),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('₪${r.netAmount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green)),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                  onPressed: () => DatabaseHelper.instance.deleteSalaryRecord(r.id!),
+                                )
+                              ],
+                            ),
+                          );
+                        }
                       ),
-                    );
-                  }
+                  ],
                 ),
+              ),
                 
               const SizedBox(height: 60), 
             ],
@@ -368,13 +405,14 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
 }
 
 // ============================================================================
-// ציור גרף ההרים (Area Chart) - נקי וללא גלילה (נדחס לרוחב המסך)
+// ציור גרף ההרים (Area Chart) המציג את הממוצע המצטבר ולא רק סכום חודשי
 // ============================================================================
 class _MountainChartPainter extends CustomPainter {
   final List<SalaryRecord> records;
+  final List<double> values;
   final bool isHourly;
 
-  _MountainChartPainter(this.records, this.isHourly);
+  _MountainChartPainter(this.records, this.values, this.isHourly);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -400,8 +438,7 @@ class _MountainChartPainter extends CustomPainter {
 
     double maxVal = 0;
     double minVal = double.infinity;
-    for (var r in records) {
-      double v = isHourly ? (r.netAmount / r.hours) : r.netAmount;
+    for (var v in values) {
       if (v > maxVal) maxVal = v;
       if (v < minVal) minVal = v;
     }
@@ -419,7 +456,7 @@ class _MountainChartPainter extends CustomPainter {
     
     List<Offset> points = [];
     for (int i = 0; i < records.length; i++) {
-      double v = isHourly ? (records[i].netAmount / records[i].hours) : records[i].netAmount;
+      double v = values[i]; // השימוש בערך הממוצע המצטבר (Cumulative Average)
       double x = size.width - (i * stepX); // משמאל לימין כדי להתאים ל-RTL
       double y = size.height - 30 - (((v - bottomBase) / range) * (size.height - 60));
       points.add(Offset(x, y));
@@ -452,7 +489,7 @@ class _MountainChartPainter extends CustomPainter {
       canvas.drawCircle(points[i], 4, Paint()..color = Colors.white);
       canvas.drawCircle(points[i], 4, paintLine..style = PaintingStyle.stroke);
 
-      double v = isHourly ? (records[i].netAmount / records[i].hours) : records[i].netAmount;
+      double v = values[i];
       String label = isHourly ? '₪${v.toStringAsFixed(1)}' : '${(v / 1000).toStringAsFixed(1)}k';
       
       textPainter.text = TextSpan(text: label, style: const TextStyle(color: Colors.black87, fontSize: 10, fontWeight: FontWeight.bold));

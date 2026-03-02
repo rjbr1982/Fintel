@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Linter Warning - extra_positional_arguments_could_be_named)
+// 🔒 STATUS: EDITED (Fixed Contrast in Dynamic Salary TextField & Linter Warning)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -1004,10 +1004,19 @@ class SpecificExpensesScreen extends StatelessWidget {
                   ],
 
                   TextField(
-                    controller: amountController, keyboardType: TextInputType.number, enabled: !(isIncome && isDynamic),
+                    controller: amountController, 
+                    keyboardType: TextInputType.number, 
+                    readOnly: (isIncome && isDynamic),
+                    style: TextStyle(
+                      color: (isIncome && isDynamic) ? Colors.blueGrey[900] : Colors.black,
+                      fontWeight: (isIncome && isDynamic) ? FontWeight.bold : FontWeight.normal,
+                    ),
                     decoration: InputDecoration(
                       labelText: expense.isPerChild ? 'סכום לתשלום (עבור כל הילדים)' : (isIncome ? 'סכום חודשי' : 'סכום לתשלום'), 
-                      suffixText: '₪', filled: isIncome && isDynamic, fillColor: Colors.grey[100]
+                      suffixText: '₪', 
+                      filled: isIncome && isDynamic, 
+                      fillColor: Colors.grey[200],
+                      border: const OutlineInputBorder()
                     )
                   ),
                   const SizedBox(height: 16),
