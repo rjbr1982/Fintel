@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Contrast in Dynamic Salary TextField & Linter Warning)
+// 🔒 STATUS: EDITED (Fixed Contrast in Dynamic Salary TextField & Fixed Linter Warning)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -485,37 +485,42 @@ class SpecificExpensesScreen extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 16),
           elevation: 2,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: ExpansionTile(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            leading: CircleAvatar(backgroundColor: Colors.purple[50], child: Icon(Icons.child_care, color: Colors.purple[400])),
-            title: Text(childName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            subtitle: Text('צבור אישי: ₪${childBalance.toStringAsFixed(0)} | תקציב: ₪${childTotal.toStringAsFixed(0)}', style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
-            children: [
-              Container(
-                color: Colors.grey[50],
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.purple[50], foregroundColor: Colors.purple[800], elevation: 0),
-                        icon: const Icon(Icons.account_balance_wallet, size: 18),
-                        label: const Text('ניהול קופה אישית', style: TextStyle(fontWeight: FontWeight.bold)),
-                        onPressed: () {
-                          showModalBottomSheet(
-                            context: context, isScrollControlled: true,
-                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                            builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: 'ילדים: $childName', expenses: items),
-                          );
-                        }
-                      )
-                    ),
-                  ]
-                )
-              ),
-              ...items.map((e) => _buildExpenseTile(context, provider, e, childName: childName))
-            ]
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              backgroundColor: Colors.white,
+              collapsedBackgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              leading: CircleAvatar(backgroundColor: Colors.purple[50], child: Icon(Icons.child_care, color: Colors.purple[400])),
+              title: Text(childName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              subtitle: Text('צבור אישי: ₪${childBalance.toStringAsFixed(0)} | תקציב: ₪${childTotal.toStringAsFixed(0)}', style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
+              children: [
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.purple[50], foregroundColor: Colors.purple[800], elevation: 0),
+                          icon: const Icon(Icons.account_balance_wallet, size: 18),
+                          label: const Text('ניהול קופה אישית', style: TextStyle(fontWeight: FontWeight.bold)),
+                          onPressed: () {
+                            showModalBottomSheet(
+                              context: context, isScrollControlled: true,
+                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                              builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: 'ילדים: $childName', expenses: items),
+                            );
+                          }
+                        )
+                      ),
+                    ]
+                  )
+                ),
+                ...items.map((e) => _buildExpenseTile(context, provider, e, childName: childName))
+              ]
+            ),
           )
         );
       }).toList()
@@ -543,55 +548,60 @@ class SpecificExpensesScreen extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 16),
           elevation: 2,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: ExpansionTile(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            leading: CircleAvatar(backgroundColor: Colors.blue[50], child: Icon(Icons.directions_car, color: Colors.blue[400])),
-            title: Text(vehicleName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            subtitle: Text('צבור: ₪${vehicleBalance.toStringAsFixed(0)} | עלות חודשית: ₪${vehicleTotal.toStringAsFixed(0)}', style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
-            children: [
-              Container(
-                color: Colors.grey[50],
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[50], foregroundColor: Colors.blue[800], elevation: 0),
-                        icon: const Icon(Icons.account_balance_wallet, size: 18),
-                        label: const Text('קופת הרכב', style: TextStyle(fontWeight: FontWeight.bold)),
-                        onPressed: () {
-                          showModalBottomSheet(
-                            context: context, isScrollControlled: true,
-                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                            builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: 'רכב: $vehicleName', expenses: items.where((e)=>e.isSinking).toList()),
-                          );
-                        }
-                      )
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(icon: const Icon(Icons.edit, color: Colors.blueGrey), tooltip: 'ערוך שם רכב', onPressed: () => _showRenameVehicle(context, provider, items, vehicleName)),
-                    IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), tooltip: 'מחק רכב זה', onPressed: () async {
-                      bool? confirm = await showDialog(
-                        context: context,
-                        builder: (c) => AlertDialog(
-                          title: const Text('מחיקת רכב'),
-                          content: Text('האם למחוק את כל ההוצאות המשויכות לרכב "$vehicleName"?'),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('ביטול')),
-                            ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(c, true), child: const Text('מחק רכב', style: TextStyle(color: Colors.white))),
-                          ]
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              backgroundColor: Colors.white,
+              collapsedBackgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              leading: CircleAvatar(backgroundColor: Colors.blue[50], child: Icon(Icons.directions_car, color: Colors.blue[400])),
+              title: Text(vehicleName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              subtitle: Text('צבור: ₪${vehicleBalance.toStringAsFixed(0)} | עלות חודשית: ₪${vehicleTotal.toStringAsFixed(0)}', style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
+              children: [
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[50], foregroundColor: Colors.blue[800], elevation: 0),
+                          icon: const Icon(Icons.account_balance_wallet, size: 18),
+                          label: const Text('קופת הרכב', style: TextStyle(fontWeight: FontWeight.bold)),
+                          onPressed: () {
+                            showModalBottomSheet(
+                              context: context, isScrollControlled: true,
+                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                              builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: 'רכב: $vehicleName', expenses: items.where((e)=>e.isSinking).toList()),
+                            );
+                          }
                         )
-                      );
-                      if (confirm == true) {
-                        for (var e in items) { if (e.id != null) await provider.deleteExpense(e.id!); }
-                      }
-                    })
-                  ]
-                )
-              ),
-              ...items.map((e) => _buildExpenseTile(context, provider, e, isVehicle: true))
-            ]
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(icon: const Icon(Icons.edit, color: Colors.blueGrey), tooltip: 'ערוך שם רכב', onPressed: () => _showRenameVehicle(context, provider, items, vehicleName)),
+                      IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), tooltip: 'מחק רכב זה', onPressed: () async {
+                        bool? confirm = await showDialog(
+                          context: context,
+                          builder: (c) => AlertDialog(
+                            title: const Text('מחיקת רכב'),
+                            content: Text('האם למחוק את כל ההוצאות המשויכות לרכב "$vehicleName"?'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('ביטול')),
+                              ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(c, true), child: const Text('מחק רכב', style: TextStyle(color: Colors.white))),
+                            ]
+                          )
+                        );
+                        if (confirm == true) {
+                          for (var e in items) { if (e.id != null) await provider.deleteExpense(e.id!); }
+                        }
+                      })
+                    ]
+                  )
+                ),
+                ...items.map((e) => _buildExpenseTile(context, provider, e, isVehicle: true))
+              ]
+            ),
           )
         );
       }).toList(),
@@ -1013,9 +1023,9 @@ class SpecificExpensesScreen extends StatelessWidget {
                     ),
                     decoration: InputDecoration(
                       labelText: expense.isPerChild ? 'סכום לתשלום (עבור כל הילדים)' : (isIncome ? 'סכום חודשי' : 'סכום לתשלום'), 
-                      suffixText: '₪', 
-                      filled: isIncome && isDynamic, 
-                      fillColor: Colors.grey[200],
+                      suffixText: '₪',
+                      filled: false, 
+                      prefixIcon: (isIncome && isDynamic) ? const Icon(Icons.lock, size: 16, color: Colors.blueGrey) : null,
                       border: const OutlineInputBorder()
                     )
                   ),

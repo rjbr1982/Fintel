@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Dynamic Child Specific Expenses & Salary Avg Fix)
+// 🔒 STATUS: EDITED (Added cleanup logic for valid child names in variable expenses)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -338,6 +338,20 @@ class BudgetProvider with ChangeNotifier {
     bool changed = false;
     final now = DateTime.now().toIso8601String();
 
+    // --- ניקוי ילדים שהפכו להורים מתוך משתנות הילדים ---
+    final validChildNames = _familyMembers.where((m) => m.role == FamilyRole.child).map((m) => m.name).toList();
+    for (int i = _expenses.length - 1; i >= 0; i--) {
+      final e = _expenses[i];
+      if (e.parentCategory == 'ילדים - משתנות' && e.name != 'בגדים ילדים' && e.name != 'בילויים ילדים') {
+        bool isValid = validChildNames.any((childName) => e.name.contains(childName));
+        if (!isValid) {
+          await DatabaseHelper.instance.deleteExpense(e.id!);
+          _expenses.removeAt(i);
+          changed = true;
+        }
+      }
+    }
+
     if (childCount > 0) {
       final kidsFixed = ['שכר לימוד', 'ציוד בית ספר', 'חוגים', 'מתנות לימי הולדת', 'קייטנות'];
       for (String kf in kidsFixed) {
@@ -559,7 +573,6 @@ class BudgetProvider with ChangeNotifier {
     if (wasUpdated) notifyListeners();
   }
 
-  // --- תיקון מנוע השכר: חלוקה מדויקת במספר החודשים שהוזנו בפועל ---
   double getAverageSalary(int expenseId, {bool calendarYear = false}) {
     final records = _salaryRecords.where((r) => r.expenseId == expenseId).toList();
     if (records.isEmpty) return 0.0;
