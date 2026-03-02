@@ -1,9 +1,9 @@
-// 🔒 STATUS: EDITED (Fixed Linter Warnings - withOpacity & activeColor deprecations)
-// lib/ui/widgets/global_header.dart
+// 🔒 STATUS: EDITED (Redesigned Family Settings with Pencil Icon & Role Selector)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../providers/budget_provider.dart';
+import '../../data/expense_model.dart';
 import '../../utils/app_localizations.dart';
 import '../../services/ai_export_service.dart';
 import '../screens/onboarding_screen.dart';
@@ -193,49 +193,59 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
         backgroundColor: Colors.white,
         child: Padding(
           padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.settings_outlined, color: Colors.blueGrey, size: 28),
-                  SizedBox(width: 10),
-                  Text('הגדרות מערכת', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87)),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _buildSettingsCard(ctx, Icons.family_restroom_rounded, 'הגדרות משפחה וישויות', () {
-                  Navigator.pop(ctx);
-                  _showFamilySettingsDialog(context, budget);
-              }, Colors.blue),
-              _buildSettingsCard(ctx, Icons.pie_chart_outline, 'אחוז משתנות (רמת חיים)', () {
-                  Navigator.pop(ctx);
-                  _showRatioSettingsDialog(context, budget);
-              }, Colors.orange),
-              _buildSettingsCard(ctx, Icons.balance, 'חלוקת שארית (עתידיות/פיננסיות)', () {
-                  Navigator.pop(ctx);
-                  _showFutureVsFinancialDialog(context, budget);
-              }, Colors.purple),
-              
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Divider(height: 1),
-              ),
-              
-              _buildSettingsCard(ctx, Icons.logout, 'התנתקות מהחשבון (Log Out)', () async {
-                  Navigator.pop(ctx);
-                  await FirebaseAuth.instance.signOut();
-                  if (context.mounted) {
-                    Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
-                  }
-              }, Colors.blueGrey),
-              _buildSettingsCard(ctx, Icons.restore, 'איפוס כל הנתונים', () {
-                  Navigator.pop(ctx);
-                  _showFactoryResetConfirm(context, budget);
-              }, Colors.red),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.settings_outlined, color: Colors.blueGrey, size: 28),
+                    SizedBox(width: 10),
+                    Text('הגדרות מערכת', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                _buildSettingsCard(ctx, Icons.family_restroom_rounded, 'הגדרות משפחה', () {
+                    Navigator.pop(ctx);
+                    _showFamilySettingsDialog(context, budget);
+                }, Colors.blue),
+                
+                _buildSettingsCard(ctx, Icons.person_off_outlined, 'ניהול ישויות דינמי (משתנות)', () {
+                    Navigator.pop(ctx);
+                    _showDynamicEntitiesDialog(context, budget);
+                }, Colors.teal),
+            
+                _buildSettingsCard(ctx, Icons.pie_chart_outline, 'אחוז משתנות (רמת חיים)', () {
+                    Navigator.pop(ctx);
+                    _showRatioSettingsDialog(context, budget);
+                }, Colors.orange),
+                
+                _buildSettingsCard(ctx, Icons.balance, 'חלוקת שארית (עתידיות/פיננסיות)', () {
+                    Navigator.pop(ctx);
+                    _showFutureVsFinancialDialog(context, budget);
+                }, Colors.purple),
+                
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(height: 1),
+                ),
+                
+                _buildSettingsCard(ctx, Icons.logout, 'התנתקות מהחשבון', () async {
+                    Navigator.pop(ctx);
+                    await FirebaseAuth.instance.signOut();
+                    if (context.mounted) {
+                      Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+                    }
+                }, Colors.blueGrey),
+                
+                _buildSettingsCard(ctx, Icons.restore, 'איפוס כל הנתונים', () {
+                    Navigator.pop(ctx);
+                    _showFactoryResetConfirm(context, budget);
+                }, Colors.red),
+              ],
+            ),
           ),
         ),
       ),
@@ -265,12 +275,55 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: Text(text, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.blueGrey[900])),
+                child: Text(text, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey[900])),
               ),
               Icon(Icons.arrow_forward_ios, size: 14, color: Colors.blueGrey[300]),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showDynamicEntitiesDialog(BuildContext context, BudgetProvider budget) {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('ניהול ישויות - משתנות', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('כיבוי ישות יאפס את התקציב שלה ויחלק אותו יחסית בין שאר הישויות הפעילות.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const SizedBox(height: 20),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('תקציב אבא פעיל', style: TextStyle(fontWeight: FontWeight.bold)),
+                  value: budget.isFatherActive,
+                  activeThumbColor: Colors.teal,
+                  onChanged: (val) { budget.toggleEntityActive('father', val); setDialogState((){}); },
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('תקציב אמא פעיל', style: TextStyle(fontWeight: FontWeight.bold)),
+                  value: budget.isMotherActive,
+                  activeThumbColor: Colors.teal,
+                  onChanged: (val) { budget.toggleEntityActive('mother', val); setDialogState((){}); },
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('תקציב ילדים פעיל', style: TextStyle(fontWeight: FontWeight.bold)),
+                  value: budget.isKidsActive,
+                  activeThumbColor: Colors.teal,
+                  onChanged: (val) { budget.toggleEntityActive('kids', val); setDialogState((){}); },
+                ),
+              ],
+            ),
+            actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('סגור'))],
+          );
+        },
       ),
     );
   }
@@ -313,7 +366,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                       decoration: const InputDecoration(labelText: 'עתידיות', suffixText: '%', border: OutlineInputBorder()),
                       onChanged: (val) {
                         final num = double.tryParse(val) ?? 0;
-                        if (num >= 0 && num <= 100) financialController.text = (100 - num).toStringAsFixed(0);
+                        if (num >= 0 && num <= 100) { financialController.text = (100 - num).toStringAsFixed(0); }
                       },
                     ),
                   ),
@@ -325,7 +378,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                       decoration: const InputDecoration(labelText: 'פיננסיות', suffixText: '%', border: OutlineInputBorder()),
                       onChanged: (val) {
                         final num = double.tryParse(val) ?? 0;
-                        if (num >= 0 && num <= 100) futureController.text = (100 - num).toStringAsFixed(0);
+                        if (num >= 0 && num <= 100) { futureController.text = (100 - num).toStringAsFixed(0); }
                       },
                     ),
                   ),
@@ -431,27 +484,22 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
         builder: (context, setDialogState) {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('הגדרות משפחה וישויות', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+            title: const Text('הגדרות משפחה', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
             content: SizedBox(
               width: double.maxFinite,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // סעיף 7.1.1: תצוגה בלבד של מספר הילדים, ללא אפשרות שינוי
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('מספר ילדים:', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Row(
-                            children: [
-                              IconButton(onPressed: budget.childCount > 0 ? () { budget.setChildCount(budget.childCount - 1); setDialogState(() {}); } : null, icon: const Icon(Icons.remove_circle_outline, color: Colors.blue)),
-                              Text('${budget.childCount}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
-                              IconButton(onPressed: () { budget.setChildCount(budget.childCount + 1); setDialogState(() {}); }, icon: const Icon(Icons.add_circle_outline, color: Colors.blue)),
-                            ],
-                          ),
+                          const Text('סה"כ ילדים מעודכנים:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text('${budget.childCount}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
                         ],
                       ),
                     ),
@@ -462,21 +510,34 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                       itemCount: budget.familyMembers.length,
                       itemBuilder: (context, index) {
                         final member = budget.familyMembers[index];
+                        bool isParent = member.role == FamilyRole.parent;
                         return Card(
                           elevation: 0,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey[200]!)),
                           child: ListTile(
-                            leading: CircleAvatar(backgroundColor: Colors.orange[50], child: const Icon(Icons.person, color: Colors.orange)),
+                            leading: CircleAvatar(
+                              backgroundColor: isParent ? Colors.blue[50] : Colors.purple[50], 
+                              child: Icon(isParent ? Icons.person : Icons.child_care, color: isParent ? Colors.blue : Colors.purple)
+                            ),
                             title: Text(member.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('גיל: ${member.age}'),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent), 
-                              onPressed: () async { 
-                                if (member.id != null) { 
-                                  await budget.removeFamilyMember(member.id!); 
-                                  if (ctx.mounted) setDialogState(() {}); 
-                                } 
-                              }
+                            subtitle: Text('${isParent ? "הורה" : "ילד"} | גיל: ${member.age}'),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.blueGrey, size: 20), 
+                                  onPressed: () => _showEditMemberDialog(context, budget, member, setDialogState)
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20), 
+                                  onPressed: () async { 
+                                    if (member.id != null) { 
+                                      await budget.removeFamilyMember(member.id!); 
+                                      if (ctx.mounted) setDialogState(() {}); 
+                                    } 
+                                  }
+                                ),
+                              ],
                             ),
                           ),
                         );
@@ -487,31 +548,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey[900], foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                       icon: const Icon(Icons.person_add, size: 18),
                       label: const Text('הוסף בן משפחה'),
-                      onPressed: () => _showAddMemberDialog(context, budget, setDialogState)
-                    ),
-                    const Divider(height: 30),
-                    const Text('ניהול ישויות בתקציב המשתנות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-                    const SizedBox(height: 8),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('תקציב אבא פעיל'),
-                      value: budget.isFatherActive,
-                      activeThumbColor: Colors.green,
-                      onChanged: (val) { budget.toggleEntityActive('father', val); setDialogState((){}); },
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('תקציב אמא פעיל'),
-                      value: budget.isMotherActive,
-                      activeThumbColor: Colors.green,
-                      onChanged: (val) { budget.toggleEntityActive('mother', val); setDialogState((){}); },
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('תקציב ילדים פעיל'),
-                      value: budget.isKidsActive,
-                      activeThumbColor: Colors.green,
-                      onChanged: (val) { budget.toggleEntityActive('kids', val); setDialogState((){}); },
+                      onPressed: () => _showEditMemberDialog(context, budget, null, setDialogState)
                     ),
                   ],
                 ),
@@ -524,38 +561,57 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  void _showAddMemberDialog(BuildContext context, BudgetProvider budget, Function parentState) {
-    final nameController = TextEditingController();
-    final yearController = TextEditingController(text: DateTime.now().year.toString());
+  void _showEditMemberDialog(BuildContext context, BudgetProvider budget, FamilyMember? member, Function parentState) {
+    final nameController = TextEditingController(text: member?.name ?? '');
+    final yearController = TextEditingController(text: member?.birthYear.toString() ?? DateTime.now().year.toString());
+    FamilyRole selectedRole = member?.role ?? FamilyRole.child;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('בן משפחה חדש', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם מלא', border: OutlineInputBorder())),
-            const SizedBox(height: 12),
-            TextField(controller: yearController, decoration: const InputDecoration(labelText: 'שנת לידה (למשל 2015)', border: OutlineInputBorder()), keyboardType: TextInputType.number),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(member == null ? 'הוספת בן משפחה' : 'עריכת פרטים', style: const TextStyle(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם מלא', border: OutlineInputBorder())),
+              const SizedBox(height: 12),
+              TextField(controller: yearController, decoration: const InputDecoration(labelText: 'שנת לידה (למשל 2015)', border: OutlineInputBorder()), keyboardType: TextInputType.number),
+              const SizedBox(height: 16),
+              const Align(alignment: Alignment.centerRight, child: Text('הגדרת תפקיד:', style: TextStyle(fontWeight: FontWeight.bold))),
+              const SizedBox(height: 8),
+              SegmentedButton<FamilyRole>(
+                segments: const [
+                  ButtonSegment(value: FamilyRole.parent, label: Text('הורה'), icon: Icon(Icons.person)), 
+                  ButtonSegment(value: FamilyRole.child, label: Text('ילד'), icon: Icon(Icons.child_care))
+                ],
+                selected: {selectedRole},
+                onSelectionChanged: (val) => setDialogState(() => selectedRole = val.first),
+              )
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+            ElevatedButton(
+              onPressed: () async { 
+                if (nameController.text.isNotEmpty) { 
+                  final birthYear = int.tryParse(yearController.text) ?? DateTime.now().year;
+                  if (member == null) {
+                    await budget.addFamilyMember(nameController.text, birthYear, selectedRole); 
+                  } else {
+                    await budget.updateFamilyMember(FamilyMember(id: member.id, name: nameController.text, birthYear: birthYear, role: selectedRole));
+                  }
+                  if (ctx.mounted) {
+                    parentState(() {}); 
+                    Navigator.pop(ctx); 
+                  }
+                } 
+              }, 
+              child: const Text('שמור')
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
-          ElevatedButton(
-            onPressed: () async { 
-              if (nameController.text.isNotEmpty) { 
-                final birthYear = int.tryParse(yearController.text) ?? DateTime.now().year;
-                await budget.addFamilyMember(nameController.text, birthYear); 
-                if (ctx.mounted) {
-                  parentState(() {}); 
-                  Navigator.pop(ctx); 
-                }
-              } 
-            }, 
-            child: const Text('שמור')
-          ),
-        ],
       ),
     );
   }

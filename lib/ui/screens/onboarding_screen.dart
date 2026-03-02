@@ -1,8 +1,9 @@
-// 🔒 STATUS: EDITED (Implemented 4-Step Onboarding Flow per Rule 4.18)
+// 🔒 STATUS: EDITED (Fixed 3 positional arguments error and removed setChildCount)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../services/seed_service.dart';
+import '../../data/expense_model.dart'; // <--- Added for FamilyRole
 import 'main_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -66,13 +67,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() {
       _maritalStatus = status;
       if (status == 'single') {
-        // שמירת מבוגר אחד בלבד ("אישי")
         if (_adults.length > 1) {
           _adults.removeRange(1, _adults.length);
         }
         _adults[0]['name']!.text = 'אישי';
       } else {
-        // הוספת מבוגר שני ("אבא" ו"אמא")
         if (_adults.length < 2) {
           _adults.add({
             'name': TextEditingController(text: 'אמא'),
@@ -97,53 +96,46 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _completeOnboarding() async {
     setState(() => _isLoading = true);
     
-    // קליטת הערכים
     final housingCost = double.tryParse(_housingCtrl.text) ?? 3500;
     final supermarket = double.tryParse(_supermarketCtrl.text) ?? 2500;
     final electricity = double.tryParse(_electricityCtrl.text) ?? 350;
     final water = double.tryParse(_waterCtrl.text) ?? 110;
     final leasing = double.tryParse(_leasingCtrl.text) ?? 0;
 
-    // 1. הפעלת מנוע האתחול הבסיסי (יציג שגיאה עד שנעדכן את seed_service.dart)
     await SeedService.generateInitialData(
-      maritalStatus: _maritalStatus, // חדש
+      maritalStatus: _maritalStatus, 
       vehicleType: _vehicleType,
-      housingType: _housingType,     // חדש
+      housingType: _housingType,    
       leasingCost: leasing,
-      housingAmount: housingCost,    // שונה מ-rentAmount
+      housingAmount: housingCost,    
       supermarketAmount: supermarket,
       electricityAmount: electricity,
       waterAmount: water,
-      childrenCount: _children.length, // חדש: לצורך חישוב אחוזים ראשוני
+      childrenCount: _children.length, 
     );
 
     if (!mounted) return;
 
-    // 2. שמירת בני המשפחה
     final budget = Provider.of<BudgetProvider>(context, listen: false);
     
-    // הוספת מבוגרים
     for (var adult in _adults) {
       final name = adult['name']!.text.trim();
       if (name.isNotEmpty) {
-        await budget.addFamilyMember(name, int.tryParse(adult['year']!.text) ?? (DateTime.now().year - 30));
+        // הוספת מבוגר כהורה (FamilyRole.parent)
+        await budget.addFamilyMember(name, int.tryParse(adult['year']!.text) ?? (DateTime.now().year - 30), FamilyRole.parent);
       }
     }
     
-    // הוספת ילדים
-    int validChildrenCount = 0;
     for (var child in _children) {
       final name = child['name']!.text.trim();
       if (name.isNotEmpty) {
-        validChildrenCount++;
-        await budget.addFamilyMember(name, int.tryParse(child['year']!.text) ?? DateTime.now().year);
+        // הוספת ילד (FamilyRole.child)
+        await budget.addFamilyMember(name, int.tryParse(child['year']!.text) ?? DateTime.now().year, FamilyRole.child);
       }
     }
 
-    // עדכון כמות הילדים הרשמית במערכת
-    await budget.setChildCount(validChildrenCount);
-    
-    // רענון המידע כדי להציג מיד במסך הראשי
+    // הוסר `budget.setChildCount` מכיוון שהספירה כעת דינמית במודל
+
     await budget.loadData();
 
     if (mounted) {
@@ -169,7 +161,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             currentStep: _currentStep,
             physics: const BouncingScrollPhysics(),
             onStepContinue: () {
-              if (_currentStep < 3) { // הוגדל ל-3 (4 שלבים)
+              if (_currentStep < 3) { 
                 setState(() => _currentStep += 1);
               } else {
                 _completeOnboarding();
@@ -208,7 +200,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               );
             },
             steps: [
-              // שלב 0: סטטוס אישי
               Step(
                 title: const Text('סטטוס אישי', style: TextStyle(fontSize: 18)),
                 content: Column(
@@ -236,7 +227,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           entry.value['name']!, 
                           entry.value['year']!, 
                           'שם פרטי', 
-                          showDelete: false, // לא מאפשרים מחיקה ידנית, זה נשלט ע"י הסטטוס
+                          showDelete: false, 
                         ),
                       );
                     }),
@@ -245,7 +236,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 isActive: _currentStep >= 0,
               ),
 
-              // שלב 1: ילדים ותלויים
               Step(
                 title: const Text('ילדים ותלויים', style: TextStyle(fontSize: 18)),
                 content: Column(
@@ -280,7 +270,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 isActive: _currentStep >= 1,
               ),
 
-              // שלב 2: כלי רכב
               Step(
                 title: const Text('כלי רכב וניידות', style: TextStyle(fontSize: 18)),
                 content: Column(
@@ -316,7 +305,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 isActive: _currentStep >= 2,
               ),
 
-              // שלב 3: מגורים והוצאות עוגן
               Step(
                 title: const Text('מגורים והוצאות בסיס', style: TextStyle(fontSize: 18)),
                 content: Column(
@@ -392,7 +380,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             onPressed: onDelete,
           ),
         ] else
-          const SizedBox(width: 48), // כדי לשמור על יישור עם השורות שיש בהן פח אשפה
+          const SizedBox(width: 48), 
       ],
     );
   }

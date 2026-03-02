@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Shortened Title to "תזרים" and cleaned unused 'loc')
+// 🔒 STATUS: EDITED (Added support for Dynamic Entities hiding)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -33,7 +33,7 @@ class PnLScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: isFutureMode ? const Color(0xFFF0FDF4) : Colors.white,
       appBar: const GlobalHeader(
-        title: 'תזרים', // הכותרת קוצרה בהתאם לדרישה
+        title: 'תזרים', 
       ),
       body: Column(
         children: [
@@ -374,7 +374,7 @@ class PnLScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     TextField(
                       controller: capitalCtrl,
-                      readOnly: true, // מונע עריכה ידנית כי זה נשאב דינמית מהנכסים
+                      readOnly: true, 
                       decoration: const InputDecoration(
                         labelText: 'הון עצמי נוכחי (נשאב מהנכסים)',
                         prefixIcon: Icon(Icons.account_balance_wallet),

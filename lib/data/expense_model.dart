@@ -1,16 +1,25 @@
-// 🔒 STATUS: EDITED (Added isCustom flag for Flexible Model Principle 4.7)
+// 🔒 STATUS: EDITED (Added FamilyRole Enum and updated FamilyMember model)
 // ignore_for_file: constant_identifier_names
 
 // הגדרת האפשרויות לתדירות התשלום
 enum Frequency { MONTHLY, BI_MONTHLY, YEARLY }
+
+// --- תפקידים במשפחה (סעיף 11.8) ---
+enum FamilyRole { parent, child }
 
 // --- מודל בן משפחה ---
 class FamilyMember {
   final int? id;
   final String name;
   final int birthYear;
+  final FamilyRole role; 
 
-  FamilyMember({this.id, required this.name, required this.birthYear});
+  FamilyMember({
+    this.id, 
+    required this.name, 
+    required this.birthYear,
+    this.role = FamilyRole.child, 
+  });
 
   int get age => DateTime.now().year - birthYear;
 
@@ -19,6 +28,7 @@ class FamilyMember {
       if (id != null) 'id': id,
       'name': name,
       'birthYear': birthYear,
+      'role': role.index,
     };
   }
 
@@ -27,6 +37,7 @@ class FamilyMember {
       id: map['id'],
       name: map['name'] ?? '',
       birthYear: map['birthYear'] ?? DateTime.now().year,
+      role: map['role'] != null ? FamilyRole.values[map['role']] : FamilyRole.child,
     );
   }
 }
@@ -56,8 +67,8 @@ class Expense {
   final bool isDynamicSalary;
   final String? salaryStartDate;
 
-  // --- שדה תשתית גמישה (NEW) ---
-  final bool isCustom; // האם מדובר בהוצאה שיצר המשתמש (ניתנת למחיקה)?
+  // --- שדה תשתית גמישה ---
+  final bool isCustom; 
 
   final String date; 
 
@@ -79,7 +90,7 @@ class Expense {
     this.manualAmount,
     this.isDynamicSalary = false,
     this.salaryStartDate,
-    this.isCustom = false, // ברירת מחדל: נתוני מערכת מוגנים (Seed)
+    this.isCustom = false, 
     required this.date,
   }) : originalAmount = originalAmount ?? monthlyAmount;
 

@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Text Color & Converted Add Button to FAB)
+// 🔒 STATUS: EDITED (Fixed Dropdown Menu Contrast - Forced White Background)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -103,10 +103,8 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
   Widget _buildNativeBarChart(List<SalaryRecord> records, bool isHourly) {
     if (records.isEmpty) return const SizedBox.shrink();
     
-    // מיון כרונולוגי
     records.sort((a, b) => DateTime.parse(a.monthYear).compareTo(DateTime.parse(b.monthYear)));
     
-    // לקיחת 6 חודשים אחרונים למניעת עומס ויזואלי
     final displayRecords = records.length > 6 ? records.sublist(records.length - 6) : records;
 
     double maxValue = 0;
@@ -174,7 +172,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
     double avgSalaryByWork = provider.getAverageSalary(selectedExpense.id!);
     double avgHourlyRate = provider.getAverageHourlyRate(selectedExpense.id!);
     
-    // חישוב YTD השנה
     final currentYear = DateTime.now().year;
     double ytdAmount = 0;
     for (var r in myRecords) {
@@ -208,12 +205,13 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                   child: DropdownButton<int>(
                     value: _selectedExpenseId,
                     isExpanded: true,
+                    dropdownColor: Colors.white, // <--- Fixed: Forced White Background
                     icon: const Icon(Icons.work_outline, color: Colors.blue),
-                    style: const TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Heebo'),
+                    style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Heebo'),
                     items: incomeExpenses.map((e) {
                       return DropdownMenuItem<int>(
                         value: e.id,
-                        child: Text(e.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                        child: Text(e.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -224,7 +222,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
               ),
               const SizedBox(height: 20),
 
-              // קוביות סטטיסטיקה
               Row(
                 children: [
                   Expanded(
@@ -273,7 +270,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
 
               const SizedBox(height: 30),
               
-              // גרפים
               if (myRecords.isNotEmpty) ...[
                 const Text('מגמת שכר נטו (6 חודשים אחרונים)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 12),
@@ -293,7 +289,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                 const SizedBox(height: 30),
               ],
 
-              // היסטוריית חודשים
               const Text('היסטוריית דיווחי שכר', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               const SizedBox(height: 12),
 
@@ -333,7 +328,7 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                   }
                 ),
                 
-              const SizedBox(height: 60), // מרווח לכפתור הצף
+              const SizedBox(height: 60), 
             ],
           ),
         ),

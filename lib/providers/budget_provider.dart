@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Dynamic Entities, Multi-Vehicle Templates, and Custom Protection logic)
+// 🔒 STATUS: EDITED (Replaced manual _childCount with automatic getter)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -18,13 +18,9 @@ class BudgetProvider with ChangeNotifier {
 
   static const double defaultVariableRatio = 0.833; 
   static const double defaultFutureRatio = 0.85;    
-  static const int defaultChildCount = 3;
 
-  // --- משתני משפחה דינמיים ---
   String _maritalStatus = 'married'; 
-  int _childCount = defaultChildCount; 
   
-  // --- ישויות פעילות (סעיף 4.8.4) ---
   bool _isFatherActive = true;
   bool _isMotherActive = true;
   bool _isKidsActive = true;
@@ -32,16 +28,13 @@ class BudgetProvider with ChangeNotifier {
   double _variableAllocationRatio = defaultVariableRatio; 
   double _futureAllocationRatio = defaultFutureRatio;    
 
-  // --- משתני מנוע החירות ---
   double _initialCapital = 0.0;
   double _expectedYield = 4.0;
   int _compoundingFrequency = 12;
   double? _manualTargetIncome;
 
-  // --- מנועי שכר ---
   List<SalaryRecord> _salaryRecords = [];
 
-  // --- מנויי האזנה לענן ---
   StreamSubscription? _expensesSub;
   StreamSubscription? _familySub;
   StreamSubscription? _settingsSub;
@@ -52,7 +45,10 @@ class BudgetProvider with ChangeNotifier {
   List<Expense> get expenses => _expenses;
   List<FamilyMember> get familyMembers => _familyMembers;
   List<SalaryRecord> get salaryRecords => _salaryRecords;
-  int get childCount => _childCount;
+  
+  // חישוב כמות ילדים דינמית על סמך התפקיד
+  int get childCount => _familyMembers.where((m) => m.role == FamilyRole.child).length;
+  
   String get maritalStatus => _maritalStatus;
   
   bool get isFatherActive => _isFatherActive;
@@ -102,7 +98,6 @@ class BudgetProvider with ChangeNotifier {
       _variableAllocationRatio = await DatabaseHelper.instance.getSetting('variable_ratio') ?? defaultVariableRatio;
       _futureAllocationRatio = await DatabaseHelper.instance.getSetting('future_ratio') ?? defaultFutureRatio;
       
-      _childCount = (await DatabaseHelper.instance.getSetting('child_count') ?? defaultChildCount.toDouble()).toInt();
       double msVal = await DatabaseHelper.instance.getSetting('marital_status') ?? 2.0;
       _maritalStatus = msVal == 1.0 ? 'single' : 'married';
 
@@ -133,6 +128,7 @@ class BudgetProvider with ChangeNotifier {
 
     _familySub = DatabaseHelper.instance.streamFamilyMembers().listen((data) {
       _familyMembers = data;
+      _recalculateAll();
       notifyListeners();
     });
 
@@ -162,7 +158,6 @@ class BudgetProvider with ChangeNotifier {
         if (key == 'manual_target_income' && _manualTargetIncome != val) { _manualTargetIncome = val; changed = true; }
         if (key == 'variable_ratio' && val != null && _variableAllocationRatio != val) { _variableAllocationRatio = val; changed = true; }
         if (key == 'future_ratio' && val != null && _futureAllocationRatio != val) { _futureAllocationRatio = val; changed = true; }
-        if (key == 'child_count' && val != null && _childCount != val.toInt()) { _childCount = val.toInt(); changed = true; }
         
         if (key == 'marital_status' && val != null) { 
           String newStatus = val == 1.0 ? 'single' : 'married';
@@ -188,14 +183,10 @@ class BudgetProvider with ChangeNotifier {
     });
   }
 
-  Future<void> updateFamilyStructure({String? maritalStatus, int? childrenCount}) async {
+  Future<void> updateFamilyStructure({String? maritalStatus}) async {
     if (maritalStatus != null) {
       await DatabaseHelper.instance.saveSetting('marital_status', maritalStatus == 'single' ? 1.0 : 2.0);
       _maritalStatus = maritalStatus;
-    }
-    if (childrenCount != null) {
-      await DatabaseHelper.instance.saveSetting('child_count', childrenCount.toDouble());
-      _childCount = childrenCount;
     }
     await _forceCategorySync();
     _recalculateAll();
@@ -216,10 +207,6 @@ class BudgetProvider with ChangeNotifier {
     }
     _recalculateAll();
     notifyListeners();
-  }
-
-  Future<void> setChildCount(int count) async {
-    await updateFamilyStructure(childrenCount: count);
   }
 
   Future<void> setFreedomSettings({
@@ -253,7 +240,6 @@ class BudgetProvider with ChangeNotifier {
     int months = 0;
     while (months < 1200) { 
       cap += monthlyDeposit;
-      
       if (_compoundingFrequency == 1) { 
         if (months > 0 && months % 12 == 0) cap += cap * yieldRate;
       } else if (_compoundingFrequency == 12) { 
@@ -261,7 +247,6 @@ class BudgetProvider with ChangeNotifier {
       } else if (_compoundingFrequency == 52) { 
         cap *= math.pow(1 + yieldRate / 52, 52 / 12).toDouble();
       }
-
       if ((cap * yieldRate) >= targetAnnual) return months;
       months++;
     }
@@ -269,11 +254,12 @@ class BudgetProvider with ChangeNotifier {
   }
 
   Map<String, double> _getDynamicVariableRatios() {
-    if (_maritalStatus == 'single' && _childCount > 0) {
+    int cCount = childCount;
+    if (_maritalStatus == 'single' && cCount > 0) {
       return { 'בגדים אישי': 0.28, 'בילויים אישי': 0.33, 'טיפוח אישי': 0.15, 'בגדים ילדים': 0.12, 'בילויים ילדים': 0.12 };
-    } else if (_maritalStatus == 'married' && _childCount == 0) {
+    } else if (_maritalStatus == 'married' && cCount == 0) {
       return { 'בגדים אבא': 0.25, 'בילויים אבא': 0.20, 'בגדים אמא': 0.15, 'בילויים אמא': 0.25, 'טיפוח אמא': 0.15 };
-    } else if (_maritalStatus == 'single' && _childCount == 0) {
+    } else if (_maritalStatus == 'single' && cCount == 0) {
       return { 'בגדים אישי': 0.40, 'בילויים אישי': 0.45, 'טיפוח אישי': 0.15 };
     } else {
       return { 'בגדים אבא': 0.19, 'בילויים אבא': 0.14, 'בגדים אמא': 0.09, 'בילויים אמא': 0.19, 'טיפוח אמא': 0.15, 'בגדים ילדים': 0.12, 'בילויים ילדים': 0.12 };
@@ -313,7 +299,6 @@ class BudgetProvider with ChangeNotifier {
     await DatabaseHelper.instance.updateExpense(updated);
   }
 
-  // --- מנוע צי רכבים (סעיף 7.2) ---
   Future<void> addVehicleTemplate(String vehicleName, String type) async {
     final now = DateTime.now().toIso8601String();
     String parentCat = 'רכב';
@@ -326,7 +311,6 @@ class BudgetProvider with ChangeNotifier {
       await addExpense(Expense(name: 'ליסינג ($vehicleName)', category: 'קבועות', parentCategory: parentCat, monthlyAmount: 600, frequency: Frequency.MONTHLY, isSinking: false, isCustom: true, date: now));
       await addExpense(Expense(name: 'דלק ($vehicleName)', category: 'קבועות', parentCategory: parentCat, monthlyAmount: 500, frequency: Frequency.MONTHLY, isSinking: false, isCustom: true, date: now));
     } else {
-      // אופנוע
       await addExpense(Expense(name: 'טסט ($vehicleName)', category: 'קבועות', parentCategory: parentCat, monthlyAmount: 21, frequency: Frequency.MONTHLY, isSinking: true, isCustom: true, date: now));
       await addExpense(Expense(name: 'ביטוח ($vehicleName)', category: 'קבועות', parentCategory: parentCat, monthlyAmount: 292, frequency: Frequency.MONTHLY, isSinking: true, isCustom: true, date: now));
       await addExpense(Expense(name: 'טיפול ($vehicleName)', category: 'קבועות', parentCategory: parentCat, monthlyAmount: 42, frequency: Frequency.MONTHLY, isSinking: true, isCustom: true, date: now));
@@ -341,7 +325,7 @@ class BudgetProvider with ChangeNotifier {
     bool changed = false;
     final now = DateTime.now().toIso8601String();
 
-    if (_childCount > 0) {
+    if (childCount > 0) {
       final kidsFixed = ['שכר לימוד', 'ציוד בית ספר', 'חוגים', 'מתנות לימי הולדת', 'קייטנות'];
       for (String kf in kidsFixed) {
         if (!_expenses.any((e) => e.name == kf || (kf == 'מתנות לימי הולדת' && e.name == 'מתנות ימי הולדת'))) {
@@ -349,7 +333,7 @@ class BudgetProvider with ChangeNotifier {
                name: kf, category: 'קבועות', parentCategory: 'ילדים - קבועות',
                monthlyAmount: 0, originalAmount: 0, isSinking: true, isPerChild: true,
                frequency: (kf == 'ציוד בית ספר' || kf == 'קייטנות') ? Frequency.YEARLY : Frequency.MONTHLY,
-               date: now, isDynamicSalary: false, isCustom: false, // מוגן מחיקה
+               date: now, isDynamicSalary: false, isCustom: false,
            ));
            changed = true;
         }
@@ -392,7 +376,16 @@ class BudgetProvider with ChangeNotifier {
       String newCat = e.category;
       String newParent = e.parentCategory;
       bool newIsPerChild = e.isPerChild;
+      String newName = e.name;
+      bool newIsCustom = e.isCustom;
       String nameForMatch = e.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
+
+      final oldVehicleNames = ['טסט', 'ביטוח', 'טיפול', 'תיקונים', 'דלק', 'ליסינג', 'נסיעות'];
+      if (e.parentCategory == 'רכב' && !e.name.contains('(') && oldVehicleNames.contains(e.name.trim())) {
+        newName = '${e.name} (אופנוע יסוד)';
+        newIsCustom = true; 
+        needsUpdate = true;
+      }
 
       if (syncRules.containsKey(nameForMatch)) {
         final rule = syncRules[nameForMatch]!;
@@ -405,7 +398,6 @@ class BudgetProvider with ChangeNotifier {
       }
 
       double? newRatio = e.allocationRatio;
-      
       if (requiredRatios.containsKey(nameForMatch)) {
         if (newRatio != requiredRatios[nameForMatch]) {
           newRatio = requiredRatios[nameForMatch];
@@ -426,13 +418,13 @@ class BudgetProvider with ChangeNotifier {
 
       if (needsUpdate) {
         final updated = Expense(
-          id: e.id, name: e.name, category: newCat, parentCategory: newParent,
+          id: e.id, name: newName, category: newCat, parentCategory: newParent,
           monthlyAmount: e.monthlyAmount, originalAmount: e.originalAmount, frequency: e.frequency,
           isSinking: newIsSinking, isPerChild: newIsPerChild,
           targetAmount: e.targetAmount, currentBalance: e.currentBalance, allocationRatio: newRatio,
           lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
           isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
-          isCustom: e.isCustom,
+          isCustom: newIsCustom,
         );
         await DatabaseHelper.instance.updateExpense(updated);
         changed = true;
@@ -446,7 +438,7 @@ class BudgetProvider with ChangeNotifier {
           name: entry.key, category: 'משתנות', parentCategory: parentCat,
           monthlyAmount: 0, originalAmount: 0, isSinking: true,
           isPerChild: entry.key.contains('ילדים'), allocationRatio: entry.value,
-          date: now, isDynamicSalary: false, isCustom: false, // מוגן
+          date: now, isDynamicSalary: false, isCustom: false,
         ));
         changed = true;
       }
@@ -490,7 +482,6 @@ class BudgetProvider with ChangeNotifier {
 
   Future<void> fullAppReset() async {
     await DatabaseHelper.instance.clearAllData();
-    _childCount = defaultChildCount;
     _maritalStatus = 'married';
     _isFatherActive = true;
     _isMotherActive = true;
@@ -519,7 +510,7 @@ class BudgetProvider with ChangeNotifier {
         int monthsDiff = (now.year - lastUpdate.year) * 12 + now.month - lastUpdate.month;
         if (monthsDiff > 0) {
           double monthlyDeposit = e.monthlyAmount;
-          if (e.isPerChild) monthlyDeposit *= _childCount;
+          if (e.isPerChild) monthlyDeposit *= childCount;
           double addedAmount = monthlyDeposit * monthsDiff;
           
           final updatedExpense = Expense(
@@ -696,7 +687,6 @@ class BudgetProvider with ChangeNotifier {
     double usedBudget = 0;
     double totalActiveRatios = 0;
 
-    // שלב 1: איסוף יחסי חלוקה לפי ישויות פעילות
     for (var i in variableIndices) {
       final e = _expenses[i];
       
@@ -705,7 +695,6 @@ class BudgetProvider with ChangeNotifier {
       bool isMotherEntity = e.parentCategory == 'אמא' || e.name.contains('אמא');
       bool isKidsEntity = e.parentCategory == 'ילדים - משתנות' || e.name.contains('ילדים');
 
-      // אם הישות כבויה בהגדרות, היא מוחרגת מסך האחוזים
       if ((isFatherEntity && !_isFatherActive) || 
           (isMotherEntity && !_isMotherActive) || 
           (isKidsEntity && !_isKidsActive)) {
@@ -729,7 +718,6 @@ class BudgetProvider with ChangeNotifier {
       _variableDeficit = 0.0;
     }
     
-    // שלב 2: חלוקה מחודשת ויחסית (נרמול)
     for (var i in variableIndices) {
       final e = _expenses[i];
       double calculatedAmount = 0;
@@ -742,7 +730,7 @@ class BudgetProvider with ChangeNotifier {
       if ((isFatherEntity && !_isFatherActive) || 
           (isMotherEntity && !_isMotherActive) || 
           (isKidsEntity && !_isKidsActive)) {
-        calculatedAmount = 0; // ישות כבויה לא מקבלת תקציב
+        calculatedAmount = 0; 
       } else {
         if (e.isLocked && e.manualAmount != null) {
           calculatedAmount = e.manualAmount!;
@@ -810,8 +798,8 @@ class BudgetProvider with ChangeNotifier {
     );
   }
 
-  Future<void> addFamilyMember(String name, int birthYear) async {
-    final newMember = FamilyMember(name: name, birthYear: birthYear);
+  Future<void> addFamilyMember(String name, int birthYear, FamilyRole role) async {
+    final newMember = FamilyMember(name: name, birthYear: birthYear, role: role);
     await DatabaseHelper.instance.insertFamilyMember(newMember);
   }
 
@@ -860,7 +848,7 @@ class BudgetProvider with ChangeNotifier {
   }
 
   double get totalIncome => _expenses.where((e) => e.category == 'הכנסות').fold(0.0, (sum, e) => sum + e.monthlyAmount);
-  double get totalFixedExpenses => _expenses.where((e) => e.category == 'קבועות').fold(0.0, (sum, e) => sum + (e.monthlyAmount * (e.isPerChild ? _childCount : 1)));
+  double get totalFixedExpenses => _expenses.where((e) => e.category == 'קבועות').fold(0.0, (sum, e) => sum + (e.monthlyAmount * (e.isPerChild ? childCount : 1)));
   double get totalReducingExpenses => _isFutureMode ? 0.0 : _externalDebtPayment;
   double get disposableIncome => totalIncome - totalFixedExpenses - totalReducingExpenses;
   double get totalVariableExpenses => disposableIncome * _variableAllocationRatio;
@@ -876,8 +864,6 @@ class BudgetProvider with ChangeNotifier {
     return totalFinancialExpenses;
   }
 
-  // --- משיכות מהוצאות צוברות ---
-  
   Future<List<Withdrawal>> getWithdrawalsForExpense(int expenseId) async {
     return await DatabaseHelper.instance.getWithdrawals(expenseId);
   }
