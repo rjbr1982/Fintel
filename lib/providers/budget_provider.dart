@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Replaced manual _childCount with automatic getter)
+// 🔒 STATUS: EDITED (Dynamic Child Specific Expenses & Salary Avg Fix)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -46,7 +46,6 @@ class BudgetProvider with ChangeNotifier {
   List<FamilyMember> get familyMembers => _familyMembers;
   List<SalaryRecord> get salaryRecords => _salaryRecords;
   
-  // חישוב כמות ילדים דינמית על סמך התפקיד
   int get childCount => _familyMembers.where((m) => m.role == FamilyRole.child).length;
   
   String get maritalStatus => _maritalStatus;
@@ -255,15 +254,29 @@ class BudgetProvider with ChangeNotifier {
 
   Map<String, double> _getDynamicVariableRatios() {
     int cCount = childCount;
+    final kids = _familyMembers.where((m) => m.role == FamilyRole.child).toList();
+    
+    Map<String, double> ratios = {};
     if (_maritalStatus == 'single' && cCount > 0) {
-      return { 'בגדים אישי': 0.28, 'בילויים אישי': 0.33, 'טיפוח אישי': 0.15, 'בגדים ילדים': 0.12, 'בילויים ילדים': 0.12 };
+      ratios = { 'בגדים אישי': 0.28, 'בילויים אישי': 0.33, 'טיפוח אישי': 0.15 };
     } else if (_maritalStatus == 'married' && cCount == 0) {
-      return { 'בגדים אבא': 0.25, 'בילויים אבא': 0.20, 'בגדים אמא': 0.15, 'בילויים אמא': 0.25, 'טיפוח אמא': 0.15 };
+      ratios = { 'בגדים אבא': 0.25, 'בילויים אבא': 0.20, 'בגדים אמא': 0.15, 'בילויים אמא': 0.25, 'טיפוח אמא': 0.15 };
     } else if (_maritalStatus == 'single' && cCount == 0) {
-      return { 'בגדים אישי': 0.40, 'בילויים אישי': 0.45, 'טיפוח אישי': 0.15 };
+      ratios = { 'בגדים אישי': 0.40, 'בילויים אישי': 0.45, 'טיפוח אישי': 0.15 };
     } else {
-      return { 'בגדים אבא': 0.19, 'בילויים אבא': 0.14, 'בגדים אמא': 0.09, 'בילויים אמא': 0.19, 'טיפוח אמא': 0.15, 'בגדים ילדים': 0.12, 'בילויים ילדים': 0.12 };
+      ratios = { 'בגדים אבא': 0.19, 'בילויים אבא': 0.14, 'בגדים אמא': 0.09, 'בילויים אמא': 0.19, 'טיפוח אמא': 0.15 };
     }
+
+    // הקצאה שמית לכל ילד בנפרד (כך שהסה"כ יישאר 24%)
+    if (cCount > 0) {
+      double clothesRatio = 0.12 / cCount;
+      double funRatio = 0.12 / cCount;
+      for (var kid in kids) {
+        ratios['בגדים ${kid.name}'] = clothesRatio;
+        ratios['בילויים ${kid.name}'] = funRatio;
+      }
+    }
+    return ratios;
   }
 
   Future<void> resetExpenseToDefault(int expenseId, {bool? isSinking}) async {
@@ -341,8 +354,6 @@ class BudgetProvider with ChangeNotifier {
     }
 
     final Map<String, Map<String, String>> syncRules = {
-      'בגדים ילדים': {'cat': 'משתנות', 'parent': 'ילדים - משתנות'},
-      'בילויים ילדים': {'cat': 'משתנות', 'parent': 'ילדים - משתנות'},
       'שכר לימוד': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
       'ציוד בית ספר': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
       'חוגים': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
@@ -359,14 +370,13 @@ class BudgetProvider with ChangeNotifier {
     };
 
     final Map<String, double> targetVariableRatios = _getDynamicVariableRatios();
-    final List<String> allPossibleVariableNames = [
-      'בגדים אבא', 'בילויים אבא', 'בגדים אמא', 'בילויים אמא', 'טיפוח אמא',
-      'בגדים ילדים', 'בילויים ילדים', 'בגדים אישי', 'בילויים אישי', 'טיפוח אישי'
-    ];
+    final kidsNames = _familyMembers.where((m) => m.role == FamilyRole.child).map((m) => m.name).toList();
 
     for (int i = 0; i < _expenses.length; i++) {
       final e = _expenses[i];
-      if (e.name == 'פארם וניקיון') {
+      
+      // מחיקת קטגוריות ישנות שבוטלו או הוחלפו במודל החדש
+      if (e.name == 'פארם וניקיון' || e.name == 'בגדים ילדים' || e.name == 'בילויים ילדים') {
         await DatabaseHelper.instance.deleteExpense(e.id!);
         changed = true;
         continue;
@@ -392,9 +402,15 @@ class BudgetProvider with ChangeNotifier {
         if (e.category != rule['cat'] || e.parentCategory != rule['parent']) {
           newCat = rule['cat']!;
           newParent = rule['parent']!;
-          newIsPerChild = (rule['parent']!.startsWith('ילדים') || e.isPerChild);
+          newIsPerChild = (rule['parent']!.startsWith('ילדים - קבועות') || e.isPerChild);
           needsUpdate = true;
         }
+      }
+
+      // מניעת כפילות מכפילים לילדים במשתנות, כי הם כבר מופרדים
+      if (e.parentCategory == 'ילדים - משתנות' && e.isPerChild) {
+        newIsPerChild = false;
+        needsUpdate = true;
       }
 
       double? newRatio = e.allocationRatio;
@@ -404,7 +420,7 @@ class BudgetProvider with ChangeNotifier {
           needsUpdate = true;
         }
       } 
-      else if (allPossibleVariableNames.contains(nameForMatch)) {
+      else if (targetVariableRatios.containsKey(nameForMatch) || e.parentCategory == 'ילדים - משתנות') {
         double targetRatio = targetVariableRatios[nameForMatch] ?? 0.0;
         if (newRatio != targetRatio) {
           if (targetRatio == 0.0 || newRatio == 0 || newRatio == null || (newRatio * 100).round() == 10) {
@@ -431,13 +447,25 @@ class BudgetProvider with ChangeNotifier {
       }
     }
 
+    // הוספת סעיפי משתנות חסרים (כולל פיצול פרטני לכל ילד)
     for (var entry in targetVariableRatios.entries) {
       if (entry.value > 0 && !_expenses.any((e) => e.name == entry.key)) {
-        String parentCat = entry.key.contains('ילדים') ? 'ילדים - משתנות' : (entry.key.contains('אישי') ? 'אישי' : (entry.key.contains('אבא') ? 'אבא' : 'אמא'));
+        String parentCat;
+        if (kidsNames.any((name) => entry.key.contains(name))) {
+           parentCat = 'ילדים - משתנות';
+        } else if (entry.key.contains('אישי')) {
+           parentCat = 'אישי';
+        } else if (entry.key.contains('אבא')) {
+           parentCat = 'אבא';
+        } else {
+           parentCat = 'אמא';
+        }
+        
         await DatabaseHelper.instance.insertExpense(Expense(
           name: entry.key, category: 'משתנות', parentCategory: parentCat,
           monthlyAmount: 0, originalAmount: 0, isSinking: true,
-          isPerChild: entry.key.contains('ילדים'), allocationRatio: entry.value,
+          isPerChild: false, // <-- במשתנות ילדים זה מפוצל לשמות ולכן לא מוכפל!
+          allocationRatio: entry.value,
           date: now, isDynamicSalary: false, isCustom: false,
         ));
         changed = true;
@@ -531,18 +559,7 @@ class BudgetProvider with ChangeNotifier {
     if (wasUpdated) notifyListeners();
   }
 
-  int getActiveWorkingMonths(Expense expense) {
-    if (expense.salaryStartDate == null) return 1;
-    try {
-      DateTime start = DateTime.parse(expense.salaryStartDate!);
-      DateTime now = DateTime.now();
-      int months = (now.year - start.year) * 12 + now.month - start.month + 1;
-      return months > 0 ? months : 1;
-    } catch (e) {
-      return 1;
-    }
-  }
-
+  // --- תיקון מנוע השכר: חלוקה מדויקת במספר החודשים שהוזנו בפועל ---
   double getAverageSalary(int expenseId, {bool calendarYear = false}) {
     final records = _salaryRecords.where((r) => r.expenseId == expenseId).toList();
     if (records.isEmpty) return 0.0;
@@ -550,12 +567,9 @@ class BudgetProvider with ChangeNotifier {
     double totalNet = records.fold(0.0, (sum, r) => sum + r.netAmount);
     
     if (calendarYear) {
-       return totalNet / DateTime.now().month;
+       return totalNet / 12.0;
     } else {
-       final index = _expenses.indexWhere((e) => e.id == expenseId);
-       if (index == -1) return 0.0;
-       int active = getActiveWorkingMonths(_expenses[index]);
-       return totalNet / active;
+       return totalNet / records.length; 
     }
   }
 
@@ -693,7 +707,7 @@ class BudgetProvider with ChangeNotifier {
       bool isAnchor = (e.allocationRatio == null || e.allocationRatio == 0);
       bool isFatherEntity = e.parentCategory == 'אבא' || e.name.contains('אבא') || e.name.contains('אישי');
       bool isMotherEntity = e.parentCategory == 'אמא' || e.name.contains('אמא');
-      bool isKidsEntity = e.parentCategory == 'ילדים - משתנות' || e.name.contains('ילדים');
+      bool isKidsEntity = e.parentCategory == 'ילדים - משתנות';
 
       if ((isFatherEntity && !_isFatherActive) || 
           (isMotherEntity && !_isMotherActive) || 
@@ -725,7 +739,7 @@ class BudgetProvider with ChangeNotifier {
       bool isAnchor = (e.allocationRatio == null || e.allocationRatio == 0);
       bool isFatherEntity = e.parentCategory == 'אבא' || e.name.contains('אבא') || e.name.contains('אישי');
       bool isMotherEntity = e.parentCategory == 'אמא' || e.name.contains('אמא');
-      bool isKidsEntity = e.parentCategory == 'ילדים - משתנות' || e.name.contains('ילדים');
+      bool isKidsEntity = e.parentCategory == 'ילדים - משתנות';
 
       if ((isFatherEntity && !_isFatherActive) || 
           (isMotherEntity && !_isMotherActive) || 
