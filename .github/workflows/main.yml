@@ -1,0 +1,11 @@
+name: Dump Code to Logs
+on: workflow_dispatch
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print All Code
+        run: |
+          find lib -name "*.dart" -exec sh -c 'echo "\n\nFILE: {} \n-----------------------"; cat {}' \;
+          
