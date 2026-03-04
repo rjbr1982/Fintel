@@ -1,0 +1,33 @@
+# פרוטוקול תפעול סוכן AI - פרויקט Fintel
+
+## 1. מקור האמת והקשר (SSOT)
+- **חובה:** לפני כל פעולה, קרא את `FINTEL_CONSTITUTION.md` ו-`project_status.md`.
+- **סנכרון תחילת סשן:** הרץ תמיד את הפקודה המשולבת:
+  `Write-Host "=== PROJECT STATUS ==="; Get-Content project_status.md; Write-Host "n=== FILE TREE (WITH TIME) ==="; Get-ChildItem lib -Recurse | Select-Object LastWriteTime, Name; Write-Host "n=== FLUTTER ANALYZE ==="; flutter analyze; Get-ChildItem lib -Recurse | Select-Object FullName`
+
+## 2. בקרת איכות קשיחה (Zero Tolerance)
+- **איסור אזהרות:** פקודת `flutter analyze` חייבת להחזיר "No issues found". **כל אזהרה (Warning) או הערה (Info) נחשבת כשגיאה קריטית.** אל תמשיך לבילד עד שתיקנת את כולן (כולל `const`, `deprecated_member_use` וכו').
+- **בדיקה לפני מסירה:** אין לבקש אישור פריסה אם לא הרצת סימולציה לוגית לשינוי שביצעת.
+
+## 3. ניהול סביבות ופריסה (Deployment)
+פעל לפי הרצף הבא בלבד, תוך המתנה לאישור אנושי בתיבת ה-Cline:
+1. **שלב הבדיקה (Testing):**
+   - הרץ `flutter build web`.
+   - הרץ `firebase hosting:channel:deploy testing`.
+   - הצג לרפאל את הלינק הזמני והמתן לבדיקתו.
+2. **שלב הייצור (Production):**
+   - **רק לאחר אישור מפורש מרפאל**, הרץ `firebase deploy`.
+- **הפצות אחרות:** ל-APK השתמש ב-`flutter build apk`. ל-Windows השתמש ב-Inno Setup לפי הנתיב המוגדר בחוקה.
+
+## 4. פרוטוקול גיבוי (GIT)
+סדר הפעולות בטרמינל הוא חוק בל יעבור:
+1. `git add .`
+2. `git commit -m "הסבר טכני קצר באנגלית"`
+3. `git pull`
+4. `git push`
+*הערה: קליין יעצור לבקש Approve על כל פקודה. אל תנסה לעקוף זאת.*
+
+## 5. סגירת סשן ותיעוד
+- בסיום כל משימה, עדכן את `project_status.md` בשינויים שבוצעו.
+- שלח לרפאל בתיבות העתקה נפרדות את `AI_CONTEXT.md` ו-`project_status.md`.
+- אם המערכת "תקועה" על קוד ישן, בצע ניקוי עמוק: `flutter clean; flutter pub get`.

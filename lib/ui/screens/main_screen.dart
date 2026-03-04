@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Updated Welcome Dialog to explicitly list 0-amount expenses dynamically)
+// 🔒 STATUS: EDITED (Cleaned lint warnings, removed test button, and completely removed forbidden bottom bar)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -38,9 +38,8 @@ class _MainScreenState extends State<MainScreen> {
 
   void _showSoftLandingDialog(BuildContext context) {
     final budget = context.read<BudgetProvider>();
-    final hasKids = budget.childCount > 0; // בדיקה דינמית אם יש ילדים
+    final hasKids = budget.childCount > 0; 
 
-    // בניית טקסט ההסבר לסעיפי האפס בצורה דינמית ומפורטת
     String zeroAmountDesc = 'הסעיפים האישיים הבאים נוצרו עבורך עם סכום 0, והם ממתינים לעדכון שלך בקטגוריית ה"קבועות":\n'
         '• קופת חולים וביטוחים\n'
         '• מנויים דיגיטליים\n'
@@ -78,7 +77,6 @@ class _MainScreenState extends State<MainScreen> {
               _buildTaskRow('1', 'כיול הוצאות דיור', 'כנס לקטגוריות קבועות -> דיור, ועדכן את שכר הדירה/משכנתא האמיתי שלך.'),
               const SizedBox(height: 15),
               
-              // המשימה המפורטת החדשה
               _buildTaskRow('2', 'השלמת הוצאות חסרות (סכום 0)', zeroAmountDesc),
               const SizedBox(height: 15),
 
@@ -183,7 +181,7 @@ class _MainScreenState extends State<MainScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade400),
+                        border: Border.all(color: Colors.grey),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: DropdownButtonHideUnderline(
@@ -320,14 +318,14 @@ class _MainScreenState extends State<MainScreen> {
                 InkWell(
                   onTap: () => _showFreedomSettingsDialog(context, budget),
                   borderRadius: BorderRadius.circular(10),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
+                  child: const Padding(
+                    padding: EdgeInsets.all(8.0),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('יעד הכנסה פסיבית חודשית', style: TextStyle(color: Colors.grey, fontSize: 16)),
-                        const SizedBox(width: 8),
-                        Icon(Icons.edit, size: 16, color: Colors.grey[400]),
+                        Text('יעד הכנסה פסיבית חודשית', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                        SizedBox(width: 8),
+                        Icon(Icons.edit, size: 16, color: Colors.grey),
                       ],
                     ),
                   ),
@@ -365,12 +363,12 @@ class _MainScreenState extends State<MainScreen> {
                           style: const TextStyle(fontSize: 64, fontWeight: FontWeight.bold, color: Colors.black87),
                         ),
                         const SizedBox(height: 10),
-                        Row(
+                        const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.family_restroom, size: 16, color: Colors.grey[500]),
-                            const SizedBox(width: 5),
-                            Text('לחץ לגילאי המשפחה והתזרים', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+                            Icon(Icons.family_restroom, size: 16, color: Colors.grey),
+                            SizedBox(width: 5),
+                            Text('לחץ לגילאי המשפחה והתזרים', style: TextStyle(fontSize: 13, color: Colors.grey)),
                           ],
                         ),
                       ],
@@ -405,24 +403,6 @@ class _MainScreenState extends State<MainScreen> {
               ],
             ),
           ),
-        ),
-      ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            )
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-          ],
         ),
       ),
     );
