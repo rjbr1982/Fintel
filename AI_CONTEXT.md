@@ -3,13 +3,15 @@
 **Hello AI!** You are resuming work on the "Fintel" (דוחכם) project architecture.
 
 ### Where we left off:
-1. Implemented the "Unified Sinking Funds" (קופות מאוחדות) logic for parent categories (like vehicles, parents, kids fixed expenses) with a 3-dots management menu in the UI.
-2. Fixed the "Kids dynamic allocation" collision bug in `budget_provider.dart` by implementing Ironclad logic that relies strictly on `childCount` rather than string matching.
-3. Codebase is clean with zero Linter warnings (Zero Warnings Policy enforced).
-4. **Sandbox Doctrine Status:** The Hard Freeze was temporarily lifted to apply core fixes directly to the `dohaham` main project.
+1. Fixed the infinite spinner bug in the sinking funds withdrawal history (bypassed Firebase composite index by sorting locally in `database_helper.dart`).
+2. Completely redesigned the Dashboard (`main_screen.dart`): Centered Freedom Year, top pills for Family/Passive Income, bottom action buttons (Cashflow, Salary, Savings).
+3. Fixed light-on-light text visibility issues in multiple dialogs and bottom sheets across the app.
+4. Changed the Global Header menu icon to a hamburger menu (`Icons.menu`).
+5. Implemented local text scaling (`A+`/`A-`) in `shopping_screen.dart` for better Desktop readability without breaking global responsiveness.
+6. Codebase is clean with zero Linter warnings (Zero Warnings Policy enforced).
 
 ### Next Steps:
-Await explicit instructions from Rafael. Likely proceeding with the next items on the WhatsApp fix-list or continuing End-to-End testing of the Onboarding flow.
+Await explicit instructions from Rafael. Likely proceeding with the next items on the WhatsApp fix-list or E2E testing.
 
 ### Constitution Status:
 Up to date (v12.20).

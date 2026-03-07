@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Cleaned lint warnings, removed test button, and completely removed forbidden bottom bar)
+// 🔒 STATUS: EDITED (Fixed light-on-light text visibility issues in dialogs by forcing dark text styles)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -7,6 +7,8 @@ import '../../utils/app_localizations.dart';
 import '../widgets/global_header.dart'; 
 import 'pnl_screen.dart'; 
 import 'shopping_screen.dart';
+import 'salary_engine_screen.dart';
+import 'sinking_funds_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final bool showWelcomeDialog; 
@@ -63,7 +65,7 @@ class _MainScreenState extends State<MainScreen> {
           children: [
             Icon(Icons.celebration, color: Colors.amber, size: 40),
             SizedBox(height: 10),
-            Text('ברוכים הבאים לחירות הפיננסית!', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+            Text('ברוכים הבאים לחירות הפיננסית!', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black87)),
           ],
         ),
         content: SingleChildScrollView(
@@ -140,7 +142,7 @@ class _MainScreenState extends State<MainScreen> {
             return AlertDialog(
               backgroundColor: Colors.white, surfaceTintColor: Colors.transparent,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('הגדרות מנוע החירות', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+              title: const Text('הגדרות מנוע החירות', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -148,47 +150,62 @@ class _MainScreenState extends State<MainScreen> {
                     TextField(
                       controller: targetCtrl,
                       keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.black87),
                       decoration: InputDecoration(
                         labelText: 'יעד הכנסה פסיבית (ריק = אוטומטי)',
+                        labelStyle: const TextStyle(color: Colors.blueGrey),
                         hintText: budget.autoTargetIncome.toStringAsFixed(0),
-                        prefixIcon: const Icon(Icons.track_changes),
+                        hintStyle: const TextStyle(color: Colors.black38),
+                        prefixIcon: const Icon(Icons.track_changes, color: Colors.blueGrey),
+                        enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                        focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
                       ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: capitalCtrl,
                       readOnly: true, 
+                      style: const TextStyle(color: Colors.black87),
                       decoration: const InputDecoration(
                         labelText: 'הון עצמי נוכחי (נשאב מהנכסים)',
-                        prefixIcon: Icon(Icons.account_balance_wallet),
+                        labelStyle: TextStyle(color: Colors.blueGrey),
+                        prefixIcon: Icon(Icons.account_balance_wallet, color: Colors.blueGrey),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
                       ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: yieldCtrl,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: const TextStyle(color: Colors.black87),
                       decoration: const InputDecoration(
                         labelText: 'תשואה שנתית נטו (%)',
-                        prefixIcon: Icon(Icons.trending_up),
+                        labelStyle: TextStyle(color: Colors.blueGrey),
+                        prefixIcon: Icon(Icons.trending_up, color: Colors.blueGrey),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
                       ),
                     ),
                     const SizedBox(height: 20),
                     const Align(
                       alignment: Alignment.centerRight,
-                      child: Text('תדירות צבירת ריבית:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text('תדירות צבירת ריבית:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
                     ),
                     const SizedBox(height: 5),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
+                        border: Border.all(color: Colors.black26),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<int>(
                           value: freq,
                           isExpanded: true,
-                          icon: const Icon(Icons.arrow_drop_down),
+                          dropdownColor: Colors.white,
+                          style: const TextStyle(color: Colors.black87, fontSize: 16),
+                          icon: const Icon(Icons.arrow_drop_down, color: Colors.black54),
                           items: const [
                             DropdownMenuItem(value: 1, child: Text('שנתית (1)')),
                             DropdownMenuItem(value: 12, child: Text('חודשית (12)')),
@@ -243,16 +260,16 @@ class _MainScreenState extends State<MainScreen> {
         return AlertDialog(
           backgroundColor: Colors.white, surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('גילאי המשפחה בשנת $targetYear', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+          title: Text('גילאי המשפחה בשנת $targetYear', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Divider(),
+              const Divider(color: Colors.black12),
               ...budget.familyMembers.map((fm) {
                 int age = targetYear - fm.birthYear;
                 return ListTile(
                   leading: const Icon(Icons.person, color: Colors.blueGrey),
-                  title: Text(fm.name, style: const TextStyle(fontSize: 16)),
+                  title: Text(fm.name, style: const TextStyle(fontSize: 16, color: Colors.black87)),
                   trailing: Text('גיל $age', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF00C853))),
                 );
               }),
@@ -275,6 +292,33 @@ class _MainScreenState extends State<MainScreen> {
           ],
         );
       }
+    );
+  }
+
+  Widget _buildQuickAction(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              shape: const CircleBorder(),
+              padding: const EdgeInsets.all(18),
+              backgroundColor: color.withValues(alpha: 0.1),
+              foregroundColor: color,
+              elevation: 0,
+            ),
+            onPressed: onTap,
+            child: Icon(icon, size: 28),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+          ),
+        ],
+      ),
     );
   }
 
@@ -311,74 +355,118 @@ class _MainScreenState extends State<MainScreen> {
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 40.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                InkWell(
-                  onTap: () => _showFreedomSettingsDialog(context, budget),
-                  borderRadius: BorderRadius.circular(10),
-                  child: const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('יעד הכנסה פסיבית חודשית', style: TextStyle(color: Colors.grey, fontSize: 16)),
-                        SizedBox(width: 8),
-                        Icon(Icons.edit, size: 16, color: Colors.grey),
-                      ],
-                    ),
-                  ),
-                ),
-                Text(
-                  '${loc?.get('currency_symbol') ?? '₪'}${budget.targetPassiveIncome.toStringAsFixed(0)}',
-                  style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black87),
-                ),
                 
+                // הליבה של מסך הבית: שנת החירות הפיננסית והכפתורים סביבה
+                Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    // הכרטיס המרכזי של שנת החירות
+                    Container(
+                      width: 280,
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(40),
+                        boxShadow: [
+                          BoxShadow(color: const Color(0xFF00C853).withValues(alpha: 0.1), blurRadius: 25, spreadRadius: 5),
+                        ],
+                        border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.4), width: 2),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('שנת החירות הפיננסית', style: TextStyle(fontSize: 16, color: Colors.blueGrey, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 10),
+                          Text(
+                            yearText,
+                            style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: Color(0xFF121212), height: 1.1),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    // כפתור המשפחה - ימין למעלה
+                    Positioned(
+                      top: -15,
+                      right: -15,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          shape: const CircleBorder(),
+                          padding: const EdgeInsets.all(14),
+                          backgroundColor: Colors.blueGrey[900],
+                          foregroundColor: Colors.white,
+                          elevation: 4,
+                        ),
+                        onPressed: () {
+                          if (targetYear != null) _showFamilyDrilldown(context, budget, targetYear);
+                        },
+                        child: const Icon(Icons.family_restroom, size: 24),
+                      ),
+                    ),
+                    
+                    // כפתור יעד הכנסה פסיבית - שמאל למעלה
+                    Positioned(
+                      top: -15,
+                      left: -25,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          backgroundColor: Colors.amber[600],
+                          foregroundColor: Colors.black87,
+                          elevation: 4,
+                        ),
+                        onPressed: () => _showFreedomSettingsDialog(context, budget),
+                        icon: const Icon(Icons.track_changes, size: 18),
+                        label: Text(
+                          '${loc?.get('currency_symbol') ?? '₪'}${budget.targetPassiveIncome.toStringAsFixed(0)}', 
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
                 const SizedBox(height: 50),
 
-                InkWell(
-                  onTap: () {
-                    if (targetYear != null) {
-                      _showFamilyDrilldown(context, budget, targetYear);
-                    } else {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const PnLScreen()));
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 30),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFF00C853), width: 2),
-                      borderRadius: BorderRadius.circular(20),
-                      color: const Color(0xFF00C853).withValues(alpha: 0.05),
+                // שורת כפתורי הניווט התחתונה
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildQuickAction(
+                      context, 
+                      'תזרים', 
+                      Icons.account_balance_wallet, 
+                      Colors.blue, 
+                      () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PnLScreen()))
                     ),
-                    child: Column(
-                      children: [
-                        const Text('שנת החירות הפיננסית', 
-                          style: TextStyle(fontSize: 16, color: Color(0xFF00C853), fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 10),
-                        Text(
-                          yearText,
-                          style: const TextStyle(fontSize: 64, fontWeight: FontWeight.bold, color: Colors.black87),
-                        ),
-                        const SizedBox(height: 10),
-                        const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.family_restroom, size: 16, color: Colors.grey),
-                            SizedBox(width: 5),
-                            Text('לחץ לגילאי המשפחה והתזרים', style: TextStyle(fontSize: 13, color: Colors.grey)),
-                          ],
-                        ),
-                      ],
+                    _buildQuickAction(
+                      context, 
+                      'ממוצע שכר', 
+                      Icons.insights, 
+                      Colors.orange, 
+                      () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SalaryEngineScreen()))
                     ),
-                  ),
+                    _buildQuickAction(
+                      context, 
+                      'מרכז חסכונות', 
+                      Icons.savings, 
+                      Colors.green, 
+                      () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SinkingFundsScreen()))
+                    ),
+                  ],
                 ),
 
                 if (budget.expectedYield <= 4.0)
                   Padding(
-                    padding: const EdgeInsets.only(top: 20.0),
+                    padding: const EdgeInsets.only(top: 40.0),
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(

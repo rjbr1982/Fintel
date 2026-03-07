@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed App Icon path to match Fintel_Icon.png)
+// 🔒 STATUS: EDITED (Changed popup menu icon from 3-dots to hamburger/menu lines)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -82,7 +82,8 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
         
         PopupMenuButton<MenuAction>(
-          icon: const Icon(Icons.more_vert, color: brandBlue),
+          // השינוי העיקרי כאן: הפיכת שלוש הנקודות לשלושה קווים (המבורגר)
+          icon: const Icon(Icons.menu, color: brandBlue, size: 28),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           offset: const Offset(0, 40),
           tooltip: 'תפריט פעולות',

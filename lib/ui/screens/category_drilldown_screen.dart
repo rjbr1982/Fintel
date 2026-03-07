@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Hidden Kids toggle when childCount == 0 to fix logical collision)
+// 🔒 STATUS: EDITED (Fixed dark mode styling for BottomSheets to display white text on Deep Slate background)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -244,7 +244,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                         children: [
                           _buildFilterChip('אבא', provider.isFatherActive, (v) => provider.toggleEntityActive('father', v)),
                           _buildFilterChip('אמא', provider.isMotherActive, (v) => provider.toggleEntityActive('mother', v)),
-                          if (provider.childCount > 0) // החבא את מתג הילדים אם אין ילדים
+                          if (provider.childCount > 0)
                             _buildFilterChip('ילדים', provider.isKidsActive, (v) => provider.toggleEntityActive('kids', v)),
                         ],
                       )
@@ -369,11 +369,9 @@ class CategoryDrilldownScreen extends StatelessWidget {
                                 onPressed: () {
                                   showModalBottomSheet(
                                     context: context, isScrollControlled: true,
+                                    backgroundColor: const Color(0xFF121212),
                                     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                                    builder: (ctx) => Theme(
-                                      data: ThemeData.light(),
-                                      child: _UnifiedFundBottomSheet(provider: provider, parentCategory: parentName, expenses: items)
-                                    ),
+                                    builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: parentName, expenses: items),
                                   );
                                 }
                               ),
@@ -430,7 +428,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                 if (controller.text.isNotEmpty && controller.text != oldName) {
                   provider.renameParentCategory(oldName, controller.text);
                   Navigator.pop(ctx);
-                  Navigator.pop(context); // Return to previous screen to refresh filter
+                  Navigator.pop(context); 
                 }
               },
               child: const Text("עדכן"),
@@ -567,11 +565,9 @@ class SpecificExpensesScreen extends StatelessWidget {
                           onPressed: () {
                             showModalBottomSheet(
                               context: context, isScrollControlled: true,
+                              backgroundColor: const Color(0xFF121212),
                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                              builder: (ctx) => Theme(
-                                data: ThemeData.light(),
-                                child: _UnifiedFundBottomSheet(provider: provider, parentCategory: 'ילדים: $childName', expenses: items)
-                              ),
+                              builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: 'ילדים: $childName', expenses: items),
                             );
                           }
                         )
@@ -753,11 +749,9 @@ class SpecificExpensesScreen extends StatelessWidget {
               onPressed: () {
                 showModalBottomSheet(
                   context: context, isScrollControlled: true,
+                  backgroundColor: const Color(0xFF121212),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  builder: (ctx) => Theme(
-                    data: ThemeData.light(),
-                    child: _SinkingFundBottomSheet(provider: provider, expense: expense)
-                  ),
+                  builder: (ctx) => _SinkingFundBottomSheet(provider: provider, expense: expense)
                 );
               },
             ),
@@ -918,11 +912,9 @@ class SpecificExpensesScreen extends StatelessWidget {
                       label: const Text('ניהול משיכות (קופה מאוחדת)', style: TextStyle(fontWeight: FontWeight.bold)),
                       onPressed: () => showModalBottomSheet(
                         context: context, isScrollControlled: true,
+                        backgroundColor: const Color(0xFF121212),
                         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                        builder: (ctx) => Theme(
-                          data: ThemeData.light(),
-                          child: _UnifiedFundBottomSheet(provider: provider, parentCategory: parentCategory, expenses: currentExpenses)
-                        ),
+                        builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: parentCategory, expenses: currentExpenses),
                       ),
                     ),
                   )
@@ -1326,7 +1318,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                   double? newManualAmount;
                   bool newIsLocked = selectedMode != 0;
                   double? newRatio = selectedMode == 0 ? (double.tryParse(ratioController.text) ?? 0) / 100 : expense.allocationRatio;
-  
+ 
                   if (selectedMode == 1) {
                     newManualAmount = double.tryParse(amountController.text);
                     if (newManualAmount != null) { newManualAmount = newManualAmount / multiplier; }
@@ -1340,7 +1332,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                       newManualAmount = newManualAmount / multiplier;
                     }
                   }
-  
+ 
                   if (newIsLocked && newManualAmount == null && selectedMode != 2) {
                     await provider.resetExpenseToDefault(expense.id!, isSinking: isSinking);
                   } else {
@@ -1387,26 +1379,31 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
 
   Future<void> _loadWithdrawals() async {
     List<Withdrawal> all = [];
-    for (var e in widget.expenses) {
-      if (e.id != null) {
-        final w = await widget.provider.getWithdrawalsForExpense(e.id!);
-        all.addAll(w);
+    try {
+      for (var e in widget.expenses) {
+        if (e.id != null) {
+          final w = await widget.provider.getWithdrawalsForExpense(e.id!);
+          all.addAll(w);
+        }
       }
+      all.sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
+    } catch (e) {
+      debugPrint('Error loading unified withdrawals: $e');
+    } finally {
+      if (mounted) { setState(() { _withdrawals = all; _isLoading = false; }); }
     }
-    all.sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
-    if (mounted) { setState(() { _withdrawals = all; _isLoading = false; }); }
   }
 
   Widget _buildHistoryList() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('היסטוריית משיכות והפקדות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-        const Divider(),
+        const Text('היסטוריית משיכות והפקדות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        const Divider(color: Colors.white24),
         if (_isLoading) 
-          const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+          const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: Colors.white)))
         else if (_withdrawals.isEmpty) 
-          const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות בקופה זו', style: TextStyle(color: Colors.grey))))
+          const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות בקופה זו', style: TextStyle(color: Colors.white54))))
         else ListView.builder(
           shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: _withdrawals.length,
           itemBuilder: (ctx, i) {
@@ -1416,20 +1413,20 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
             final displayAmount = w.amount.abs();
             return ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.green : Colors.redAccent),
-              title: Text('₪${displayAmount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.redAccent)),
+              leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.greenAccent : Colors.redAccent),
+              title: Text('₪${displayAmount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.greenAccent : Colors.redAccent)),
               subtitle: Padding(
                 padding: const EdgeInsets.only(top: 4.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (w.note.isNotEmpty) Text(w.note, style: const TextStyle(color: Colors.black87), softWrap: true),
+                    if (w.note.isNotEmpty) Text(w.note, style: const TextStyle(color: Colors.white), softWrap: true),
                     const SizedBox(height: 2),
-                    Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.white54)),
                   ],
                 ),
               ),
-              trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey), tooltip: 'מחק פעולה והחזר יתרה', onPressed: () async { await widget.provider.deleteWithdrawal(w); _loadWithdrawals(); }),
+              trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.white54), tooltip: 'מחק פעולה והחזר יתרה', onPressed: () async { await widget.provider.deleteWithdrawal(w); _loadWithdrawals(); }),
             );
           },
         ),
@@ -1442,19 +1439,19 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
       children: [
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: Colors.greenAccent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                  Text('₪${totalCurrentBalance.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
+                  const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+                  Text('₪${totalCurrentBalance.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.greenAccent)),
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.edit, color: Colors.green), tooltip: 'עדכון יתרה משותפת',
+                icon: const Icon(Icons.edit, color: Colors.greenAccent), tooltip: 'עדכון יתרה משותפת',
                 onPressed: () {
                   showDialog(
                     context: context,
@@ -1471,16 +1468,47 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
           ),
         ),
         const SizedBox(height: 20),
-        const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold))),
+        const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
         const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(flex: 2, child: TextField(controller: _amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום', suffixText: '₪', border: OutlineInputBorder(), isDense: true))),
+            Expanded(
+              flex: 2, 
+              child: TextField(
+                controller: _amountController, 
+                keyboardType: TextInputType.number, 
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'סכום', 
+                  labelStyle: TextStyle(color: Colors.white70),
+                  suffixText: '₪', 
+                  suffixStyle: TextStyle(color: Colors.white70),
+                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+                  isDense: true
+                )
+              )
+            ),
             const SizedBox(width: 8),
-            Expanded(flex: 3, child: TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'לאן יצא הכסף?', border: OutlineInputBorder(), isDense: true))),
+            Expanded(
+              flex: 3, 
+              child: TextField(
+                controller: _noteController, 
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'לאן יצא הכסף?', 
+                  labelStyle: TextStyle(color: Colors.white70),
+                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+                  isDense: true
+                )
+              )
+            ),
             const SizedBox(width: 8),
             IconButton(
-              style: IconButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), 
+              style: IconButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), 
               icon: const Icon(Icons.arrow_downward), 
               onPressed: () {
                 _handleWithdrawalWithoutPop();
@@ -1520,7 +1548,7 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('קופה: ${widget.parentCategory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('קופה: ${widget.parentCategory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 16),
             _buildStandardUnifiedView(context, totalCurrentBalance),
           ],
@@ -1669,8 +1697,13 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
   void initState() { super.initState(); _loadWithdrawals(); }
 
   Future<void> _loadWithdrawals() async {
-    final data = await widget.provider.getWithdrawalsForExpense(widget.expense.id!);
-    if (mounted) { setState(() { _withdrawals = data; _isLoading = false; }); }
+    try {
+      final data = await widget.provider.getWithdrawalsForExpense(widget.expense.id!);
+      if (mounted) { setState(() { _withdrawals = data; _isLoading = false; }); }
+    } catch (e) {
+      debugPrint('Error loading withdrawals: $e');
+      if (mounted) { setState(() { _withdrawals = []; _isLoading = false; }); }
+    }
   }
 
   @override
@@ -1689,24 +1722,24 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('ניהול קופה: ${currentExpense.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('ניהול קופה: ${currentExpense.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
             const SizedBox(height: 16),
             
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: Colors.greenAccent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                      Text('₪${(currentExpense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
+                      const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+                      Text('₪${(currentExpense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.greenAccent)),
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.green), tooltip: 'עדכון יתרה',
+                    icon: const Icon(Icons.edit, color: Colors.greenAccent), tooltip: 'עדכון יתרה',
                     onPressed: () {
                       showDialog(
                         context: context,
@@ -1724,16 +1757,47 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
             ),
             const SizedBox(height: 20),
             
-            const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold))),
+            const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(flex: 2, child: TextField(controller: _amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום', suffixText: '₪', border: OutlineInputBorder(), isDense: true))),
+                Expanded(
+                  flex: 2, 
+                  child: TextField(
+                    controller: _amountController, 
+                    keyboardType: TextInputType.number, 
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'סכום', 
+                      labelStyle: TextStyle(color: Colors.white70),
+                      suffixText: '₪', 
+                      suffixStyle: TextStyle(color: Colors.white70),
+                      border: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                      enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+                      isDense: true
+                    )
+                  )
+                ),
                 const SizedBox(width: 8),
-                Expanded(flex: 3, child: TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'לאן יצא הכסף?', border: OutlineInputBorder(), isDense: true))),
+                Expanded(
+                  flex: 3, 
+                  child: TextField(
+                    controller: _noteController, 
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'לאן יצא הכסף?', 
+                      labelStyle: TextStyle(color: Colors.white70),
+                      border: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                      enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+                      isDense: true
+                    )
+                  )
+                ),
                 const SizedBox(width: 8),
                 IconButton(
-                  style: IconButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                  style: IconButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
                   icon: const Icon(Icons.arrow_downward),
                   onPressed: () async {
                     final amt = double.tryParse(_amountController.text);
@@ -1748,13 +1812,13 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
             ),
             
             const SizedBox(height: 24),
-            const Align(alignment: Alignment.centerRight, child: Text('היסטוריית משיכות והפקדות', style: TextStyle(fontWeight: FontWeight.bold))),
-            const Divider(),
+            const Align(alignment: Alignment.centerRight, child: Text('היסטוריית משיכות והפקדות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+            const Divider(color: Colors.white24),
             
             if (_isLoading) 
-              const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())
+              const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: Colors.white))
             else if (_withdrawals.isEmpty) 
-              const Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות בקופה זו', style: TextStyle(color: Colors.grey)))
+              const Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות בקופה זו', style: TextStyle(color: Colors.white54)))
             else ListView.builder(
               shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: _withdrawals.length,
               itemBuilder: (ctx, i) {
@@ -1764,20 +1828,20 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
                 final displayAmount = w.amount.abs();
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.green : Colors.redAccent),
-                  title: Text('₪${displayAmount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.redAccent)),
+                  leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.greenAccent : Colors.redAccent),
+                  title: Text('₪${displayAmount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.greenAccent : Colors.redAccent)),
                   subtitle: Padding(
                     padding: const EdgeInsets.only(top: 4.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (w.note.isNotEmpty) Text(w.note, style: const TextStyle(color: Colors.black87), softWrap: true),
+                        if (w.note.isNotEmpty) Text(w.note, style: const TextStyle(color: Colors.white), softWrap: true),
                         const SizedBox(height: 2),
-                        Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.white54)),
                       ],
                     ),
                   ),
-                  trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey), tooltip: 'מחק פעולה והחזר יתרה', onPressed: () async { await widget.provider.deleteWithdrawal(w); _loadWithdrawals(); }),
+                  trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.white54), tooltip: 'מחק פעולה והחזר יתרה', onPressed: () async { await widget.provider.deleteWithdrawal(w); _loadWithdrawals(); }),
                 );
               }
             ),

@@ -1,13 +1,15 @@
 # Project Status - Fintel (דוחכם)
 **Date:** March 2026
 **Current Constitution Version:** 12.20
-**Phase:** Core Logic Refinement & Stabilization
+**Phase:** Core Logic Refinement, UI/UX Polish & Stabilization
 
 ### ✅ Completed Milestones:
+- **UI/UX Redesign:** Overhauled the Dashboard (MainScreen) with a centered Freedom Year, floating parameter pills, and clear visual navigation buttons.
+- **Desktop Readability:** Added a local A+/A- text scaling engine specifically for the Shopping Screen to support shared desktop planning.
+- **Sinking Funds Withdrawals:** Fixed the infinite loading bug in withdrawal history by handling Firebase index limitations with local sorting. Dialogs now properly support Dark Mode text visibility.
 - **Unified Sinking Funds:** Added the ability to toggle specific parent categories as "Unified Funds", allowing shared balance and withdrawal management (UI and Provider logic).
-- **Kids Entity Allocation Fix:** Rebuilt the logic for distributing variable percentages to children. It now completely bypasses legacy string-matching and strictly calculates `0.12 / childCount`, wiping old data automatically if `childCount == 0`.
-- **Zero Warnings:** Maintained strict zero-warnings policy (`prefer_final_fields` resolved).
-- **UI/UX Polish:** Integrated 3-dots menus in `category_drilldown_screen.dart` to manage unified funds and category names cleanly without cluttering the screen.
+- **Kids Entity Allocation Fix:** Rebuilt the logic for distributing variable percentages to children bypassing legacy string-matching.
+- **Zero Warnings:** Maintained strict zero-warnings policy across all new UI updates.
 
 ### 🛑 Strategic Directives (v12.20):
 - **Zero Warnings Policy:** Every `flutter analyze` run must return 0 issues (including `info` alerts).

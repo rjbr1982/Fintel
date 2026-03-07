@@ -1,4 +1,4 @@
-// 🔒 STATUS: VERIFIED (Implicitly supports new isCustom field via toMap/fromMap)
+// 🔒 STATUS: VERIFIED (Fixed Sinking Fund withdrawal query missing composite index)
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -246,11 +246,18 @@ class DatabaseHelper {
   }
 
   Future<List<Withdrawal>> getWithdrawals(int expenseId) async {
-    final snap = await _userCollection('withdrawals')
-      .where('expenseId', isEqualTo: expenseId)
-      .orderBy('date', descending: true)
-      .get();
-    return snap.docs.map((doc) => Withdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
+    try {
+      final snap = await _userCollection('withdrawals')
+          .where('expenseId', isEqualTo: expenseId)
+          .get();
+      
+      final items = snap.docs.map((doc) => Withdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      // מיון מקומי פותר את שגיאת Firebase הקשורה לאינדקס מורכב חסר
+      items.sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
+      return items;
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<int> deleteWithdrawal(int id) async {

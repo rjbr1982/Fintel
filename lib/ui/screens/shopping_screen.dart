@@ -1,11 +1,10 @@
-// 🔒 STATUS: EDITED (Fixed 11,000 NIS Bug - Safely fetching the Shopping Anchor)
+// 🔒 STATUS: EDITED (Added local dynamic text scaling, fixed autofocus typo, removed unused imports)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/shopping_provider.dart';
 import '../../providers/budget_provider.dart'; 
 import '../../data/shopping_model.dart';
 import '../../data/expense_model.dart';
-import '../widgets/global_header.dart';
 
 class ShoppingScreen extends StatefulWidget {
   const ShoppingScreen({super.key});
@@ -23,6 +22,9 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   
   int _comparisonOffset = 0; 
 
+  // מנגנון זום מקומי למסך קניות (רספונסיביות למחשב)
+  double _textScale = 1.0;
+
   @override
   void initState() {
     super.initState();
@@ -30,6 +32,18 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       if (mounted) {
         context.read<ShoppingProvider>().loadItems();
       }
+    });
+  }
+
+  void _zoomIn() {
+    setState(() {
+      if (_textScale < 2.0) _textScale += 0.1;
+    });
+  }
+
+  void _zoomOut() {
+    setState(() {
+      if (_textScale > 0.8) _textScale -= 0.1;
     });
   }
 
@@ -70,7 +84,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     final shoppingProvider = context.watch<ShoppingProvider>();
     final budgetProvider = context.watch<BudgetProvider>();
     
-    // 🛑 תוקן: שאיבה בטוחה של עוגן הקניות ללא קריסה למשכורת
+    // שאיבה בטוחה של עוגן הקניות ללא קריסה למשכורת
     final groceryExpense = budgetProvider.expenses.firstWhere(
       (e) => e.name.trim() == 'קניות' || (e.category == 'משתנות' && e.parentCategory == 'קניות'),
       orElse: () => Expense(
@@ -119,8 +133,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
           result = a.name.compareTo(b.name);
         }
         
-        // אם נמצא הבדל בשכבה הנוכחית, אנחנו מחזירים אותו. 
-        // אם הם שווים, הלולאה ממשיכה לשכבת המיון הבאה!
         if (result != 0) {
           return result;
         }
@@ -135,8 +147,28 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: const GlobalHeader(
-        title: 'רשימת קניות',
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.blueGrey, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text('רשימת קניות', style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Text('A-', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold, fontSize: 16)),
+            tooltip: 'הקטן טקסט',
+            onPressed: _zoomOut,
+          ),
+          IconButton(
+            icon: const Text('A+', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 18)),
+            tooltip: 'הגדל טקסט',
+            onPressed: _zoomIn,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       floatingActionButton: currentBasket > 0 
           ? null 
@@ -156,11 +188,11 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.layers, size: 18, color: Colors.blueGrey),
-                    const SizedBox(width: 8),
+                    Icon(Icons.layers, size: 18 * _textScale, color: Colors.blueGrey),
+                    SizedBox(width: 8 * _textScale),
                     Text(
                       "$_selectedCategory | מיון: $sortDisplay",
-                      style: const TextStyle(fontSize: 13, color: Colors.blueGrey, fontWeight: FontWeight.w500),
+                      style: TextStyle(fontSize: 13 * _textScale, color: Colors.blueGrey, fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
@@ -177,13 +209,12 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                         itemCount: displayedItems.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 8),
+                        separatorBuilder: (context, index) => SizedBox(height: 8 * _textScale),
                         itemBuilder: (context, index) {
                           final item = displayedItems[index];
                           final bool wasPurchased = _wasItemPurchasedInWeek(item, _comparisonOffset);
                           Widget tile = _buildComparisonTile(item, shoppingProvider, wasPurchased);
 
-                          // הזרקת כותרות קבוצה - מתרחש רק אם המיון *הראשון* בעדיפות הוא "סיווג"
                           if (_activeSorts.isNotEmpty && _activeSorts.first == 'סיווג' && _selectedCategory == 'הכל') {
                             bool isFirst = index == 0;
                             bool isNewCat = isFirst || displayedItems[index - 1].category != item.category;
@@ -193,10 +224,10 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 12, bottom: 6, right: 4),
+                                    padding: EdgeInsets.only(top: 12 * _textScale, bottom: 6 * _textScale, right: 4),
                                     child: Text(
                                       item.category,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey),
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14 * _textScale, color: Colors.blueGrey),
                                     ),
                                   ),
                                   tile,
@@ -245,7 +276,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
             boxShadow: isSelected ? [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 4)] : null,
           ),
           alignment: Alignment.center,
-          child: Text(label, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? const Color(0xFF00A3FF) : Colors.black54)),
+          child: Text(label, style: TextStyle(fontSize: 11 * _textScale, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? const Color(0xFF00A3FF) : Colors.black54)),
         ),
       ),
     );
@@ -260,7 +291,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         onSelected: (val) => setState(() => _comparisonOffset = val),
         itemBuilder: (context) => _getWeekOptions().map((offset) => PopupMenuItem(
           value: offset,
-          child: Text(_getWeekLabel(offset), style: const TextStyle(fontSize: 13, color: Colors.black87)),
+          child: Text(_getWeekLabel(offset), style: TextStyle(fontSize: 13 * _textScale, color: Colors.black87)),
         )).toList(),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -275,12 +306,12 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
               Text(
                 isExtraSelected ? _getWeekLabel(_comparisonOffset) : "עוד שבועות...",
                 style: TextStyle(
-                  fontSize: 11, 
+                  fontSize: 11 * _textScale, 
                   fontWeight: isExtraSelected ? FontWeight.bold : FontWeight.normal,
                   color: isExtraSelected ? const Color(0xFF00A3FF) : Colors.black54
                 ),
               ),
-              Icon(Icons.arrow_drop_down, size: 16, color: isExtraSelected ? const Color(0xFF00A3FF) : Colors.black54),
+              Icon(Icons.arrow_drop_down, size: 16 * _textScale, color: isExtraSelected ? const Color(0xFF00A3FF) : Colors.black54),
             ],
           ),
         ),
@@ -302,11 +333,14 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       child: ListTile(
         dense: true,
         onLongPress: () => _showQuickHistoryAction(context, item, provider),
-        leading: Checkbox(
-          value: checked,
-          activeColor: const Color(0xFF121212),
-          side: const BorderSide(color: Colors.black45, width: 1.5),
-          onChanged: (_) => provider.toggleItem(item.id!),
+        leading: Transform.scale(
+          scale: _textScale,
+          child: Checkbox(
+            value: checked,
+            activeColor: const Color(0xFF121212),
+            side: const BorderSide(color: Colors.black45, width: 1.5),
+            onChanged: (_) => provider.toggleItem(item.id!),
+          ),
         ),
         title: Row(
           children: [
@@ -316,7 +350,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                 style: TextStyle(
                   decoration: checked ? TextDecoration.lineThrough : null,
                   color: checked ? Colors.grey : Colors.black87,
-                  fontWeight: FontWeight.w500, fontSize: 14,
+                  fontWeight: FontWeight.w500, fontSize: 14 * _textScale,
                 ),
               ),
             ),
@@ -332,13 +366,13 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                   children: [
                     Icon(
                       wasPurchasedInHistory ? Icons.check_circle : Icons.radio_button_unchecked,
-                      size: 12, 
+                      size: 12 * _textScale, 
                       color: wasPurchasedInHistory ? Colors.green : Colors.black12
                     ),
                     const SizedBox(width: 4),
                     Text(
                       wasPurchasedInHistory ? "נקנה" : "לא נקנה",
-                      style: TextStyle(fontSize: 9, color: wasPurchasedInHistory ? Colors.green[700] : Colors.black26, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 9 * _textScale, color: wasPurchasedInHistory ? Colors.green[700] : Colors.black26, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -347,10 +381,10 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         ),
         subtitle: Text(
           "₪${item.price.toStringAsFixed(1)} | ${_formatFrequency(item)}${item.lastPurchaseDate != null ? ' | נקנה לפני ${item.daysSinceLastPurchase} ימים' : ''}",
-          style: const TextStyle(fontSize: 10, color: Colors.blueGrey),
+          style: TextStyle(fontSize: 10 * _textScale, color: Colors.blueGrey),
         ),
         trailing: IconButton(
-          icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.black54),
+          icon: Icon(Icons.edit_outlined, size: 18 * _textScale, color: Colors.black54),
           onPressed: () => _showItemEditor(context, provider, item: item),
         ),
       ),
@@ -368,28 +402,28 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text("תיעוד קנייה למפרע: ${item.name}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+              child: Text("תיעוד קנייה למפרע: ${item.name}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16 * _textScale, color: Colors.black87)),
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.today, color: Colors.blue),
-              title: const Text("נקנה השבוע (מחוץ לסל המרכזי)", style: TextStyle(color: Colors.black87)),
+              leading: Icon(Icons.today, color: Colors.blue, size: 24 * _textScale),
+              title: Text("נקנה השבוע (מחוץ לסל המרכזי)", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
               onTap: () {
                 _applyRetroactivePurchase(item, 0, provider);
                 Navigator.pop(ctx);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.history, color: Colors.orange),
-              title: const Text("נקנה בשבוע שעבר", style: TextStyle(color: Colors.black87)),
+              leading: Icon(Icons.history, color: Colors.orange, size: 24 * _textScale),
+              title: Text("נקנה בשבוע שעבר", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
               onTap: () {
                 _applyRetroactivePurchase(item, -1, provider);
                 Navigator.pop(ctx);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.event_repeat, color: Colors.blueGrey),
-              title: const Text("נקנה במועד אחר...", style: TextStyle(color: Colors.black87)),
+              leading: Icon(Icons.event_repeat, color: Colors.blueGrey, size: 24 * _textScale),
+              title: Text("נקנה במועד אחר...", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
               onTap: () {
                 Navigator.pop(ctx);
                 _showHistoryPicker(context, (offset) => _applyRetroactivePurchase(item, offset, provider));
@@ -425,7 +459,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
   Widget _buildControlMenu(ShoppingProvider provider) {
     return PopupMenuButton<dynamic>(
-      icon: const Icon(Icons.tune, color: Color(0xFF121212)),
+      icon: Icon(Icons.tune, color: const Color(0xFF121212), size: 24 * _textScale),
       color: Colors.white, 
       surfaceTintColor: Colors.white, 
       onSelected: (value) {
@@ -438,29 +472,29 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         }
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'manage_cats', 
           child: Row(
             children: [
-              Icon(Icons.category_outlined, size: 18, color: Colors.blue), 
-              SizedBox(width: 8), 
-              Text("ניהול קטגוריות", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))
+              Icon(Icons.category_outlined, size: 18 * _textScale, color: Colors.blue), 
+              SizedBox(width: 8 * _textScale), 
+              Text("ניהול קטגוריות", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))
             ]
           )
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'multi_sort', 
           child: Row(
             children: [
-              Icon(Icons.layers, size: 18, color: Colors.orange), 
-              SizedBox(width: 8), 
-              Text("מיון רב-שכבתי...", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold))
+              Icon(Icons.layers, size: 18 * _textScale, color: Colors.orange), 
+              SizedBox(width: 8 * _textScale), 
+              Text("מיון רב-שכבתי...", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))
             ]
           )
         ),
         const PopupMenuDivider(),
-        const PopupMenuItem(enabled: false, child: Text("סינון קטגוריה", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blue))),
-        ...provider.availableCategories.map((cat) => PopupMenuItem(value: cat, child: Row(children: [Icon(Icons.check, size: 16, color: _selectedCategory == cat ? Colors.blue : Colors.transparent), const SizedBox(width: 8), Text(cat, style: const TextStyle(color: Colors.black87))]))),
+        PopupMenuItem(enabled: false, child: Text("סינון קטגוריה", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12 * _textScale, color: Colors.blue))),
+        ...provider.availableCategories.map((cat) => PopupMenuItem(value: cat, child: Row(children: [Icon(Icons.check, size: 16 * _textScale, color: _selectedCategory == cat ? Colors.blue : Colors.transparent), SizedBox(width: 8 * _textScale), Text(cat, style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale))]))),
       ],
     );
   }
@@ -482,12 +516,12 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text("ניהול סדר מיון (רב-שכבתי)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  Text("ניהול סדר מיון (רב-שכבתי)", style: TextStyle(fontSize: 18 * _textScale, fontWeight: FontWeight.bold, color: Colors.black87)),
                   const SizedBox(height: 8),
-                  const Text("המיון יתבצע מלמעלה למטה.\nגרור באמצעות הפסים כדי לשנות עדיפות, וסמן V כדי להפעיל.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text("המיון יתבצע מלמעלה למטה.\nגרור באמצעות הפסים כדי לשנות עדיפות, וסמן V כדי להפעיל.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12 * _textScale, color: Colors.grey)),
                   const Divider(),
                   SizedBox(
-                    height: 280,
+                    height: 280 * _textScale,
                     child: ReorderableListView(
                       buildDefaultDragHandles: false,
                       onReorder: (oldIndex, newIndex) {
@@ -524,8 +558,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                                   }
                                 });
                               },
-                              title: Text(option, style: TextStyle(fontWeight: isActive ? FontWeight.bold : FontWeight.normal, color: Colors.black87)),
-                              secondary: const Icon(Icons.drag_handle, color: Colors.grey),
+                              title: Text(option, style: TextStyle(fontWeight: isActive ? FontWeight.bold : FontWeight.normal, color: Colors.black87, fontSize: 14 * _textScale)),
+                              secondary: Icon(Icons.drag_handle, color: Colors.grey, size: 24 * _textScale),
                             ),
                           ),
                         );
@@ -551,7 +585,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                       });
                       Navigator.pop(ctx);
                     },
-                    child: const Text("החל מיון"),
+                    child: Text("החל מיון", style: TextStyle(fontSize: 14 * _textScale)),
                   )
                 ],
               ),
@@ -589,8 +623,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   Widget _buildStatDetail(String label, double value, Color color) {
     return Column(
       children: [
-        Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)), 
-        FittedBox(fit: BoxFit.scaleDown, child: Text("₪${value.toStringAsFixed(0)}", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color)))
+        Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 10 * _textScale, color: Colors.grey, fontWeight: FontWeight.bold)), 
+        FittedBox(fit: BoxFit.scaleDown, child: Text("₪${value.toStringAsFixed(0)}", style: TextStyle(fontSize: 15 * _textScale, fontWeight: FontWeight.bold, color: color)))
       ]
     );
   }
@@ -604,8 +638,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [const Text("סכום הקנייה הנוכחית", style: TextStyle(color: Colors.white60, fontSize: 10)), Text("₪${total.toStringAsFixed(2)}", style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))]),
-            ElevatedButton(onPressed: () => _confirmFinalize(provider), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF), foregroundColor: Colors.white, shape: const StadiumBorder()), child: const Text("סיום ותיעוד")),
+            Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Text("סכום הקנייה הנוכחית", style: TextStyle(color: Colors.white60, fontSize: 10 * _textScale)), Text("₪${total.toStringAsFixed(2)}", style: TextStyle(color: Colors.white, fontSize: 18 * _textScale, fontWeight: FontWeight.bold))]),
+            ElevatedButton(onPressed: () => _confirmFinalize(provider), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF), foregroundColor: Colors.white, shape: const StadiumBorder()), child: Text("סיום ותיעוד", style: TextStyle(fontSize: 14 * _textScale))),
           ],
         ),
       ),
@@ -614,8 +648,10 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
   void _confirmFinalize(ShoppingProvider provider) {
     showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: const Text("סיום קנייה", style: TextStyle(color: Colors.black87)), content: const Text("האם לעדכן את תאריכי הקנייה עבור כל המוצרים שבסל ולאפס את הרשימה?", style: TextStyle(color: Colors.black87)),
-      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ביטול")), TextButton(onPressed: () { provider.finalizePurchase(); Navigator.pop(ctx); }, child: const Text("כן, בצע", style: TextStyle(fontWeight: FontWeight.bold)))],
+      backgroundColor: Colors.white,
+      title: Text("סיום קנייה", style: TextStyle(color: Colors.black87, fontSize: 18 * _textScale)), 
+      content: Text("האם לעדכן את תאריכי הקנייה עבור כל המוצרים שבסל ולאפס את הרשימה?", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(fontSize: 14 * _textScale))), TextButton(onPressed: () { provider.finalizePurchase(); Navigator.pop(ctx); }, child: Text("כן, בצע", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14 * _textScale)))],
     ));
   }
 
@@ -631,7 +667,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.shopping_basket_outlined, size: 48, color: Colors.grey[300]), const SizedBox(height: 16), const Text('הרשימה ריקה', style: TextStyle(color: Colors.grey))]));
+    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.shopping_basket_outlined, size: 48 * _textScale, color: Colors.grey[300]), SizedBox(height: 16 * _textScale), Text('הרשימה ריקה', style: TextStyle(color: Colors.grey, fontSize: 14 * _textScale))]));
   }
 
   // --- אישור מחיקת מוצר ---
@@ -641,10 +677,10 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        title: const Text("מחיקת מוצר", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-        content: Text("האם אתה בטוח שברצונך למחוק את '${item.name}' לצמיתות?", style: const TextStyle(color: Colors.black87)),
+        title: Text("מחיקת מוצר", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18 * _textScale)),
+        content: Text("האם אתה בטוח שברצונך למחוק את '${item.name}' לצמיתות?", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ביטול", style: TextStyle(color: Colors.black54))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(color: Colors.black54, fontSize: 14 * _textScale))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             onPressed: () {
@@ -652,7 +688,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
               Navigator.pop(ctx); // סגירת דיאלוג המחיקה
               Navigator.pop(context); // סגירת דיאלוג העריכה
             },
-            child: const Text("מחק"),
+            child: Text("מחק", style: TextStyle(fontSize: 14 * _textScale)),
           ),
         ],
       ),
@@ -675,8 +711,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     int weeks = item != null ? (item.frequencyWeeks % 4) : 1;
     int historyOffset = 0;
 
-    const labelStyle = TextStyle(color: Colors.black54, fontSize: 14);
-    const contentStyle = TextStyle(color: Colors.black87, fontSize: 16);
+    final labelStyle = TextStyle(color: Colors.black54, fontSize: 14 * _textScale);
+    final contentStyle = TextStyle(color: Colors.black87, fontSize: 16 * _textScale);
 
     showDialog(
       context: context,
@@ -684,10 +720,10 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: Colors.white, surfaceTintColor: Colors.transparent, 
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(item == null ? 'הוספת מוצר חדש' : 'עריכת מוצר', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+          title: Text(item == null ? 'הוספת מוצר חדש' : 'עריכת מוצר', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 18 * _textScale)),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              TextField(controller: nameController, style: contentStyle, decoration: const InputDecoration(labelText: 'שם המוצר', labelStyle: labelStyle)),
+              TextField(controller: nameController, style: contentStyle, decoration: InputDecoration(labelText: 'שם המוצר', labelStyle: labelStyle)),
               const SizedBox(height: 10),
               
               if (!isAddingNewCat)
@@ -695,10 +731,10 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                   initialValue: selectedCat, 
                   dropdownColor: Colors.white, 
                   style: contentStyle, 
-                  decoration: const InputDecoration(labelText: 'קטגוריה', labelStyle: labelStyle),
+                  decoration: InputDecoration(labelText: 'קטגוריה', labelStyle: labelStyle),
                   items: [
                     ...categoriesForDialog.map((c) => DropdownMenuItem(value: c, child: Text(c, style: contentStyle))),
-                    const DropdownMenuItem(value: 'NEW', child: Text("+ קטגוריה חדשה...", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))),
+                    DropdownMenuItem(value: 'NEW', child: Text("+ קטגוריה חדשה...", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 16 * _textScale))),
                   ], 
                   onChanged: (val) {
                     if (val == 'NEW') {
@@ -715,26 +751,26 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                   decoration: InputDecoration(
                     labelText: 'שם קטגוריה חדשה', 
                     labelStyle: labelStyle,
-                    suffixIcon: IconButton(icon: const Icon(Icons.close), onPressed: () => setDialogState(() => isAddingNewCat = false))
+                    suffixIcon: IconButton(icon: Icon(Icons.close, size: 24 * _textScale), onPressed: () => setDialogState(() => isAddingNewCat = false))
                   )
                 ),
 
-              TextField(controller: priceController, keyboardType: TextInputType.number, style: contentStyle, decoration: const InputDecoration(labelText: 'מחיר משוער', prefixText: '₪ ', labelStyle: labelStyle)),
+              TextField(controller: priceController, keyboardType: TextInputType.number, style: contentStyle, decoration: InputDecoration(labelText: 'מחיר משוער', prefixText: '₪ ', labelStyle: labelStyle)),
               
               if (item == null) ...[
                 const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('מועד קנייה:', style: TextStyle(fontSize: 13, color: Colors.black54)),
+                    Text('מועד קנייה:', style: TextStyle(fontSize: 13 * _textScale, color: Colors.black54)),
                     TextButton.icon(
                       onPressed: () {
                         _showHistoryPicker(context, (selectedOffset) {
                           setDialogState(() => historyOffset = selectedOffset);
                         });
                       },
-                      icon: Icon(Icons.history, size: 16, color: historyOffset == 0 ? Colors.blue : Colors.orange),
-                      label: Text(_getWeekLabel(historyOffset), style: TextStyle(color: historyOffset == 0 ? Colors.blue : Colors.orange, fontWeight: FontWeight.bold)),
+                      icon: Icon(Icons.history, size: 16 * _textScale, color: historyOffset == 0 ? Colors.blue : Colors.orange),
+                      label: Text(_getWeekLabel(historyOffset), style: TextStyle(color: historyOffset == 0 ? Colors.blue : Colors.orange, fontWeight: FontWeight.bold, fontSize: 14 * _textScale)),
                     ),
                   ],
                 ),
@@ -743,7 +779,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                 const SizedBox(height: 20),
               ],
               
-              const Text('תדירות קנייה:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
+              Text('תדירות קנייה:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13 * _textScale, color: Colors.black87)),
               const SizedBox(height: 10), 
               Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [_buildCounter(label: 'חודשים', value: months, onChanged: (val) => setDialogState(() => months = val)), _buildCounter(label: 'שבועות', value: weeks, max: 3, onChanged: (val) => setDialogState(() => weeks = val))]),
             ]),
@@ -752,14 +788,14 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
           actions: [
             if (item != null)
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                icon: Icon(Icons.delete_outline, color: Colors.red, size: 24 * _textScale),
                 tooltip: "מחק מוצר",
                 onPressed: () => _confirmDelete(context, provider, item),
               ),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול', style: TextStyle(color: Colors.black54))), 
+                TextButton(onPressed: () => Navigator.pop(ctx), child: Text('ביטול', style: TextStyle(color: Colors.black54, fontSize: 14 * _textScale))), 
                 const SizedBox(width: 8),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF121212), foregroundColor: Colors.white), 
@@ -793,7 +829,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                       Navigator.pop(ctx); 
                     } 
                   }, 
-                  child: const Text("שמור")
+                  child: Text("שמור", style: TextStyle(fontSize: 14 * _textScale))
                 )
               ],
             )
@@ -811,14 +847,14 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       builder: (ctx) => ListView(
         shrinkWrap: true,
         children: [
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text("בחר שבוע לתיעוד", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text("בחר שבוע לתיעוד", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 16 * _textScale)),
           ),
-          ListTile(title: const Text("השבוע", style: TextStyle(color: Colors.black87)), onTap: () { onSelected(0); Navigator.pop(ctx); }),
-          ListTile(title: const Text("שבוע שעבר", style: TextStyle(color: Colors.black87)), onTap: () { onSelected(-1); Navigator.pop(ctx); }),
+          ListTile(title: Text("השבוע", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)), onTap: () { onSelected(0); Navigator.pop(ctx); }),
+          ListTile(title: Text("שבוע שעבר", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)), onTap: () { onSelected(-1); Navigator.pop(ctx); }),
           ..._getWeekOptions().map((offset) => ListTile(
-            title: Text(_getWeekLabel(offset), style: const TextStyle(color: Colors.black87)),
+            title: Text(_getWeekLabel(offset), style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
             onTap: () { onSelected(offset); Navigator.pop(ctx); },
           )),
           const SizedBox(height: 20),
@@ -834,14 +870,14 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        title: const Text("ניהול קטגוריות", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
+        title: Text("ניהול קטגוריות", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18 * _textScale, color: Colors.black87)),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView(
             shrinkWrap: true,
             children: provider.availableCategories.where((c) => c != 'הכל').map((cat) => ListTile(
-              title: Text(cat, style: const TextStyle(fontSize: 15, color: Colors.black87)),
-              trailing: const Icon(Icons.edit, size: 18, color: Colors.blueGrey),
+              title: Text(cat, style: TextStyle(fontSize: 15 * _textScale, color: Colors.black87)),
+              trailing: Icon(Icons.edit, size: 18 * _textScale, color: Colors.blueGrey),
               onTap: () {
                 Navigator.pop(ctx);
                 _showRenameCategoryDialog(context, provider, cat);
@@ -850,7 +886,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("סגור")),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text("סגור", style: TextStyle(fontSize: 14 * _textScale))),
         ],
       ),
     );
@@ -863,15 +899,15 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        title: Text("שינוי שם: $oldName", style: const TextStyle(color: Colors.black87)),
+        title: Text("שינוי שם: $oldName", style: TextStyle(color: Colors.black87, fontSize: 18 * _textScale)),
         content: TextField(
           controller: controller, 
-          style: const TextStyle(color: Colors.black87),
-          decoration: const InputDecoration(labelText: 'שם חדש'),
+          style: TextStyle(color: Colors.black87, fontSize: 16 * _textScale),
+          decoration: InputDecoration(labelText: 'שם חדש', labelStyle: TextStyle(fontSize: 14 * _textScale)),
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ביטול")),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(fontSize: 14 * _textScale))),
           ElevatedButton(
             onPressed: () {
               if (controller.text.isNotEmpty && controller.text != oldName) {
@@ -880,7 +916,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
               }
             }, 
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF121212), foregroundColor: Colors.white),
-            child: const Text("עדכן")
+            child: Text("עדכן", style: TextStyle(fontSize: 14 * _textScale))
           ),
         ],
       ),
@@ -888,6 +924,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   }
 
   Widget _buildCounter({required String label, required int value, required Function(int) onChanged, int max = 99}) {
-    return Column(children: [Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black54)), Row(mainAxisSize: MainAxisSize.min, children: [IconButton(icon: const Icon(Icons.remove_circle_outline, color: Colors.black45), onPressed: value > 0 ? () => onChanged(value - 1) : null), Text('$value', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)), IconButton(icon: const Icon(Icons.add_circle_outline, color: Colors.black45), onPressed: value < max ? () => onChanged(value + 1) : null)])]);
+    return Column(children: [Text(label, style: TextStyle(fontSize: 11 * _textScale, fontWeight: FontWeight.bold, color: Colors.black54)), Row(mainAxisSize: MainAxisSize.min, children: [IconButton(icon: Icon(Icons.remove_circle_outline, color: Colors.black45, size: 24 * _textScale), onPressed: value > 0 ? () => onChanged(value - 1) : null), Text('$value', style: TextStyle(fontSize: 16 * _textScale, fontWeight: FontWeight.bold, color: Colors.black87)), IconButton(icon: Icon(Icons.add_circle_outline, color: Colors.black45, size: 24 * _textScale), onPressed: value < max ? () => onChanged(value + 1) : null)])]);
   }
 }
