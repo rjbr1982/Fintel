@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed dark mode styling for BottomSheets to display white text on Deep Slate background)
+// 🔒 STATUS: EDITED (Decoupled Unified Fund UI from individual isSinking flags to persist Unified UI)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -296,7 +296,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
                     }
 
                     bool isUnified = provider.isCategoryUnified(parentName);
-                    bool hasSinking = items.any((e) => e.isSinking);
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -328,7 +327,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                               ),
                           ],
                         ),
-                        subtitle: (mainCategory == 'עתידיות' || (parentName == 'ילדים' && provider.childCount > 0) || (isUnified && hasSinking)) 
+                        subtitle: (mainCategory == 'עתידיות' || (parentName == 'ילדים' && provider.childCount > 0) || isUnified) 
                           ? Padding(
                               padding: const EdgeInsets.only(top: 8.0),
                               child: Column(
@@ -343,7 +342,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                                       style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold),
                                     ),
                                   ],
-                                  if (isUnified && hasSinking && mainCategory != 'עתידיות') ...[
+                                  if (isUnified && mainCategory != 'עתידיות') ...[
                                     Text('להפרשה חודשית לקופה: ₪${monthlySinkingTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)),
                                   ],
                                 ],
@@ -362,7 +361,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(width: 8),
-                            if (isUnified && hasSinking && parentName != 'רכב')
+                            if (isUnified && parentName != 'רכב')
                               IconButton(
                                 icon: const Icon(Icons.account_balance_wallet, color: Colors.green),
                                 tooltip: 'ניהול קופה מאוחדת',
@@ -884,7 +883,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                   )
                 ],
 
-                if (isUnified && currentExpenses.any((e) => e.isSinking)) ...[
+                if (isUnified) ...[
                   const SizedBox(height: 12),
                   const Divider(height: 1),
                   const SizedBox(height: 12),
@@ -1318,7 +1317,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                   double? newManualAmount;
                   bool newIsLocked = selectedMode != 0;
                   double? newRatio = selectedMode == 0 ? (double.tryParse(ratioController.text) ?? 0) / 100 : expense.allocationRatio;
- 
+
                   if (selectedMode == 1) {
                     newManualAmount = double.tryParse(amountController.text);
                     if (newManualAmount != null) { newManualAmount = newManualAmount / multiplier; }
@@ -1332,7 +1331,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                       newManualAmount = newManualAmount / multiplier;
                     }
                   }
- 
+
                   if (newIsLocked && newManualAmount == null && selectedMode != 2) {
                     await provider.resetExpenseToDefault(expense.id!, isSinking: isSinking);
                   } else {
