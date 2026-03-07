@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added collision prevention for children named as parents & strict category mapping)
+// 🔒 STATUS: EDITED (Ironclad Kids Allocation logic directly bound to childCount bypassing string matching)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -34,6 +34,7 @@ class BudgetProvider with ChangeNotifier {
   double? _manualTargetIncome;
 
   List<SalaryRecord> _salaryRecords = [];
+  final Map<String, bool> _unifiedCategories = {}; 
 
   StreamSubscription? _expensesSub;
   StreamSubscription? _familySub;
@@ -67,6 +68,19 @@ class BudgetProvider with ChangeNotifier {
 
   double get autoTargetIncome => totalFixedExpenses + totalVariableExpenses + totalFutureExpenses;
   double get targetPassiveIncome => _manualTargetIncome ?? autoTargetIncome;
+
+  bool isCategoryUnified(String cat) {
+    if (_unifiedCategories.containsKey(cat)) {
+      return _unifiedCategories[cat]!;
+    }
+    return ['ילדים - קבועות', 'אבא', 'אמא', 'חגים', 'רכב'].contains(cat);
+  }
+
+  Future<void> toggleCategoryUnified(String cat, bool value) async {
+    _unifiedCategories[cat] = value;
+    await DatabaseHelper.instance.saveSetting('unified_cat_$cat', value ? 1.0 : 0.0);
+    notifyListeners();
+  }
 
   @override
   void dispose() {
@@ -125,8 +139,9 @@ class BudgetProvider with ChangeNotifier {
       notifyListeners();
     });
 
-    _familySub = DatabaseHelper.instance.streamFamilyMembers().listen((data) {
+    _familySub = DatabaseHelper.instance.streamFamilyMembers().listen((data) async {
       _familyMembers = data;
+      await _forceCategorySync(); 
       _recalculateAll();
       notifyListeners();
     });
@@ -151,6 +166,15 @@ class BudgetProvider with ChangeNotifier {
         final data = doc.data() as Map<String, dynamic>;
         final key = data['key'];
         final val = (data['value'] as num?)?.toDouble();
+
+        if (key != null && key.startsWith('unified_cat_') && val != null) {
+          String catName = key.substring(12);
+          bool isU = val == 1.0;
+          if (_unifiedCategories[catName] != isU) {
+            _unifiedCategories[catName] = isU;
+            changed = true;
+          }
+        }
 
         if (key == 'expected_yield' && val != null && _expectedYield != val) { _expectedYield = val; changed = true; }
         if (key == 'comp_freq' && val != null && _compoundingFrequency != val.toInt()) { _compoundingFrequency = val.toInt(); changed = true; }
@@ -271,8 +295,7 @@ class BudgetProvider with ChangeNotifier {
       double clothesRatio = 0.12 / cCount;
       double funRatio = 0.12 / cCount;
       for (var kid in kids) {
-        String safeName = kid.name;
-        // מניעת התנגשות אם המשתמש קרא לילד בשם של קטגוריית אם (אבא, אמא, אישי)
+        String safeName = kid.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
         if (safeName == 'אבא' || safeName == 'אמא' || safeName == 'אישי') {
           safeName = '$safeName (ילד)';
         }
@@ -301,6 +324,11 @@ class BudgetProvider with ChangeNotifier {
     };
 
     double defaultRatio = defaultRatios[nameForMatch] ?? 0.0;
+
+    // הגנה נוקשה לשחזור הקצאת ילדים
+    if (_expenses[index].parentCategory == 'ילדים - משתנות') {
+      defaultRatio = childCount > 0 ? (0.12 / childCount) : 0.0;
+    }
 
     final old = _expenses[index];
     final updated = Expense(
@@ -342,18 +370,38 @@ class BudgetProvider with ChangeNotifier {
     bool changed = false;
     final now = DateTime.now().toIso8601String();
 
-    // רשימת הילדים החוקיים עם הגנה על השמות
+    if (childCount == 0) {
+      for (int i = _expenses.length - 1; i >= 0; i--) {
+        final e = _expenses[i];
+        if (e.parentCategory == 'ילדים - משתנות' || e.parentCategory == 'ילדים - קבועות') {
+          await DatabaseHelper.instance.deleteExpense(e.id!);
+          _expenses.removeAt(i);
+          changed = true;
+        }
+      }
+    }
+
     final validChildNames = _familyMembers.where((m) => m.role == FamilyRole.child).map((m) {
-      String n = m.name;
+      String n = m.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
       if (n == 'אבא' || n == 'אמא' || n == 'אישי') n = '$n (ילד)';
       return n;
     }).toList();
 
-    // --- ניקוי ילדים שהפכו להורים מתוך משתנות הילדים ---
+    final Set<String> seenKidsExpenses = {};
     for (int i = _expenses.length - 1; i >= 0; i--) {
       final e = _expenses[i];
       if (e.parentCategory == 'ילדים - משתנות' && e.name != 'בגדים ילדים' && e.name != 'בילויים ילדים') {
-        bool isValid = validChildNames.any((childName) => e.name == 'בגדים $childName' || e.name == 'בילויים $childName');
+        String eNameForMatch = e.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
+        
+        if (seenKidsExpenses.contains(eNameForMatch)) {
+          await DatabaseHelper.instance.deleteExpense(e.id!);
+          _expenses.removeAt(i);
+          changed = true;
+          continue;
+        }
+        seenKidsExpenses.add(eNameForMatch);
+
+        bool isValid = validChildNames.any((childName) => eNameForMatch == 'בגדים $childName' || eNameForMatch == 'בילויים $childName');
         if (!isValid) {
           await DatabaseHelper.instance.deleteExpense(e.id!);
           _expenses.removeAt(i);
@@ -395,7 +443,6 @@ class BudgetProvider with ChangeNotifier {
 
     final Map<String, double> targetVariableRatios = _getDynamicVariableRatios();
     
-    // מערך שמות ההוצאות הייעודי לילדים למניעת התנגשויות
     List<String> allKidsVarExpenses = [];
     for(var n in validChildNames) {
        allKidsVarExpenses.add('בגדים $n');
@@ -405,7 +452,6 @@ class BudgetProvider with ChangeNotifier {
     for (int i = 0; i < _expenses.length; i++) {
       final e = _expenses[i];
       
-      // מחיקת קטגוריות ישנות שבוטלו או הוחלפו במודל החדש
       if (e.name == 'פארם וניקיון' || e.name == 'בגדים ילדים' || e.name == 'בילויים ילדים') {
         await DatabaseHelper.instance.deleteExpense(e.id!);
         changed = true;
@@ -437,20 +483,32 @@ class BudgetProvider with ChangeNotifier {
         }
       }
 
-      // מניעת כפילות מכפילים לילדים במשתנות, כי הם כבר מופרדים
-      if (e.parentCategory == 'ילדים - משתנות' && e.isPerChild) {
-        newIsPerChild = false;
-        needsUpdate = true;
-      }
-
       double? newRatio = e.allocationRatio;
-      if (requiredRatios.containsKey(nameForMatch)) {
+
+      // Ironclad Logic for Kids Allocation: Bypasses string matching and forces ratio based strictly on childCount
+      if (e.parentCategory == 'ילדים - משתנות') {
+        double expectedRatio = childCount > 0 ? (0.12 / childCount) : 0.0;
+        if (newRatio == null || (newRatio - expectedRatio).abs() > 0.0001) {
+            newRatio = expectedRatio;
+            needsUpdate = true;
+        }
+        if (e.isPerChild) {
+            newIsPerChild = false;
+            needsUpdate = true;
+        }
+        if (e.name != nameForMatch) {
+            newName = nameForMatch;
+            needsUpdate = true;
+        }
+      } 
+      // Regular matching for everything else
+      else if (requiredRatios.containsKey(nameForMatch)) {
         if (newRatio != requiredRatios[nameForMatch]) {
           newRatio = requiredRatios[nameForMatch];
           needsUpdate = true;
         }
       } 
-      else if (targetVariableRatios.containsKey(nameForMatch) || e.parentCategory == 'ילדים - משתנות') {
+      else if (targetVariableRatios.containsKey(nameForMatch)) {
         double targetRatio = targetVariableRatios[nameForMatch] ?? 0.0;
         if (newRatio != targetRatio) {
           if (targetRatio == 0.0 || newRatio == 0 || newRatio == null || (newRatio * 100).round() == 10) {
@@ -477,7 +535,6 @@ class BudgetProvider with ChangeNotifier {
       }
     }
 
-    // הוספת סעיפי משתנות חסרים (כולל פיצול פרטני לכל ילד)
     for (var entry in targetVariableRatios.entries) {
       if (entry.value > 0 && !_expenses.any((e) => e.name == entry.key)) {
         String parentCat;
@@ -494,7 +551,7 @@ class BudgetProvider with ChangeNotifier {
         await DatabaseHelper.instance.insertExpense(Expense(
           name: entry.key, category: 'משתנות', parentCategory: parentCat,
           monthlyAmount: 0, originalAmount: 0, isSinking: true,
-          isPerChild: false, // <-- במשתנות ילדים זה מפוצל לשמות ולכן לא מוכפל!
+          isPerChild: false,
           allocationRatio: entry.value,
           date: now, isDynamicSalary: false, isCustom: false,
         ));
@@ -842,7 +899,8 @@ class BudgetProvider with ChangeNotifier {
   }
 
   Future<void> addFamilyMember(String name, int birthYear, FamilyRole role) async {
-    final newMember = FamilyMember(name: name, birthYear: birthYear, role: role);
+    String cleanName = name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
+    final newMember = FamilyMember(name: cleanName, birthYear: birthYear, role: role);
     await DatabaseHelper.instance.insertFamilyMember(newMember);
   }
 
@@ -851,7 +909,11 @@ class BudgetProvider with ChangeNotifier {
   }
 
   Future<void> updateFamilyMember(FamilyMember member) async {
-    if (member.id != null) await DatabaseHelper.instance.updateFamilyMember(member);
+    if (member.id != null) {
+      String cleanName = member.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
+      final updated = FamilyMember(id: member.id, name: cleanName, birthYear: member.birthYear, role: member.role);
+      await DatabaseHelper.instance.updateFamilyMember(updated);
+    }
   }
 
   Future<void> addExpense(Expense expense) async {

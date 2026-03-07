@@ -1,21 +1,21 @@
 # Project Status - Fintel (דוחכם)
 **Date:** March 2026
-**Current Constitution Version:** 12.18
-**Phase:** MVP Polish & Production Readiness
+**Current Constitution Version:** 12.20
+**Phase:** Core Logic Refinement & Stabilization
 
 ### ✅ Completed Milestones:
-- **Core Engine:** Full budget distribution logic (Incomes, Fixed, Variables, Future, Financials) is working per the Dohaham method.
-- **Entities:** Parent vs. Child dynamic allocations and collision handling (preventing overriding parent entities with same names).
-- **UI/UX:** Dark mode overrides for dialogs/headers, clean Dashboard with Freedom Engine Year calculation.
-- **Branding:** Global app icons and web favicons successfully deployed and cached-busted.
-- **Onboarding (v12.18):** 5-step intuitive wizard built.
-- **Seed Data:** Dynamic data generation based on onboarding inputs, sanitized from personal hardcoded data to generic professional defaults.
-- **Soft Landing:** "Welcome Dialog" implemented to guide new users to complete their setup (Housing, Shopping Anchor, 0-amount items, Debts).
+- **Unified Sinking Funds:** Added the ability to toggle specific parent categories as "Unified Funds", allowing shared balance and withdrawal management (UI and Provider logic).
+- **Kids Entity Allocation Fix:** Rebuilt the logic for distributing variable percentages to children. It now completely bypasses legacy string-matching and strictly calculates `0.12 / childCount`, wiping old data automatically if `childCount == 0`.
+- **Zero Warnings:** Maintained strict zero-warnings policy (`prefer_final_fields` resolved).
+- **UI/UX Polish:** Integrated 3-dots menus in `category_drilldown_screen.dart` to manage unified funds and category names cleanly without cluttering the screen.
+
+### 🛑 Strategic Directives (v12.20):
+- **Zero Warnings Policy:** Every `flutter analyze` run must return 0 issues (including `info` alerts).
+- **Sandbox Doctrine (12.7):** Currently operating cautiously on the main project (`dohaham`) per Rafael's direct override.
 
 ### ⏳ Pending / Next Steps:
-- **Testing:** End-to-End testing of the Onboarding flow (using Incognito with a new Google account) to ensure Firebase and local SQLite sync perfectly for new users.
-- **Cloud Sync (Constitution 5.10):** Verify that local SQLite data correctly uploads/downloads to Cloud Firestore upon authentication.
-- **Final QA:** Check all edge cases in the "Sniper" debt engine and "Freedom" passive income engine.
+- Continue working through Rafael's WhatsApp task list.
+- End-to-End testing of the Onboarding flow (using Incognito with a new Google account).
 
 ### 🐛 Known Issues:
-- None active. (Web caching issues resolved via URL versioning).
+- None active. Main project is stable, clean, and functioning perfectly.

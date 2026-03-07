@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Wrapped all dialogs in ThemeData.light() to prevent dark-mode invisible text issues)
+// 🔒 STATUS: EDITED (Hidden Kids toggle when childCount == 0 to fix logical collision)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -244,7 +244,8 @@ class CategoryDrilldownScreen extends StatelessWidget {
                         children: [
                           _buildFilterChip('אבא', provider.isFatherActive, (v) => provider.toggleEntityActive('father', v)),
                           _buildFilterChip('אמא', provider.isMotherActive, (v) => provider.toggleEntityActive('mother', v)),
-                          _buildFilterChip('ילדים', provider.isKidsActive, (v) => provider.toggleEntityActive('kids', v)),
+                          if (provider.childCount > 0) // החבא את מתג הילדים אם אין ילדים
+                            _buildFilterChip('ילדים', provider.isKidsActive, (v) => provider.toggleEntityActive('kids', v)),
                         ],
                       )
                     ]
@@ -294,7 +295,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                       if ((e.targetAmount ?? 0) > 0) { totalTarget += e.targetAmount!; hasTarget = true; }
                     }
 
-                    bool isUnified = ['ילדים - קבועות', 'אבא', 'אמא', 'חגים'].contains(parentName);
+                    bool isUnified = provider.isCategoryUnified(parentName);
                     bool hasSinking = items.any((e) => e.isSinking);
 
                     return Card(
@@ -308,10 +309,22 @@ class CategoryDrilldownScreen extends StatelessWidget {
                           children: [
                             Text(_formatParentName(parentName), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
                             const SizedBox(width: 8),
-                            if (parentName != 'קניות' && parentName != 'רכב' && parentName != 'ילדים - משתנות')
-                              InkWell(
-                                onTap: () => _showRenameParentDialog(context, provider, parentName),
-                                child: const Icon(Icons.edit, size: 14, color: Colors.grey),
+                            if (parentName != 'קניות' && parentName != 'ילדים - משתנות')
+                              PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                                padding: EdgeInsets.zero,
+                                onSelected: (val) {
+                                  if (val == 'rename') _showRenameParentDialog(context, provider, parentName);
+                                  if (val == 'toggle_unified') provider.toggleCategoryUnified(parentName, !provider.isCategoryUnified(parentName));
+                                },
+                                itemBuilder: (ctx) => [
+                                  if (parentName != 'רכב')
+                                    const PopupMenuItem(value: 'rename', child: Text('שינוי שם קבוצה', style: TextStyle(fontSize: 14))),
+                                  PopupMenuItem(
+                                    value: 'toggle_unified',
+                                    child: Text(provider.isCategoryUnified(parentName) ? 'בטל קופה מאוחדת' : 'הגדר כקופה מאוחדת', style: const TextStyle(fontSize: 14)),
+                                  ),
+                                ],
                               ),
                           ],
                         ),
@@ -398,6 +411,34 @@ class SpecificExpensesScreen extends StatelessWidget {
   String _formatParentName(String name) {
     if (name == 'בית') { return 'קטנות לבית'; }
     return name;
+  }
+
+  void _showRenameParentDialog(BuildContext context, BudgetProvider provider, String oldName) {
+    final controller = TextEditingController(text: oldName);
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text("שינוי שם: $oldName"),
+          content: TextField(controller: controller, decoration: const InputDecoration(labelText: 'שם קבוצה חדש'), autofocus: true),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ביטול")),
+            ElevatedButton(
+              onPressed: () {
+                if (controller.text.isNotEmpty && controller.text != oldName) {
+                  provider.renameParentCategory(oldName, controller.text);
+                  Navigator.pop(ctx);
+                  Navigator.pop(context); // Return to previous screen to refresh filter
+                }
+              },
+              child: const Text("עדכן"),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showAddVehicleDialog(BuildContext context, BudgetProvider provider) {
@@ -495,6 +536,8 @@ class SpecificExpensesScreen extends StatelessWidget {
         final items = entry.value;
         double childTotal = items.fold(0.0, (sum, e) => sum + e.monthlyAmount);
         double childBalance = items.fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
+        double childRatio = items.fold(0.0, (sum, e) => sum + (e.allocationRatio ?? 0));
+        String ratioText = childRatio > 0 ? ' | הקצאה: ${(childRatio * 100).toStringAsFixed(1)}%' : '';
 
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
@@ -509,7 +552,7 @@ class SpecificExpensesScreen extends StatelessWidget {
               collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               leading: CircleAvatar(backgroundColor: Colors.purple[50], child: Icon(Icons.child_care, color: Colors.purple[400])),
               title: Text(childName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black)),
-              subtitle: Text('צבור אישי: ₪${childBalance.toStringAsFixed(0)} | תקציב: ₪${childTotal.toStringAsFixed(0)}', style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
+              subtitle: Text('צבור: ₪${childBalance.toStringAsFixed(0)} | תקציב: ₪${childTotal.toStringAsFixed(0)}$ratioText', style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
               children: [
                 Container(
                   color: Colors.white,
@@ -581,25 +624,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                   color: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[50], foregroundColor: Colors.blue[800], elevation: 0),
-                          icon: const Icon(Icons.account_balance_wallet, size: 18),
-                          label: const Text('קופת הרכב', style: TextStyle(fontWeight: FontWeight.bold)),
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context, isScrollControlled: true,
-                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                              builder: (ctx) => Theme(
-                                data: ThemeData.light(),
-                                child: _UnifiedFundBottomSheet(provider: provider, parentCategory: 'רכב: $vehicleName', expenses: items.where((e)=>e.isSinking).toList())
-                              ),
-                            );
-                          }
-                        )
-                      ),
-                      const SizedBox(width: 8),
                       IconButton(icon: const Icon(Icons.edit, color: Colors.blueGrey), tooltip: 'ערוך שם רכב', onPressed: () => _showRenameVehicle(context, provider, items, vehicleName)),
                       IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), tooltip: 'מחק רכב זה', onPressed: () async {
                         bool? confirm = await showDialog(
@@ -788,7 +814,7 @@ class SpecificExpensesScreen extends StatelessWidget {
         }
     }
 
-    bool isUnified = ['ילדים - קבועות', 'אבא', 'אמא', 'חגים'].contains(parentCategory);
+    bool isUnified = provider.isCategoryUnified(parentCategory);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -816,11 +842,32 @@ class SpecificExpensesScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('סה"כ תזרים חודשי:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    Row(
                       children: [
-                        Text('${loc?.get('currency_symbol') ?? '₪'}${(total).toStringAsFixed(0)}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue)),
-                        Text('${loc?.get('currency_symbol') ?? '₪'}${(total * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text('${loc?.get('currency_symbol') ?? '₪'}${(total).toStringAsFixed(0)}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue)),
+                            Text('${loc?.get('currency_symbol') ?? '₪'}${(total * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                          ],
+                        ),
+                        const SizedBox(width: 8),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert, color: Colors.grey),
+                          onSelected: (val) {
+                            if (val == 'rename') _showRenameParentDialog(context, provider, parentCategory);
+                            if (val == 'toggle_unified') provider.toggleCategoryUnified(parentCategory, !provider.isCategoryUnified(parentCategory));
+                          },
+                          itemBuilder: (ctx) => [
+                            if (parentCategory != 'קניות' && parentCategory != 'רכב' && parentCategory != 'ילדים - משתנות')
+                              const PopupMenuItem(value: 'rename', child: Text('שינוי שם קבוצה', style: TextStyle(fontSize: 14))),
+                            if (parentCategory != 'קניות' && parentCategory != 'ילדים - משתנות')
+                              PopupMenuItem(
+                                value: 'toggle_unified',
+                                child: Text(provider.isCategoryUnified(parentCategory) ? 'בטל קופה מאוחדת' : 'הגדר כקופה מאוחדת', style: const TextStyle(fontSize: 14)),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                   ],
