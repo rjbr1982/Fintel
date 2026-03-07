@@ -8,6 +8,7 @@
 - **Desktop Readability:** Added a local A+/A- text scaling engine specifically for the Shopping Screen to support shared desktop planning.
 - **Sinking Funds Withdrawals:** Fixed the infinite loading bug in withdrawal history by handling Firebase index limitations with local sorting. Dialogs now properly support Dark Mode text visibility.
 - **Unified Sinking Funds:** Added the ability to toggle specific parent categories as "Unified Funds", allowing shared balance and withdrawal management (UI and Provider logic).
+- **Unified Fund UI Decoupling:** Fixed a bug where turning off `isSinking` for child expenses hid the Unified Fund UI. The UI is now strictly bound to the parent's `isUnified` status across all entities.
 - **Kids Entity Allocation Fix:** Rebuilt the logic for distributing variable percentages to children bypassing legacy string-matching.
 - **Zero Warnings:** Maintained strict zero-warnings policy across all new UI updates.
 
