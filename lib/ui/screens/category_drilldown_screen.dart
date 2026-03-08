@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Contextual Onboarding for Variable Expenses and Sinking Funds, Fixed Linter Warning)
+// 🔒 STATUS: EDITED (Added Contextual Onboarding for Variable Expenses and Sinking Funds, Fixed Linter Warning, Fixed Vehicle Sinking Total, Fixed Imports)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -620,8 +620,12 @@ class SpecificExpensesScreen extends StatelessWidget {
       children: vehicles.entries.map((entry) {
         final vehicleName = entry.key;
         final items = entry.value;
+        
         double vehicleTotal = items.fold(0.0, (sum, e) => sum + e.monthlyAmount);
         double vehicleBalance = items.where((e)=>e.isSinking).fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
+        
+        // תיקון: סכימה של ההפרשה החודשית רק עבור סעיפים מסוג Sinking Fund
+        double vehicleSinkingTotal = items.where((e)=>e.isSinking).fold(0.0, (sum, e) => sum + e.monthlyAmount);
 
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
@@ -636,34 +640,60 @@ class SpecificExpensesScreen extends StatelessWidget {
               collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               leading: CircleAvatar(backgroundColor: Colors.blue[50], child: Icon(Icons.directions_car, color: Colors.blue[400])),
               title: Text(vehicleName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black)),
-              subtitle: Text('צבור: ₪${vehicleBalance.toStringAsFixed(0)} | עלות חודשית: ₪${vehicleTotal.toStringAsFixed(0)}', style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('צבור בקופה: ₪${vehicleBalance.toStringAsFixed(0)}', style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text('הפרשה חודשית לקופה: ₪${vehicleSinkingTotal.toStringAsFixed(0)} | עלות חודשית כוללת: ₪${vehicleTotal.toStringAsFixed(0)}', style: const TextStyle(color: Colors.blueGrey, fontSize: 11)),
+                ],
+              ),
               children: [
                 Container(
                   color: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(icon: const Icon(Icons.edit, color: Colors.blueGrey), tooltip: 'ערוך שם רכב', onPressed: () => _showRenameVehicle(context, provider, items, vehicleName)),
-                      IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), tooltip: 'מחק רכב זה', onPressed: () async {
-                        bool? confirm = await showDialog(
-                          context: context,
-                          builder: (c) => Theme(
-                            data: ThemeData.light(),
-                            child: AlertDialog(
-                              title: const Text('מחיקת רכב'),
-                              content: Text('האם למחוק את כל ההוצאות המשויכות לרכב "$vehicleName"?'),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('ביטול')),
-                                ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(c, true), child: const Text('מחק רכב', style: TextStyle(color: Colors.white))),
-                              ]
-                            ),
-                          )
-                        );
-                        if (confirm == true) {
-                          for (var e in items) { if (e.id != null) await provider.deleteExpense(e.id!); }
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green.withValues(alpha: 0.1), foregroundColor: Colors.green, elevation: 0),
+                        icon: const Icon(Icons.account_balance_wallet, size: 18),
+                        label: const Text('ניהול קופה', style: TextStyle(fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          // שולח רק את ההוצאות הצוברות לניהול הקופה המאוחדת
+                          final sinkingItems = items.where((e) => e.isSinking).toList();
+                          showModalBottomSheet(
+                            context: context, isScrollControlled: true,
+                            backgroundColor: const Color(0xFF121212),
+                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                            builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: 'רכב: $vehicleName', expenses: sinkingItems),
+                          );
                         }
-                      })
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(icon: const Icon(Icons.edit, color: Colors.blueGrey), tooltip: 'ערוך שם רכב', onPressed: () => _showRenameVehicle(context, provider, items, vehicleName)),
+                          IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), tooltip: 'מחק רכב זה', onPressed: () async {
+                            bool? confirm = await showDialog(
+                              context: context,
+                              builder: (c) => Theme(
+                                data: ThemeData.light(),
+                                child: AlertDialog(
+                                  title: const Text('מחיקת רכב'),
+                                  content: Text('האם למחוק את כל ההוצאות המשויכות לרכב "$vehicleName"?'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('ביטול')),
+                                    ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(c, true), child: const Text('מחק רכב', style: TextStyle(color: Colors.white))),
+                                  ]
+                                ),
+                              )
+                            );
+                            if (confirm == true) {
+                              for (var e in items) { if (e.id != null) await provider.deleteExpense(e.id!); }
+                            }
+                          })
+                        ],
+                      )
                     ]
                   )
                 ),
@@ -1350,7 +1380,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                     double balance = double.tryParse(balanceController.text) ?? 0;
                     if (months != null && months > 0) {
                       newManualAmount = (target - balance) / months;
-                      if (newManualAmount < 0) { newManualAmount = 0; } // <-- הוסר סימן הקריאה המיותר
+                      if (newManualAmount < 0) { newManualAmount = 0; } 
                       newManualAmount = newManualAmount / multiplier;
                     }
                   }

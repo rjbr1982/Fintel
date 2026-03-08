@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Ironclad Kids Allocation logic & Centralized Chronological Sorting Engine)
+// 🔒 STATUS: EDITED (Ironclad Kids Allocation logic, Centralized Chronological Sorting Engine, Enforced Sinking Funds for Vehicles - Blacklist approach)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -558,6 +558,28 @@ class BudgetProvider with ChangeNotifier {
       }
 
       bool newIsSinking = e.isSinking;
+
+      // --- ADDED LOGIC TO FIX SINKING FUNDS 0 BUG ---
+      if (newCat == 'עתידיות' || newParent == 'חגים') {
+        if (!newIsSinking) { newIsSinking = true; needsUpdate = true; }
+      }
+      
+      // הלוגיקה החכמה לרכב: הכל נחשב קופה צוברת, למעט דלק וליסינג שהם שוטפים.
+      if (newParent == 'רכב') {
+        String cleanVehicleName = newName.trim();
+        if (!cleanVehicleName.startsWith('דלק') && !cleanVehicleName.startsWith('ליסינג')) {
+          // חובה להפעיל צבירה לכל הוצאת רכב שאינה דלק או ליסינג
+          if (!newIsSinking) { newIsSinking = true; needsUpdate = true; }
+        } else {
+          // חובה לכבות צבירה לדלק וליסינג
+          if (newIsSinking) { newIsSinking = false; needsUpdate = true; }
+        }
+      }
+      
+      if (newName.trim() == 'הובלה ותיקונים') {
+        if (!newIsSinking) { newIsSinking = true; needsUpdate = true; }
+      }
+      // ----------------------------------------------
 
       if (needsUpdate) {
         final updated = Expense(

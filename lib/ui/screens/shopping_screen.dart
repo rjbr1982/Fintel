@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Enhanced Delta Tooltip and Contextual Onboarding)
+// 🔒 STATUS: EDITED (Enhanced Delta Tooltip, Contextual Onboarding, and Mobile Sort Sheet Fix)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/shopping_provider.dart';
@@ -506,88 +506,96 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // חובה למסכים קטנים כדי לאפשר גלילה חופשית מעל מקלדת/שטח מסך
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setSheetState) {
+          // מחושב גובה מקסימלי כדי למנוע חריגה מהמסך במובייל
+          final maxSheetHeight = MediaQuery.of(context).size.height * 0.75;
+          
           return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text("ניהול סדר מיון (רב-שכבתי)", style: TextStyle(fontSize: 18 * _textScale, fontWeight: FontWeight.bold, color: Colors.black87)),
-                  const SizedBox(height: 8),
-                  Text("המיון יתבצע מלמעלה למטה.\nגרור באמצעות הפסים כדי לשנות עדיפות, וסמן V כדי להפעיל.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12 * _textScale, color: Colors.grey)),
-                  const Divider(),
-                  SizedBox(
-                    height: 280 * _textScale,
-                    child: ReorderableListView(
-                      buildDefaultDragHandles: false,
-                      onReorder: (oldIndex, newIndex) {
-                        setSheetState(() {
-                          if (newIndex > oldIndex) {
-                            newIndex -= 1;
-                          }
-                          final item = currentOrder.removeAt(oldIndex);
-                          currentOrder.insert(newIndex, item);
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxSheetHeight),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min, // תופס את המינימום האפשרי, אבל לא יותר מ-maxSheetHeight
+                  children: [
+                    Text("ניהול סדר מיון (רב-שכבתי)", style: TextStyle(fontSize: 18 * _textScale, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    const SizedBox(height: 8),
+                    Text("המיון יתבצע מלמעלה למטה.\nגרור באמצעות הפסים כדי לשנות עדיפות, וסמן V כדי להפעיל.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12 * _textScale, color: Colors.grey)),
+                    const Divider(),
+                    // הרשימה הנגררת מתרחבת (Expanded) בתוך הגובה הנותר ולא חורגת מהמסך
+                    Expanded(
+                      child: ReorderableListView(
+                        buildDefaultDragHandles: false,
+                        onReorder: (oldIndex, newIndex) {
+                          setSheetState(() {
+                            if (newIndex > oldIndex) {
+                              newIndex -= 1;
+                            }
+                            final item = currentOrder.removeAt(oldIndex);
+                            currentOrder.insert(newIndex, item);
+                          });
+                        },
+                        children: currentOrder.map((option) {
+                          final isActive = currentActive.contains(option);
+                          return ReorderableDragStartListener(
+                            key: ValueKey(option),
+                            index: currentOrder.indexOf(option),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 4),
+                              decoration: BoxDecoration(
+                                color: isActive ? Colors.blue.withValues(alpha: 0.05) : Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey.withValues(alpha: 0.2))
+                              ),
+                              child: CheckboxListTile(
+                                value: isActive,
+                                activeColor: Colors.blue,
+                                side: const BorderSide(color: Colors.black54, width: 1.5),
+                                onChanged: (val) {
+                                  setSheetState(() {
+                                    if (val == true) {
+                                      currentActive.add(option);
+                                    } else {
+                                      currentActive.remove(option);
+                                    }
+                                  });
+                                },
+                                title: Text(option, style: TextStyle(fontWeight: isActive ? FontWeight.bold : FontWeight.normal, color: Colors.black87, fontSize: 14 * _textScale)),
+                                secondary: Icon(Icons.drag_handle, color: Colors.grey, size: 24 * _textScale),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // כפתור תמיד נשאר למטה
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF121212), 
+                        foregroundColor: Colors.white, 
+                        minimumSize: const Size(double.infinity, 48)
+                      ),
+                      onPressed: () {
+                        List<String> newSorts = currentOrder.where((opt) => currentActive.contains(opt)).toList();
+                        if (newSorts.isEmpty) {
+                          newSorts = ['שם'];
+                        }
+                        
+                        setState(() {
+                          _activeSorts = newSorts;
+                          _allSortOptions = List.from(currentOrder); 
                         });
+                        Navigator.pop(ctx);
                       },
-                      children: currentOrder.map((option) {
-                        final isActive = currentActive.contains(option);
-                        return ReorderableDragStartListener(
-                          key: ValueKey(option),
-                          index: currentOrder.indexOf(option),
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 4),
-                            decoration: BoxDecoration(
-                              color: isActive ? Colors.blue.withValues(alpha: 0.05) : Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey.withValues(alpha: 0.2))
-                            ),
-                            child: CheckboxListTile(
-                              value: isActive,
-                              activeColor: Colors.blue,
-                              side: const BorderSide(color: Colors.black54, width: 1.5),
-                              onChanged: (val) {
-                                setSheetState(() {
-                                  if (val == true) {
-                                    currentActive.add(option);
-                                  } else {
-                                    currentActive.remove(option);
-                                  }
-                                });
-                              },
-                              title: Text(option, style: TextStyle(fontWeight: isActive ? FontWeight.bold : FontWeight.normal, color: Colors.black87, fontSize: 14 * _textScale)),
-                              secondary: Icon(Icons.drag_handle, color: Colors.grey, size: 24 * _textScale),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF121212), 
-                      foregroundColor: Colors.white, 
-                      minimumSize: const Size(double.infinity, 48)
-                    ),
-                    onPressed: () {
-                      List<String> newSorts = currentOrder.where((opt) => currentActive.contains(opt)).toList();
-                      if (newSorts.isEmpty) {
-                        newSorts = ['שם'];
-                      }
-                      
-                      setState(() {
-                        _activeSorts = newSorts;
-                        _allSortOptions = List.from(currentOrder); 
-                      });
-                      Navigator.pop(ctx);
-                    },
-                    child: Text("החל מיון", style: TextStyle(fontSize: 14 * _textScale)),
-                  )
-                ],
+                      child: Text("החל מיון", style: TextStyle(fontSize: 14 * _textScale)),
+                    )
+                  ],
+                ),
               ),
             ),
           );
