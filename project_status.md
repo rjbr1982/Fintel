@@ -11,7 +11,7 @@
 - **Assets Rendering Bug Fix:** Converted Assets Screen to a StatefulWidget to force early data fetching, resolving the lazy-rendering issue.
 - **Chronological Sorting Engine:** Built a centralized sorting logic in `BudgetProvider` ensuring family members and all kids-related expenses are consistently sorted by age (oldest to youngest).
 - **Shopping Sort UI Fix:** Resolved mobile constraint issues in the Multi-Level Sort BottomSheet to guarantee button accessibility.
-- **Vehicle Sinking Funds Enforcement:** Implemented a blacklist approach ensuring all vehicle expenses default to Sinking Funds, except for immediate usage expenses (fuel, leasing), restoring accurate aggregation in the Sinking Funds center.
+- **Vehicle Sinking Funds Aggregation & Customization:** Implemented blacklist approach for vehicle sinking funds (excluding fuel/leasing), aggregated vehicles into a single unified fund in the Sinking Funds center, and enabled safe custom expense additions for specific vehicles.
 - **Zero Warnings:** Maintained strict zero-warnings policy across all new UI updates.
 
 ### 🛑 Strategic Directives (v12.20):

@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Dynamic Splitting for Kids and Vehicles Unified Funds)
+// 🔒 STATUS: EDITED (Dynamic Splitting for Kids, Aggregated Unified Fund for Vehicles)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -24,7 +24,7 @@ class SinkingFundsScreen extends StatelessWidget {
           double totalMonthlyDeposit = 0;
           double totalAccumulatedBalance = 0;
 
-          // לוגיקת הפיצול הדינמית (כל רכב או ילד מקבל קופה משלו באופן אוטומטי)
+          // לוגיקת הפיצול הדינמית (כל ילד מקבל קופה משלו, אבל כל הרכבים מאוחדים לקופה אחת)
           Map<String, List<Expense>> dynamicFunds = {};
           List<Expense> individualFunds = [];
 
@@ -35,11 +35,13 @@ class SinkingFundsScreen extends StatelessWidget {
 
             String groupName = '';
             
+            // --- FIX: Aggregated Vehicle Fund Logic ---
             if (e.parentCategory == 'רכב') {
-              final match = RegExp(r'\((.*?)\)').firstMatch(e.name);
-              String vName = match != null ? match.group(1)! : 'כללי';
-              groupName = 'רכב: $vName';
-            } else if (e.parentCategory == 'ילדים - משתנות') {
+              // כל תתי-הסעיפים הצוברים של כלל הרכבים יתנקזו לקופה מאוחדת אחת ששמה 'רכב'
+              groupName = 'רכב';
+            } 
+            // ------------------------------------------
+            else if (e.parentCategory == 'ילדים - משתנות') {
               String kName = e.name.replaceAll('בגדים', '').replaceAll('בילויים', '').trim();
               groupName = 'ילדים: $kName';
             } else if (['ילדים - קבועות', 'אבא', 'אמא', 'חגים'].contains(e.parentCategory)) {

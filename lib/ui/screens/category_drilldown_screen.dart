@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Contextual Onboarding for Variable Expenses and Sinking Funds, Fixed Linter Warning, Fixed Vehicle Sinking Total, Fixed Imports)
+// 🔒 STATUS: EDITED (Added Vehicle Custom Expenses Logic and Safe Editing)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -542,6 +542,69 @@ class SpecificExpensesScreen extends StatelessWidget {
     );
   }
 
+  void _showAddVehicleExpenseDialog(BuildContext context, BudgetProvider provider, String vehicleName) {
+    final nameController = TextEditingController();
+    final amountController = TextEditingController();
+    bool isSinking = true;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => Theme(
+          data: ThemeData.light(),
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text('הוספת סעיף ל-$vehicleName', style: const TextStyle(fontSize: 18)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הסעיף (למשל: שטיפה)')),
+                const SizedBox(height: 10),
+                TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום חודשי משוער', suffixText: '₪')),
+                const Divider(),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('דלק וליסינג סמנו כלא צובר', style: TextStyle(fontSize: 11)),
+                  value: isSinking,
+                  activeThumbColor: Colors.green,
+                  onChanged: (val) { setDialogState(() { isSinking = val; }); },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+              ElevatedButton(
+                onPressed: () async {
+                  final amount = double.tryParse(amountController.text) ?? 0.0;
+                  if (nameController.text.isNotEmpty) {
+                    final newExpense = Expense(
+                      name: '${nameController.text.trim()} ($vehicleName)',
+                      category: 'קבועות',
+                      parentCategory: 'רכב',
+                      monthlyAmount: amount,
+                      frequency: Frequency.MONTHLY,
+                      isLocked: true, 
+                      isPerChild: false,
+                      date: DateTime.now().toIso8601String(),
+                      isDynamicSalary: false, 
+                      isSinking: isSinking,
+                      isCustom: true, 
+                      allocationRatio: 0.0,
+                    );
+                    await provider.addExpense(newExpense);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  }
+                },
+                child: const Text('הוסף'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildKidsSections(BuildContext context, BudgetProvider provider, List<Expense> currentExpenses) {
     Map<String, List<Expense>> kids = {};
     for (var e in currentExpenses) {
@@ -623,8 +686,6 @@ class SpecificExpensesScreen extends StatelessWidget {
         
         double vehicleTotal = items.fold(0.0, (sum, e) => sum + e.monthlyAmount);
         double vehicleBalance = items.where((e)=>e.isSinking).fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
-        
-        // תיקון: סכימה של ההפרשה החודשית רק עבור סעיפים מסוג Sinking Fund
         double vehicleSinkingTotal = items.where((e)=>e.isSinking).fold(0.0, (sum, e) => sum + e.monthlyAmount);
 
         return Card(
@@ -659,7 +720,6 @@ class SpecificExpensesScreen extends StatelessWidget {
                         icon: const Icon(Icons.account_balance_wallet, size: 18),
                         label: const Text('ניהול קופה', style: TextStyle(fontWeight: FontWeight.bold)),
                         onPressed: () {
-                          // שולח רק את ההוצאות הצוברות לניהול הקופה המאוחדת
                           final sinkingItems = items.where((e) => e.isSinking).toList();
                           showModalBottomSheet(
                             context: context, isScrollControlled: true,
@@ -672,6 +732,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          IconButton(icon: const Icon(Icons.add_circle_outline, color: Colors.blue), tooltip: 'הוסף סעיף לרכב', onPressed: () => _showAddVehicleExpenseDialog(context, provider, vehicleName)),
                           IconButton(icon: const Icon(Icons.edit, color: Colors.blueGrey), tooltip: 'ערוך שם רכב', onPressed: () => _showRenameVehicle(context, provider, items, vehicleName)),
                           IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), tooltip: 'מחק רכב זה', onPressed: () async {
                             bool? confirm = await showDialog(
@@ -732,7 +793,10 @@ class SpecificExpensesScreen extends StatelessWidget {
     }
 
     String cleanName = expense.name;
+    String? vName;
     if (isVehicle) {
+      final match = RegExp(r'\((.*?)\)').firstMatch(expense.name);
+      vName = match != null ? match.group(1) : 'כללי';
       cleanName = cleanName.replaceAll(RegExp(r'\s*\(.*?\)'), '').trim();
     }
     if (childName != null) {
@@ -816,7 +880,7 @@ class SpecificExpensesScreen extends StatelessWidget {
               } else if (isVariable && (expense.allocationRatio != null || isAnchor)) {
                 _showSmartEditDialog(context, provider, expense);
               } else {
-                _showEditDialog(context, provider, expense);
+                _showEditDialog(context, provider, expense, isVehicle: isVehicle, vehicleName: vName);
               }
             },
           ),
@@ -1068,7 +1132,7 @@ class SpecificExpensesScreen extends StatelessWidget {
     );
   }
 
-  void _showEditDialog(BuildContext context, BudgetProvider provider, Expense expense) {
+  void _showEditDialog(BuildContext context, BudgetProvider provider, Expense expense, {bool isVehicle = false, String? vehicleName}) {
     double factor = 1.0;
     if (expense.frequency == Frequency.YEARLY) { factor = 12.0; }
     else if (expense.frequency == Frequency.BI_MONTHLY) { factor = 2.0; }
@@ -1076,7 +1140,12 @@ class SpecificExpensesScreen extends StatelessWidget {
     int multiplier = expense.isPerChild ? provider.childCount : 1;
     if (multiplier < 1) { multiplier = 1; }
     
-    final nameController = TextEditingController(text: expense.name); 
+    String cleanName = expense.name;
+    if (isVehicle && vehicleName != null) {
+      cleanName = cleanName.replaceAll('($vehicleName)', '').trim();
+    }
+
+    final nameController = TextEditingController(text: cleanName); 
     final amountController = TextEditingController();
     Frequency selectedFreq = expense.frequency;
     bool isSinking = expense.isSinking;
@@ -1184,7 +1253,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                 ElevatedButton(
                   onPressed: () async {
                     final val = double.tryParse(amountController.text);
-                    final finalName = nameController.text.trim().isNotEmpty ? nameController.text.trim() : expense.name;
+                    final rawName = nameController.text.trim().isNotEmpty ? nameController.text.trim() : cleanName;
+                    final finalName = (isVehicle && vehicleName != null) ? '$rawName ($vehicleName)' : rawName;
                     
                     if (val != null || (isIncome && isDynamic)) {
                       double monthly = val ?? 0;
