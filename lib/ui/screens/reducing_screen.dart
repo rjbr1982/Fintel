@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Clean Slate Protocol for Snowball Reset)
+// 🔒 STATUS: EDITED (Fixed Icon error and Onboarding visibility for Time Machine banner)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/debt_provider.dart';
@@ -42,40 +42,67 @@ class ReducingScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF00A3FF), 
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: !hasActiveDebts 
-          ? _buildVictoryState() 
-          : Column(
+      body: Column(
+        children: [
+          // הדרכה שקטה - תמיד בראש המסך
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildMissionCard(actualMissionAmount, targetDebt),
-                _buildTimeMachineHeader(context, originalFinalDate, acceleratedFinalDate),
-                
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20.0),
-                  child: Divider(thickness: 1, color: Colors.black12),
-                ),
-
+                Icon(Icons.history, color: Colors.blue[800], size: 22),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: activeDebts.length,
-                    itemBuilder: (context, index) {
-                      final debt = activeDebts[index];
-                      final payoffDate = acceleratedDates[debt.id];
-                      final acceleratedPayment = debtProvider.getAcceleratedPaymentForDebt(debt.id!, diversion);
-                      
-                      return _buildDebtCard(
-                        context, 
-                        debt, 
-                        debt.id == targetDebt?.id, 
-                        payoffDate, 
-                        acceleratedPayment, 
-                        debtProvider
-                      );
-                    },
+                  child: Text(
+                    "מכונת הזמן: כל חוב שתסיים לשלם לא ייבלע בשוטף, אלא יופנה אוטומטית כ'כוח אש' לחיסול מואץ של החוב הבא.",
+                    style: TextStyle(color: Colors.blueGrey[900], fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
             ),
+          ),
+
+          if (!hasActiveDebts) 
+            Expanded(child: _buildVictoryState()) 
+          else ...[
+            _buildMissionCard(actualMissionAmount, targetDebt),
+            _buildTimeMachineHeader(context, originalFinalDate, acceleratedFinalDate),
+            
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.0),
+              child: Divider(thickness: 1, color: Colors.black12),
+            ),
+
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: activeDebts.length,
+                itemBuilder: (context, index) {
+                  final debt = activeDebts[index];
+                  final payoffDate = acceleratedDates[debt.id];
+                  final acceleratedPayment = debtProvider.getAcceleratedPaymentForDebt(debt.id!, diversion);
+                  
+                  return _buildDebtCard(
+                    context, 
+                    debt, 
+                    debt.id == targetDebt?.id, 
+                    payoffDate, 
+                    acceleratedPayment, 
+                    debtProvider
+                  );
+                },
+              ),
+            ),
+          ]
+        ],
+      ),
     );
   }
 
@@ -135,7 +162,7 @@ class ReducingScreen extends StatelessWidget {
 
   Widget _buildMissionCard(double amount, Debt? target) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14), 
       decoration: BoxDecoration(
         gradient: const LinearGradient(

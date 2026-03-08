@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Cumulative Average Math, Range Toggles & History Accordion)
+// 🔒 STATUS: EDITED (Fixed Onboarding visibility for Salary Engine)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui' as ui;
@@ -196,6 +196,32 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              
+              // CONTEXTUAL ONBOARDING - תמיד מוצג בראש המסך
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.insights, color: Colors.blue[800], size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "ייצוב התזרים: הזן משכורות עבר כדי שהמנוע יחשב ממוצע אמיתי וימנע גירעון סמוי עקב תנודות שכר.",
+                        style: TextStyle(color: Colors.blueGrey[900], fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
               // בורר מקור הכנסה
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -268,7 +294,7 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
               ),
 
               const SizedBox(height: 30),
-              
+
               if (myRecords.isNotEmpty) ...[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -333,7 +359,14 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                   children: [
                     const Divider(height: 1),
                     if (myRecords.isEmpty)
-                      const Padding(padding: EdgeInsets.all(30), child: Text('טרם הוזנו נתונים היסטוריים', style: TextStyle(color: Colors.grey)))
+                      const Padding(
+                        padding: EdgeInsets.all(30), 
+                        child: Text(
+                          "טרם הוזנו נתונים. הוסף חודשים כדי לבנות היסטוריה.", 
+                          textAlign: TextAlign.center, 
+                          style: TextStyle(color: Colors.grey)
+                        )
+                      )
                     else
                       ListView.separated(
                         shrinkWrap: true,
@@ -405,7 +438,7 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
 }
 
 // ============================================================================
-// ציור גרף ההרים (Area Chart) המציג את הממוצע המצטבר ולא רק סכום חודשי
+// ציור גרף ההרים (Area Chart)
 // ============================================================================
 class _MountainChartPainter extends CustomPainter {
   final List<SalaryRecord> records;
@@ -456,8 +489,8 @@ class _MountainChartPainter extends CustomPainter {
     
     List<Offset> points = [];
     for (int i = 0; i < records.length; i++) {
-      double v = values[i]; // השימוש בערך הממוצע המצטבר (Cumulative Average)
-      double x = size.width - (i * stepX); // משמאל לימין כדי להתאים ל-RTL
+      double v = values[i]; 
+      double x = size.width - (i * stepX); // משמאל לימין
       double y = size.height - 30 - (((v - bottomBase) / range) * (size.height - 60));
       points.add(Offset(x, y));
     }

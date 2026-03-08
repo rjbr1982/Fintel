@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added local dynamic text scaling, fixed autofocus typo, removed unused imports)
+// 🔒 STATUS: EDITED (Enhanced Delta Tooltip and Contextual Onboarding)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/shopping_provider.dart';
@@ -609,7 +609,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
             children: [
               Expanded(child: _buildStatDetail("תקציב עוגן", anchor, Colors.blueGrey)), 
               Expanded(child: _buildStatDetail("תכנון חודשי", planned, Colors.black87)), 
-              Expanded(child: _buildStatDetail("הפרש (דלתא)", delta.abs(), delta >= 0 ? Colors.green : Colors.red)),
+              Expanded(child: _buildDeltaDetail(delta)), // Modified to include the tooltip
               Expanded(child: _buildStatDetail("ביצוע בפועל", actual, actual > anchor ? Colors.red : Colors.green)),
             ],
           ),
@@ -628,20 +628,89 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       ]
     );
   }
-
-  Widget _buildActiveBasketBar(double total, ShoppingProvider provider) {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        margin: const EdgeInsets.all(16), padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(color: const Color(0xFF121212), borderRadius: BorderRadius.circular(30), boxShadow: [BoxShadow(color: Colors.black.withAlpha(30), blurRadius: 15)]),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  
+  // CONTEXTUAL ONBOARDING: Delta Tooltip
+  Widget _buildDeltaDetail(double delta) {
+    final valueColor = delta >= 0 ? Colors.green : Colors.red;
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Text("סכום הקנייה הנוכחית", style: TextStyle(color: Colors.white60, fontSize: 10 * _textScale)), Text("₪${total.toStringAsFixed(2)}", style: TextStyle(color: Colors.white, fontSize: 18 * _textScale, fontWeight: FontWeight.bold))]),
-            ElevatedButton(onPressed: () => _confirmFinalize(provider), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF), foregroundColor: Colors.white, shape: const StadiumBorder()), child: Text("סיום ותיעוד", style: TextStyle(fontSize: 14 * _textScale))),
+            Text("הפרש (דלתא)", textAlign: TextAlign.center, style: TextStyle(fontSize: 10 * _textScale, color: Colors.grey, fontWeight: FontWeight.bold)),
+            const SizedBox(width: 2),
+            Tooltip(
+              message: "הדלתא מחשבת את הפער בין תקציב ה'עוגן' לעלות החודשית התיאורטית של הרשימה.",
+              triggerMode: TooltipTriggerMode.tap,
+              child: Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: Icon(Icons.info, size: 16 * _textScale, color: Colors.blue),
+              ),
+            )
           ],
         ),
+        FittedBox(fit: BoxFit.scaleDown, child: Text("₪${delta.abs().toStringAsFixed(0)}", style: TextStyle(fontSize: 15 * _textScale, fontWeight: FontWeight.bold, color: valueColor)))
+      ]
+    );
+  }
+
+  Widget _buildActiveBasketBar(double total, ShoppingProvider provider) {
+    // CONTEXTUAL ONBOARDING: Frequency Violation Warning
+    bool hasViolationsInBasket = false;
+    for (var item in provider.items) {
+      if (provider.isChecked(item.id ?? -1) && item.isFrequencyViolation) {
+        hasViolationsInBasket = true;
+        break;
+      }
+    }
+
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (hasViolationsInBasket)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 32),
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                border: Border.all(color: Colors.orange.withAlpha(50)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.warning_amber_rounded, size: 14 * _textScale, color: Colors.orange[800]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "שים לב: סימנת מוצרים מוקדם מדי מתדירות הקנייה שהגדרת להם.",
+                      style: TextStyle(fontSize: 11 * _textScale, color: Colors.orange[900], fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Container(
+            margin: EdgeInsets.only(left: 16, right: 16, bottom: 16, top: hasViolationsInBasket ? 0 : 16), 
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF121212), 
+              borderRadius: hasViolationsInBasket 
+                ? const BorderRadius.vertical(bottom: Radius.circular(30), top: Radius.circular(8))
+                : BorderRadius.circular(30), 
+              boxShadow: [BoxShadow(color: Colors.black.withAlpha(30), blurRadius: 15)]
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Text("סכום הקנייה הנוכחית", style: TextStyle(color: Colors.white60, fontSize: 10 * _textScale)), Text("₪${total.toStringAsFixed(2)}", style: TextStyle(color: Colors.white, fontSize: 18 * _textScale, fontWeight: FontWeight.bold))]),
+                ElevatedButton(onPressed: () => _confirmFinalize(provider), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF), foregroundColor: Colors.white, shape: const StadiumBorder()), child: Text("סיום ותיעוד", style: TextStyle(fontSize: 14 * _textScale))),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

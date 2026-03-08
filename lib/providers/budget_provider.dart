@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Ironclad Kids Allocation logic directly bound to childCount bypassing string matching)
+// 🔒 STATUS: EDITED (Ironclad Kids Allocation logic & Centralized Chronological Sorting Engine)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -98,11 +98,48 @@ class BudgetProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // מנוע מיון מרכזי: שומר על סדר כרונולוגי גורף לילדים (מהגדול לקטן) בכל המערכת
+  void _sortInMemoryData() {
+    // 1. מיון בני המשפחה: הורים קודם, ואז ילדים לפי שנת לידה (הבוגר מופיע קודם = שנת לידה קטנה יותר)
+    _familyMembers.sort((a, b) {
+      if (a.role == FamilyRole.parent && b.role != FamilyRole.parent) return -1;
+      if (b.role == FamilyRole.parent && a.role != FamilyRole.parent) return 1;
+      return a.birthYear.compareTo(b.birthYear);
+    });
+
+    // 2. חילוץ שמות הילדים הממוינים כרונולוגית לצורך סידור ההוצאות
+    final kidNames = _familyMembers.where((m) => m.role == FamilyRole.child).map((m) {
+      String n = m.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
+      if (n == 'אבא' || n == 'אמא' || n == 'אישי') n = '$n (ילד)';
+      return n;
+    }).toList();
+
+    // 3. מיון ההוצאות כך שהוצאות הילדים יסודרו לפי גיל הילד באופן גורף בכל האפליקציה
+    _expenses.sort((a, b) {
+      bool aIsKid = a.parentCategory == 'ילדים - משתנות' || a.parentCategory == 'ילדים - קבועות';
+      bool bIsKid = b.parentCategory == 'ילדים - משתנות' || b.parentCategory == 'ילדים - קבועות';
+      
+      if (aIsKid && bIsKid && a.parentCategory == b.parentCategory) {
+        int idxA = kidNames.indexWhere((n) => a.name.contains(n));
+        int idxB = kidNames.indexWhere((n) => b.name.contains(n));
+        
+        if (idxA != -1 && idxB != -1 && idxA != idxB) {
+          return idxA.compareTo(idxB);
+        }
+      }
+      
+      // שמירה על יציבות (Stable Sort) לשאר ההוצאות על בסיס ה-ID המקורי מהמסד
+      return (a.id ?? 0).compareTo(b.id ?? 0);
+    });
+  }
+
   Future<void> loadData() async {
     try {
       _expenses = await DatabaseHelper.instance.getExpenses();
       _familyMembers = await DatabaseHelper.instance.getFamilyMembers();
       
+      _sortInMemoryData(); // הפעלת המיון המרכזי
+
       await syncCapitalFromAssets(); 
       _expectedYield = await DatabaseHelper.instance.getSetting('expected_yield') ?? 4.0;
       _compoundingFrequency = (await DatabaseHelper.instance.getSetting('comp_freq') ?? 12.0).toInt();
@@ -135,12 +172,14 @@ class BudgetProvider with ChangeNotifier {
   void _setupStreams() {
     _expensesSub = DatabaseHelper.instance.streamExpenses().listen((data) {
       _expenses = data;
+      _sortInMemoryData(); // הפעלת המיון המרכזי
       _recalculateAll();
       notifyListeners();
     });
 
     _familySub = DatabaseHelper.instance.streamFamilyMembers().listen((data) async {
       _familyMembers = data;
+      _sortInMemoryData(); // הפעלת המיון המרכזי
       await _forceCategorySync(); 
       _recalculateAll();
       notifyListeners();
@@ -561,6 +600,7 @@ class BudgetProvider with ChangeNotifier {
     
     if (changed) {
       _expenses = await DatabaseHelper.instance.getExpenses();
+      _sortInMemoryData(); // מיון מחדש לאחר הוספות או שינויים
     }
   }
 

@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Decoupled Unified Fund UI from individual isSinking flags to persist Unified UI)
+// 🔒 STATUS: EDITED (Added Contextual Onboarding for Variable Expenses and Sinking Funds, Fixed Linter Warning)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -223,6 +223,29 @@ class CategoryDrilldownScreen extends StatelessWidget {
           return Column(
             children: [
               if (mainCategory == 'משתנות') ...[
+                // CONTEXTUAL ONBOARDING BANNER: Anchor vs Percentages
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.lightbulb_outline, color: Colors.blue[700], size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          "עוגנים מול אחוזים: הוצאת ה'קניות' מוגדרת כעוגן קבוע. היא מופחתת תחילה, והיתרה מתחלקת אוטומטית לשאר הסעיפים לפי האחוזים שהוגדרו.",
+                          style: TextStyle(color: Colors.blueGrey[800], fontSize: 13, height: 1.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 Container(
                   margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   padding: const EdgeInsets.all(16),
@@ -1327,7 +1350,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                     double balance = double.tryParse(balanceController.text) ?? 0;
                     if (months != null && months > 0) {
                       newManualAmount = (target - balance) / months;
-                      if (newManualAmount < 0) { newManualAmount = 0; }
+                      if (newManualAmount < 0) { newManualAmount = 0; } // <-- הוסר סימן הקריאה המיותר
                       newManualAmount = newManualAmount / multiplier;
                     }
                   }
@@ -1468,7 +1491,10 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
         ),
         const SizedBox(height: 20),
         const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
+        // CONTEXTUAL ONBOARDING: Withdrawal Explanation
+        const Align(alignment: Alignment.centerRight, child: Text("הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף.", style: TextStyle(fontSize: 12, color: Colors.white54))),
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
@@ -1757,7 +1783,10 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
             const SizedBox(height: 20),
             
             const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
+            // CONTEXTUAL ONBOARDING: Withdrawal Explanation
+            const Align(alignment: Alignment.centerRight, child: Text("הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף.", style: TextStyle(fontSize: 12, color: Colors.white54))),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(

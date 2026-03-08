@@ -6,10 +6,10 @@
 ### ✅ Completed Milestones:
 - **UI/UX Redesign:** Overhauled the Dashboard (MainScreen) with a centered Freedom Year, floating parameter pills, and clear visual navigation buttons.
 - **Desktop Readability:** Added a local A+/A- text scaling engine specifically for the Shopping Screen to support shared desktop planning.
-- **Sinking Funds Withdrawals:** Fixed the infinite loading bug in withdrawal history by handling Firebase index limitations with local sorting. Dialogs now properly support Dark Mode text visibility.
-- **Unified Sinking Funds:** Added the ability to toggle specific parent categories as "Unified Funds", allowing shared balance and withdrawal management (UI and Provider logic).
-- **Unified Fund UI Decoupling:** Fixed a bug where turning off `isSinking` for child expenses hid the Unified Fund UI. The UI is now strictly bound to the parent's `isUnified` status across all entities.
-- **Kids Entity Allocation Fix:** Rebuilt the logic for distributing variable percentages to children bypassing legacy string-matching.
+- **Unified Sinking Funds:** Added the ability to toggle specific parent categories as "Unified Funds", allowing shared balance and withdrawal management.
+- **Contextual Onboarding (המדריך השקט):** Integrated native, non-intrusive educational UI elements (Info Banners, Tooltips, Empty States) across all main screens to guide users without external packages.
+- **Assets Rendering Bug Fix:** Converted Assets Screen to a StatefulWidget to force early data fetching, resolving the lazy-rendering issue.
+- **Chronological Sorting Engine:** Built a centralized sorting logic in `BudgetProvider` ensuring family members and all kids-related expenses are consistently sorted by age (oldest to youngest).
 - **Zero Warnings:** Maintained strict zero-warnings policy across all new UI updates.
 
 ### 🛑 Strategic Directives (v12.20):
