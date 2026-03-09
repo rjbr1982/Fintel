@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Vehicle Custom Expenses Logic and Safe Editing)
+// 🔒 STATUS: EDITED (Enforced Unified Fund visual suppression of individual sinking balances & wallets)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -660,7 +660,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                     ]
                   )
                 ),
-                ...items.map((e) => _buildExpenseTile(context, provider, e, childName: childName))
+                ...items.map((e) => _buildExpenseTile(context, provider, e, childName: childName, isUnified: true))
               ]
             ),
           )
@@ -758,7 +758,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                     ]
                   )
                 ),
-                ...items.map((e) => _buildExpenseTile(context, provider, e, isVehicle: true))
+                ...items.map((e) => _buildExpenseTile(context, provider, e, isVehicle: true, isUnified: true))
               ]
             ),
           )
@@ -767,7 +767,7 @@ class SpecificExpensesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildExpenseTile(BuildContext context, BudgetProvider provider, Expense expense, {bool isVehicle = false, String? childName}) {
+  Widget _buildExpenseTile(BuildContext context, BudgetProvider provider, Expense expense, {bool isVehicle = false, String? childName, bool isUnified = false}) {
     final loc = AppLocalizations.of(context);
     final multiplier = expense.isPerChild ? provider.childCount : 1;
     final displayAmount = expense.monthlyAmount * multiplier;
@@ -813,10 +813,18 @@ class SpecificExpensesScreen extends StatelessWidget {
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (expense.isPerChild)
-            Text('₪${expense.monthlyAmount.toStringAsFixed(0)} ליחידה × ${provider.childCount} ילדים', style: TextStyle(fontSize: 12, color: Colors.orange[900], fontWeight: FontWeight.w600))
-          else if ((isVariable || isFuture) && !expense.isLocked && !isAnchor)
+          if (expense.isPerChild) ...[
+            Text('₪${expense.monthlyAmount.toStringAsFixed(0)} לחודש × ${provider.childCount} ילדים', style: TextStyle(fontSize: 12, color: Colors.orange[900], fontWeight: FontWeight.w600)),
+            const SizedBox(height: 2),
+            Text('עלות שנתית לילד יחיד: ₪${(expense.monthlyAmount * 12).toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: Colors.purple[700], fontWeight: FontWeight.bold)),
+          ] else if (!expense.isPerChild && expense.parentCategory == 'ילדים - קבועות' && provider.childCount > 0) ...[
+            const SizedBox(height: 4),
+            Text('עלות חודשית לילד יחיד: ₪${(displayAmount / provider.childCount).toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: Colors.purple[700], fontWeight: FontWeight.w600)),
+            const SizedBox(height: 2),
+            Text('עלות שנתית לילד יחיד: ₪${((displayAmount / provider.childCount) * 12).toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: Colors.purple[700], fontWeight: FontWeight.bold)),
+          ] else if ((isVariable || isFuture) && !expense.isLocked && !isAnchor) ...[
             Text('${((expense.allocationRatio ?? 0) * 100).toStringAsFixed(1)}% מהיתרה', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
           
           if (isIncome && expense.isDynamicSalary)
             Padding(
@@ -824,12 +832,7 @@ class SpecificExpensesScreen extends StatelessWidget {
               child: Text('מחושב אוטומטית ע"פ ממוצע שכר', style: TextStyle(fontSize: 11, color: Colors.blue[700], fontWeight: FontWeight.bold)),
             ),
 
-          if (!expense.isPerChild && expense.parentCategory == 'ילדים - קבועות' && provider.childCount > 0) ...[
-            const SizedBox(height: 4),
-            Text('עלות לילד יחיד: ₪${(displayAmount / provider.childCount).toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: Colors.purple[700], fontWeight: FontWeight.w600)),
-          ],
-
-          if (expense.isSinking && !isFuture && parentCategory != 'רכב' && childName == null) ...[
+          if (expense.isSinking && !isFuture && !isUnified && childName == null) ...[
             const SizedBox(height: 4),
             Text('קופה נצברת: ₪${(expense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)),
           ],
@@ -858,7 +861,7 @@ class SpecificExpensesScreen extends StatelessWidget {
           ]),
           const SizedBox(width: 12),
           
-          if (expense.isSinking && parentCategory != 'רכב' && childName == null)
+          if (expense.isSinking && !isUnified && childName == null)
             IconButton(
               icon: const Icon(Icons.account_balance_wallet_outlined, size: 20, color: Colors.green),
               tooltip: 'ניהול קופה ומשיכות',
@@ -1048,7 +1051,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                       itemCount: currentExpenses.length,
                       separatorBuilder: (ctx, i) => const Divider(),
                       itemBuilder: (context, index) {
-                        return _buildExpenseTile(context, provider, currentExpenses[index]);
+                        return _buildExpenseTile(context, provider, currentExpenses[index], isUnified: isUnified);
                       },
                   )
                 ),

@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Changed popup menu icon from 3-dots to hamburger/menu lines)
+// 🔒 STATUS: EDITED (Added Google Profile Card Header to Settings Dialog)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -54,7 +54,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: Image.asset(
-              'assets/icon/Fintel_Icon.png', // הנתיב תוקן לשם החדש
+              'assets/icon/Fintel_Icon.png', 
               width: 28,
               height: 28,
               fit: BoxFit.cover,
@@ -82,7 +82,6 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
         
         PopupMenuButton<MenuAction>(
-          // השינוי העיקרי כאן: הפיכת שלוש הנקודות לשלושה קווים (המבורגר)
           icon: const Icon(Icons.menu, color: brandBlue, size: 28),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           offset: const Offset(0, 40),
@@ -187,7 +186,66 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
+  Widget _buildUserProfileCard(BuildContext context, User user) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blueGrey.shade100),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: Colors.blueGrey.shade200,
+                backgroundImage: user.photoURL != null ? NetworkImage(user.photoURL!) : null,
+                child: user.photoURL == null ? const Icon(Icons.person, size: 30, color: Colors.white) : null,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(user.displayName ?? 'משתמש דוחכם', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+                    const SizedBox(height: 4),
+                    Text(user.email ?? '', style: TextStyle(fontSize: 13, color: Colors.blueGrey[700])),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.redAccent,
+                side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+              ),
+              icon: const Icon(Icons.logout, size: 18),
+              label: const Text('התנתקות מהחשבון', style: TextStyle(fontWeight: FontWeight.bold)),
+              onPressed: () async {
+                Navigator.pop(context); 
+                await FirebaseAuth.instance.signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+                }
+              },
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
   void _showMainSettingsDialog(BuildContext context, BudgetProvider budget) {
+    final user = FirebaseAuth.instance.currentUser;
+
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -209,6 +267,10 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
+
+                if (user != null)
+                  _buildUserProfileCard(context, user),
+
                 _buildSettingsCard(ctx, Icons.family_restroom_rounded, 'הגדרות משפחה', () {
                     Navigator.pop(ctx);
                     _showFamilySettingsDialog(context, budget);
@@ -233,14 +295,6 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                   padding: EdgeInsets.symmetric(vertical: 12),
                   child: Divider(height: 1),
                 ),
-                
-                _buildSettingsCard(ctx, Icons.logout, 'התנתקות מהחשבון', () async {
-                    Navigator.pop(ctx);
-                    await FirebaseAuth.instance.signOut();
-                    if (context.mounted) {
-                      Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
-                    }
-                }, Colors.blueGrey),
                 
                 _buildSettingsCard(ctx, Icons.restore, 'איפוס כל הנתונים', () {
                     Navigator.pop(ctx);
