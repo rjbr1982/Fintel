@@ -1,5 +1,7 @@
-// 🔒 STATUS: EDITED (Premium Entry Flow: Light Theme Splashes & Animated Transitions)
+// 🔒 STATUS: EDITED (Added Local_Auth Biometric barrier for Mobile users)
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // הוסף כדי לזהות Web
+import 'package:local_auth/local_auth.dart'; // הוסף את ספריית הביומטריה
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -143,7 +145,7 @@ class AuthStreamGate extends StatelessWidget {
   }
 }
 
-// 🏦 שער 3: חוויית הבנק - אנימציה שנייה (מאמת נתונים) ואז דשבורד
+// 🏦 שער 3: חוויית הבנק - אנימציה שנייה + ביומטריה
 class PostLoginRouter extends StatefulWidget {
   final User user;
   const PostLoginRouter({super.key, required this.user});
@@ -155,6 +157,7 @@ class PostLoginRouter extends StatefulWidget {
 class _PostLoginRouterState extends State<PostLoginRouter> {
   bool _isProcessing = true;
   bool _needsOnboarding = false;
+  bool _authFailed = false; // מצב לאימות ביומטרי שנכשל
 
   @override
   void initState() {
@@ -163,11 +166,49 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
   }
 
   Future<void> _processLogin() async {
+    setState(() {
+      _isProcessing = true;
+      _authFailed = false;
+    });
+
     final expenses = await DatabaseHelper.instance.getExpenses();
     _needsOnboarding = expenses.isEmpty;
 
-    // השהיה של 2.5 שניות להצגת האנימציה הבהירה עם תאריך הכניסה
+    // שליפת הגדרת הביומטריה (רלוונטי רק למובייל)
+    double useBioNum = await DatabaseHelper.instance.getSetting('use_biometric') ?? 0.0;
+    bool useBiometric = useBioNum == 1.0;
+
     await Future.delayed(const Duration(milliseconds: 2500));
+
+    // אם אנחנו לא ב-Web והמשתמש הדליק ביומטריה - הקפץ זיהוי
+    if (!kIsWeb && useBiometric) {
+      final LocalAuthentication auth = LocalAuthentication();
+      bool canCheckBiometrics = false;
+      try {
+        canCheckBiometrics = await auth.canCheckBiometrics || await auth.isDeviceSupported();
+      } catch (e) {
+        debugPrint('Biometric check error: $e');
+      }
+
+      if (canCheckBiometrics) {
+        try {
+          bool authenticated = await auth.authenticate(
+            localizedReason: 'אנא אמת את זהותך כדי לגשת לנתונים הפיננסיים',
+            options: const AuthenticationOptions(
+              stickyAuth: true,
+              biometricOnly: true,
+            ),
+          );
+          if (!authenticated) {
+            // המשתמש ביטל או נכשל בזיהוי
+            if (mounted) setState(() => _authFailed = true);
+            return;
+          }
+        } catch (e) {
+          debugPrint('Authentication error: $e');
+        }
+      }
+    }
 
     if (mounted) {
       setState(() => _isProcessing = false);
@@ -176,6 +217,28 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
 
   @override
   Widget build(BuildContext context) {
+    if (_authFailed) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.fingerprint, size: 80, color: Colors.redAccent),
+              const SizedBox(height: 20),
+              const Text('האימות הביומטרי נכשל', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87)),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF121212), foregroundColor: Colors.white),
+                onPressed: _processLogin, // חזרה לתהליך
+                child: const Text('נסה שוב'),
+              )
+            ]
+          )
+        )
+      );
+    }
+
     Widget currentScreen;
     if (_isProcessing) {
       currentScreen = PostLoginSplashScreen(key: const ValueKey('splash_post'), user: widget.user);

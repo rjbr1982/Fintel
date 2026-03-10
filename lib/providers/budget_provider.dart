@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Implemented 3-Mode Unified Funds System)
+// 🔒 STATUS: EDITED (Added Biometric Auth state management)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -32,13 +32,11 @@ class BudgetProvider with ChangeNotifier {
   double _expectedYield = 4.0;
   int _compoundingFrequency = 12;
   double? _manualTargetIncome;
+  
+  bool _useBiometric = false; // <-- ביומטריה
 
   List<SalaryRecord> _salaryRecords = [];
   
-  // מפת מצבי קופות מאוחדות:
-  // 0 = נפרד
-  // 1 = מאוחד בלבד
-  // 2 = משולב
   final Map<String, int> _unifiedCategoryModes = {}; 
 
   StreamSubscription? _expensesSub;
@@ -65,6 +63,7 @@ class BudgetProvider with ChangeNotifier {
   double get variableAllocationRatio => _variableAllocationRatio;
   double get futureAllocationRatio => _futureAllocationRatio;
   bool get isFutureMode => _isFutureMode;
+  bool get useBiometric => _useBiometric; // <-- Getter
   
   double get variableDeficit => _variableDeficit;
 
@@ -76,14 +75,10 @@ class BudgetProvider with ChangeNotifier {
   double get autoTargetIncome => totalFixedExpenses + totalVariableExpenses + totalFutureExpenses;
   double get targetPassiveIncome => _manualTargetIncome ?? autoTargetIncome;
 
-  // שליפת מצב קופה מאוחדת (0, 1 או 2)
   int getCategoryUnifiedMode(String cat) {
-    if (_unifiedCategoryModes.containsKey(cat)) {
-      return _unifiedCategoryModes[cat]!;
-    }
-    // ברירת מחדל: רכב, ילדים-קבועות כמשולב (2), השאר נפרד (0)
+    if (_unifiedCategoryModes.containsKey(cat)) return _unifiedCategoryModes[cat]!;
     if (cat == 'רכב' || cat == 'ילדים - קבועות') return 2;
-    return 0; // כל השאר כברירת מחדל יהיו 0 (נפרד)
+    return 0; 
   }
 
   Future<void> setCategoryUnifiedMode(String cat, int mode) async {
@@ -156,6 +151,8 @@ class BudgetProvider with ChangeNotifier {
 
       double genderVal = await DatabaseHelper.instance.getSetting('gender') ?? 1.0;
       _gender = genderVal == 1.0 ? 'male' : 'female';
+      
+      _useBiometric = (await DatabaseHelper.instance.getSetting('use_biometric') ?? 0.0) == 1.0;
 
       _customEntWarning = await DatabaseHelper.instance.getSetting('ent_warning');
       _customEntSuccess = await DatabaseHelper.instance.getSetting('ent_success');
@@ -220,14 +217,13 @@ class BudgetProvider with ChangeNotifier {
             changed = true;
           }
         }
-        // המרת נתונים מהגרסה הישנה (bool) למנוע החדש (int)
         else if (key != null && key.startsWith('unified_cat_') && val != null) {
           String catName = key.substring(12);
-          int mode = val == 1.0 ? 2 : 0; // מה שהיה מאוחד הופך ל"משולב" כדי לשמור על תאימות לאחור
+          int mode = val == 1.0 ? 2 : 0; 
           if (_unifiedCategoryModes[catName] != mode) {
              _unifiedCategoryModes[catName] = mode;
-             DatabaseHelper.instance.saveSetting('unified_mode_$catName', mode.toDouble()); // שדרוג מקומי
-             DatabaseHelper.instance.deleteSetting(key); // מחיקת המפתח הישן
+             DatabaseHelper.instance.saveSetting('unified_mode_$catName', mode.toDouble());
+             DatabaseHelper.instance.deleteSetting(key); 
              changed = true;
           }
         }
@@ -248,6 +244,11 @@ class BudgetProvider with ChangeNotifier {
           if (_gender != newGender) { _gender = newGender; changed = true; }
         }
         
+        if (key == 'use_biometric' && val != null) {
+          bool useBio = val == 1.0;
+          if (_useBiometric != useBio) { _useBiometric = useBio; changed = true; }
+        }
+
         if (key == 'ent_warning' && _customEntWarning != val) { _customEntWarning = val; changed = true; }
         if (key == 'ent_success' && _customEntSuccess != val) { _customEntSuccess = val; changed = true; }
       }
@@ -258,6 +259,12 @@ class BudgetProvider with ChangeNotifier {
         });
       }
     });
+  }
+
+  Future<void> toggleBiometric(bool val) async {
+    _useBiometric = val;
+    await DatabaseHelper.instance.saveSetting('use_biometric', val ? 1.0 : 0.0);
+    notifyListeners();
   }
 
   Future<void> saveEntertainmentLimits(double warning, double success) async {
@@ -279,7 +286,6 @@ class BudgetProvider with ChangeNotifier {
   Future<void> updateFamilyStructure({String? maritalStatus, String? gender}) async {
     if (maritalStatus != null) _maritalStatus = maritalStatus;
     if (gender != null) _gender = gender;
-    
     notifyListeners(); 
 
     if (maritalStatus != null) {
@@ -474,7 +480,6 @@ class BudgetProvider with ChangeNotifier {
         
         String preferredSuffix = _maritalStatus == 'single' ? p1 : (_gender == 'female' && p2 != null ? p2 : p1);
 
-        // 1. GARBAGE COLLECTION & TRANSITION SALVAGE
         for (int i = localExp.length - 1; i >= 0; i--) {
           final e = localExp[i];
           bool shouldDelete = false;
@@ -549,7 +554,6 @@ class BudgetProvider with ChangeNotifier {
           }
         }
 
-        // 2. INSERT MISSING
         for (var entry in targetVariableRatios.entries) {
           if (!localExp.any((e) => e.name == entry.key)) {
             String parentCat = 'אחר';
@@ -594,7 +598,6 @@ class BudgetProvider with ChangeNotifier {
           localExp = await DatabaseHelper.instance.getExpenses();
         }
 
-        // 3. UPDATE EXISTING RULES & RATIOS
         final Map<String, Map<String, String>> syncRules = {
           'שכר לימוד': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
           'ציוד בית ספר': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
@@ -753,6 +756,7 @@ class BudgetProvider with ChangeNotifier {
     _customEntWarning = null;
     _customEntSuccess = null;
     _unifiedCategoryModes.clear();
+    _useBiometric = false;
     _expenses = [];
     _familyMembers = [];
     _salaryRecords = [];

@@ -23,6 +23,7 @@ dependencies:
   
   # System
   path_provider: ^2.1.5
+  local_auth: ^2.2.0
   
   # SaaS & Firebase Cloud (Constitution 5.10)
   firebase_core: ^4.4.0 

@@ -1,5 +1,6 @@
-// 🔒 STATUS: EDITED (Added GoogleSignIn().disconnect() for deep cache wipe)
+// 🔒 STATUS: EDITED (Fixed deprecated activeColor to activeThumbColor in SwitchListTile)
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // הוסף כדי לזהות אם אנחנו ב-Web
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -227,6 +228,36 @@ void _showMainSettingsDialog(BuildContext context, BudgetProvider budget) {
               if (user != null)
                 _buildUserProfileCard(context, user),
 
+              // מתג ביומטריה - מופיע רק בנייד (לא מופיע ב-Web)
+              if (!kIsWeb)
+                Consumer<BudgetProvider>(
+                  builder: (context, budgetProv, child) {
+                    return Card(
+                      elevation: 0,
+                      color: Colors.teal.withValues(alpha: 0.05),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.teal.withValues(alpha: 0.1))
+                      ),
+                      child: SwitchListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        title: Text('כניסה ביומטרית (טביעת אצבע)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey[900])),
+                        secondary: CircleAvatar(
+                          backgroundColor: Colors.teal.withValues(alpha: 0.15),
+                          radius: 18,
+                          child: const Icon(Icons.fingerprint, color: Colors.teal, size: 20),
+                        ),
+                        value: budgetProv.useBiometric,
+                        activeThumbColor: Colors.teal, // <- התיקון כאן
+                        onChanged: (val) {
+                          budgetProv.toggleBiometric(val);
+                        },
+                      ),
+                    );
+                  }
+                ),
+
               _buildSettingsCard(ctx, Icons.family_restroom_rounded, 'הגדרות משפחה וסטטוס', () {
                   Navigator.pop(ctx);
                   _showFamilySettingsDialog(context);
@@ -305,14 +336,13 @@ Widget _buildUserProfileCard(BuildContext context, User user) {
             onPressed: () async {
               Navigator.pop(context); 
               
-              // התיקון: מחיקת מטמון הגישה מכל הכיוונים
               try {
-                await GoogleSignIn().disconnect(); // מנתק את ההרשאה לחלוטין מול שרתי גוגל
+                await GoogleSignIn().disconnect(); 
               } catch (e) {
                 debugPrint('Google disconnect error: $e');
               }
               try {
-                await GoogleSignIn().signOut(); // מנקה את ה-Cache המקומי
+                await GoogleSignIn().signOut(); 
               } catch (e) {
                 debugPrint('Google SignOut error: $e');
               }
