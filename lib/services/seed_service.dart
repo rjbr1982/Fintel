@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Sanitized Future Categories - Generic Defaults)
+// 🔒 STATUS: EDITED (Implemented Smart Family Naming Convention: Single/Married/Parents based on Gender)
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
 import '../data/shopping_model.dart';
@@ -6,6 +6,7 @@ import '../data/shopping_model.dart';
 class SeedService {
   
   static Future<void> generateInitialData({
+    required String gender, // הוספנו זיהוי מגדר
     required String maritalStatus,
     required String vehicleType,
     required String housingType,
@@ -21,12 +22,35 @@ class SeedService {
       return; 
     }
 
+    // --- לוגיקת קביעת שמות הישויות (State Machine) ---
+    String parent1Name = '';
+    String parent2Name = '';
+
+    if (maritalStatus == 'single') {
+      if (childrenCount == 0) {
+        parent1Name = 'אישי';
+      } else {
+        parent1Name = gender == 'male' ? 'אבא' : 'אמא';
+      }
+    } else { // married
+      if (childrenCount == 0) {
+        parent1Name = 'בעל';
+        parent2Name = 'אישה';
+      } else {
+        parent1Name = 'אבא';
+        parent2Name = 'אמא';
+      }
+    }
+
     final List<Expense> initialExpenses = [
       
       // === הכנסות ===
-      _create(maritalStatus == 'single' ? 'משכורת אישית' : 'הכנסת בעל', 'הכנסות', 'הכנסות', income1 > 0 ? income1 : 10000), 
+      _create(
+        maritalStatus == 'single' ? (parent1Name == 'אישי' ? 'משכורת אישית' : 'הכנסת $parent1Name') : 'הכנסת $parent1Name', 
+        'הכנסות', 'הכנסות', income1 > 0 ? income1 : 10000
+      ), 
       if (maritalStatus == 'married') 
-        _create('הכנסת אישה', 'הכנסות', 'הכנסות', income2 > 0 ? income2 : 8000),
+        _create('הכנסת $parent2Name', 'הכנסות', 'הכנסות', income2 > 0 ? income2 : 8000),
       if (childrenCount > 0)
         _create('קצבת ילדים', 'הכנסות', 'הכנסות', childrenCount * 170.0),
       
@@ -72,7 +96,7 @@ class SeedService {
       _create('סלולר ואינטרנט', 'קבועות', 'מדיה', 150),
       _create('מנויים דיגיטליים', 'קבועות', 'מדיה', 0),
       
-      // ילדים - קבועות (רק אם יש ילדים)
+      // ילדים - קבועות
       if (childrenCount > 0) ...[
         _create('שכר לימוד', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true),
         _create('ציוד בית ספר', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
@@ -81,7 +105,7 @@ class SeedService {
         _create('קייטנות', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
       ],
       
-      // חגים ואירועים (לפי תלות בדת)
+      // חגים ואירועים
       if (includeReligion) ...[
         _create('ראש השנה', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
         _create('יום כיפור', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
@@ -109,32 +133,34 @@ class SeedService {
 
       // === משתנות (חלוקה דינמית לפי משפחה) ===
       if (maritalStatus == 'single' && childrenCount > 0) ...[
-        _create('בגדים אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.28, isSinking: true),
-        _create('בילויים אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.33, isSinking: true),
-        _create('טיפוח אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.15, isSinking: true),
+        _create('בגדים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.28, isSinking: true),
+        _create('בילויים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.33, isSinking: true),
+        if (gender == 'female') 
+          _create('טיפוח $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.15, isSinking: true),
         _create('בגדים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
         _create('בילויים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
       ] else if (maritalStatus == 'married' && childrenCount == 0) ...[
-        _create('בגדים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.25, isSinking: true),
-        _create('בילויים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.20, isSinking: true),
-        _create('בגדים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.15, isSinking: true),
-        _create('בילויים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.25, isSinking: true),
-        _create('טיפוח אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.15, isSinking: true),
+        _create('בגדים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.25, isSinking: true),
+        _create('בילויים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.20, isSinking: true),
+        _create('בגדים $parent2Name', 'משתנות', parent2Name, 0, allocationRatio: 0.15, isSinking: true),
+        _create('בילויים $parent2Name', 'משתנות', parent2Name, 0, allocationRatio: 0.25, isSinking: true),
+        _create('טיפוח $parent2Name', 'משתנות', parent2Name, 0, allocationRatio: 0.15, isSinking: true),
       ] else if (maritalStatus == 'single' && childrenCount == 0) ...[
-        _create('בגדים אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.40, isSinking: true),
-        _create('בילויים אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.45, isSinking: true),
-        _create('טיפוח אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.15, isSinking: true),
+        _create('בגדים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: gender == 'female' ? 0.40 : 0.45, isSinking: true),
+        _create('בילויים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: gender == 'female' ? 0.45 : 0.55, isSinking: true),
+        if (gender == 'female') 
+          _create('טיפוח $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.15, isSinking: true),
       ] else ...[
-        _create('בגדים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.19, isSinking: true),
-        _create('בילויים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.14, isSinking: true),
-        _create('בגדים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.09, isSinking: true),
-        _create('בילויים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.19, isSinking: true),
-        _create('טיפוח אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.15, isSinking: true),
+        _create('בגדים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.19, isSinking: true),
+        _create('בילויים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.14, isSinking: true),
+        _create('בגדים $parent2Name', 'משתנות', parent2Name, 0, allocationRatio: 0.09, isSinking: true),
+        _create('בילויים $parent2Name', 'משתנות', parent2Name, 0, allocationRatio: 0.19, isSinking: true),
+        _create('טיפוח $parent2Name', 'משתנות', parent2Name, 0, allocationRatio: 0.15, isSinking: true),
         _create('בגדים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
         _create('בילויים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
       ],
       
-      // === עתידיות (נוקה והפך לגנרי) ===
+      // === עתידיות ===
       _create('רכישות גדולות (רכב/נכס)', 'עתידיות', 'רכישות גדולות', 0, isSinking: true, allocationRatio: 0.67),
       _create('מוצרי חשמל וריהוט', 'עתידיות', 'רכישות קטנות', 0, isSinking: true, allocationRatio: 0.07),
       _create('אירועים משפחתיים (בר מצווה/חתונה)', 'עתידיות', 'הפקת אירועים', 0, isSinking: true, allocationRatio: 0.11),

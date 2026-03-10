@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Smart Routing to Onboarding for New Users)
+// 🔒 STATUS: EDITED (Added SplashScreen Animation Component)
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -13,8 +13,8 @@ import 'providers/debt_provider.dart';
 import 'providers/shopping_provider.dart';
 import 'ui/screens/main_screen.dart';
 import 'ui/screens/login_screen.dart'; 
-import 'ui/screens/onboarding_screen.dart'; // המסך החדש
-import 'data/database_helper.dart'; // גישה למסד הנתונים
+import 'ui/screens/onboarding_screen.dart'; 
+import 'data/database_helper.dart'; 
 import 'utils/app_localizations.dart';
 
 void main() async {
@@ -88,6 +88,48 @@ class FintelApp extends StatelessWidget {
   }
 }
 
+// 🎬 מסך טעינה - האנימציה של המערכת
+class SplashScreen extends StatelessWidget {
+  const SplashScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF121212),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(30),
+              child: Image.asset(
+                'assets/icon/splash.gif',
+                width: 120,
+                height: 120,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  // גיבוי במידה והמשתמש טרם שם את ה-GIF בתיקייה
+                  return const CircularProgressIndicator(color: Color(0xFF00A3FF));
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Fintel',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white70,
+                letterSpacing: 2.0
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // 🛡️ שומר הסף: מנתב משתמש חדש להגדרות, ומשתמש קיים לדשבורד
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -104,9 +146,7 @@ class AuthGate extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator(color: Color(0xFF00A3FF))),
-          );
+          return const SplashScreen();
         }
 
         if (snapshot.hasData) {
@@ -114,9 +154,7 @@ class AuthGate extends StatelessWidget {
             future: _needsOnboarding(),
             builder: (context, onboardSnap) {
               if (onboardSnap.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator(color: Color(0xFF00FF85))),
-                );
+                return const SplashScreen();
               }
               // אם נדרש אתחול - ניתוב לקליטה. אחרת - לדשבורד
               if (onboardSnap.data == true) {

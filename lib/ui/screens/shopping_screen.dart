@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Enhanced Delta Tooltip, Contextual Onboarding, and Mobile Sort Sheet Fix)
+// 🔒 STATUS: EDITED (Fixed autofocus typo)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/shopping_provider.dart';
@@ -24,6 +24,9 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
   // מנגנון זום מקומי למסך קניות (רספונסיביות למחשב)
   double _textScale = 1.0;
+  
+  // מצב "סינון קנייה בפועל" - מציג רק מוצרים שסומנו
+  bool _showOnlyChecked = false;
 
   @override
   void initState() {
@@ -115,6 +118,11 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         ? List.from(shoppingProvider.items)
         : shoppingProvider.items.where((i) => i.category == _selectedCategory).toList();
 
+    // הפעלת סינון "מסומנים בלבד" במידה והופעל
+    if (_showOnlyChecked) {
+      displayedItems = displayedItems.where((i) => shoppingProvider.isChecked(i.id ?? -1)).toList();
+    }
+
     // --- לוגיקת המיון הרב-שכבתית (Multi-Level Sort Engine) ---
     displayedItems.sort((a, b) {
       for (String sort in _activeSorts) {
@@ -157,6 +165,21 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         ),
         title: const Text('רשימת קניות', style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
+          // כפתור מסנן "הצג רק מסומנים"
+          IconButton(
+            icon: Icon(
+              _showOnlyChecked ? Icons.shopping_cart : Icons.shopping_cart_outlined,
+              color: _showOnlyChecked ? Colors.blue : Colors.blueGrey,
+              size: 24,
+            ),
+            tooltip: _showOnlyChecked ? 'הצג את כל הרשימה' : 'הצג רק מוצרים שסומנו',
+            onPressed: () {
+              setState(() {
+                _showOnlyChecked = !_showOnlyChecked;
+              });
+            },
+          ),
+          Container(height: 24, width: 1, color: Colors.grey[300], margin: const EdgeInsets.symmetric(horizontal: 4)),
           IconButton(
             icon: const Text('A-', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold, fontSize: 16)),
             tooltip: 'הקטן טקסט',
@@ -467,6 +490,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
           _showCategoryManager(context, provider);
         } else if (value == 'multi_sort') {
           _showAdvancedSortSheet(context);
+        } else if (value == 'restore_catalog') {
+          _showRestoreCatalogConfirm(context, provider);
         } else {
           setState(() => _selectedCategory = value);
         }
@@ -492,10 +517,45 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
             ]
           )
         ),
+        PopupMenuItem(
+          value: 'restore_catalog', 
+          child: Row(
+            children: [
+              Icon(Icons.restore_page_outlined, size: 18 * _textScale, color: Colors.green), 
+              SizedBox(width: 8 * _textScale), 
+              Text("שחזר קטלוג חסר", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))
+            ]
+          )
+        ),
         const PopupMenuDivider(),
         PopupMenuItem(enabled: false, child: Text("סינון קטגוריה", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12 * _textScale, color: Colors.blue))),
         ...provider.availableCategories.map((cat) => PopupMenuItem(value: cat, child: Row(children: [Icon(Icons.check, size: 16 * _textScale, color: _selectedCategory == cat ? Colors.blue : Colors.transparent), SizedBox(width: 8 * _textScale), Text(cat, style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale))]))),
       ],
+    );
+  }
+
+  void _showRestoreCatalogConfirm(BuildContext context, ShoppingProvider provider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: Text("שחזור קטלוג", style: TextStyle(color: Colors.black87, fontSize: 18 * _textScale, fontWeight: FontWeight.bold)),
+        content: Text("האם לסרוק ולהוסיף מוצרי ברירת מחדל שחסרים ברשימה שלך? (שינויים שעשית במוצרים קיימים לא יידרסו).", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(fontSize: 14 * _textScale))),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await provider.restoreMissingDefaults();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('הקטלוג נסרק והושלם בהצלחה.'), backgroundColor: Colors.green));
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF), foregroundColor: Colors.white),
+            child: Text("שחזר עכשיו", style: TextStyle(fontSize: 14 * _textScale))
+          )
+        ],
+      )
     );
   }
   

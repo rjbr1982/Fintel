@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Dropdown deprecations & sync with new SeedService)
+// 🔒 STATUS: EDITED (Fixed SegmentedButton UI, Marital Status & Gender DB Saving, and Auto Parent/Child Logic)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -25,8 +25,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // --- שלב 2: משפחה ---
   bool _hasKids = false;
   final List<Map<String, TextEditingController>> _adults = [
-    {'name': TextEditingController(text: 'אבא'), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())},
-    {'name': TextEditingController(text: 'אמא'), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())}
+    {'name': TextEditingController(text: ''), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())},
+    {'name': TextEditingController(text: ''), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())}
   ];
   final List<Map<String, TextEditingController>> _children = [];
 
@@ -56,13 +56,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _maritalStatus = status;
       if (status == 'single') {
         if (_adults.length > 1) { _adults.removeRange(1, _adults.length); }
-        _adults[0]['name']!.text = 'אישי';
       } else {
         if (_adults.length < 2) {
-          _adults.add({'name': TextEditingController(text: 'אמא'), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())});
+          _adults.add({'name': TextEditingController(text: ''), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())});
         }
-        _adults[0]['name']!.text = 'אבא';
-        _adults[1]['name']!.text = 'אמא';
       }
     });
   }
@@ -83,6 +80,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final income2 = _maritalStatus == 'married' ? (double.tryParse(_income2Ctrl.text) ?? 0.0) : 0.0;
 
     await SeedService.generateInitialData(
+      gender: _gender, 
       maritalStatus: _maritalStatus, 
       vehicleType: _vehicleType,
       housingType: _housingType,    
@@ -96,6 +94,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     final budget = Provider.of<BudgetProvider>(context, listen: false);
     
+    // שמירת הסטטוס המשפחתי כדי שלא יאופס למצב ברירת מחדל
+    await DatabaseHelper.instance.saveSetting('marital_status', _maritalStatus == 'single' ? 1.0 : 2.0);
+    // שמירת המגדר (כדי שיזכור גם אחרי ריסטארט)
+    await DatabaseHelper.instance.saveSetting('gender', _gender == 'male' ? 1.0 : 2.0);
+    
+    // שמירת מבוגרים (תמיד מוגדרים כהורים/בוגרים)
     for (var adult in _adults) {
       final name = adult['name']!.text.trim();
       if (name.isNotEmpty) {
@@ -103,6 +107,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
     }
     
+    // שמירת ילדים
     if (_hasKids) {
       for (var child in _children) {
         final name = child['name']!.text.trim();
@@ -133,6 +138,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     String welcomeText = isMale ? 'ברוך הבא לדוחכם' : 'ברוכה הבאה לדוחכם';
     String continueText = isMale ? 'המשך' : 'המשכי';
     String finishText = isMale ? 'מוכן! צור לי תקציב' : 'מוכנה! צור לי תקציב';
+
+    // עיצוב קבוע לכפתורי הבחירה כדי שהטקסט לא יעלם
+    final segmentedStyle = SegmentedButton.styleFrom(
+      selectedForegroundColor: Colors.blue[900],
+      selectedBackgroundColor: Colors.blue[100],
+      foregroundColor: Colors.grey[400],
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
@@ -207,6 +219,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const Text('איך תעדיף/י שאפנה אליך?', style: TextStyle(color: Colors.grey)),
                     const SizedBox(height: 12),
                     SegmentedButton<String>(
+                      style: segmentedStyle,
                       segments: const [
                         ButtonSegment(value: 'male', label: Text('זכר')),
                         ButtonSegment(value: 'female', label: Text('נקבה')),
@@ -218,6 +231,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     Text(isMale ? 'מה הסטטוס האישי שלך?' : 'מה הסטטוס האישי שלך?', style: const TextStyle(color: Colors.grey)),
                     const SizedBox(height: 12),
                     SegmentedButton<String>(
+                      style: segmentedStyle,
                       segments: const [
                         ButtonSegment(value: 'single', icon: Icon(Icons.person), label: Text('רווק/ה')),
                         ButtonSegment(value: 'married', icon: Icon(Icons.people), label: Text('נשוי/אה')),
@@ -236,9 +250,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(isMale ? 'האם יש לך ילדים?' : 'האם יש לך ילדים?', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                    const Text('פרטי הבוגרים במשפחה', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                    const SizedBox(height: 12),
+                    _buildFamilyRow(
+                      _adults[0]['name']!, 
+                      _adults[0]['year']!, 
+                      'השם שלך', 
+                      showDelete: false
+                    ),
+                    if (_maritalStatus == 'married') ...[
+                      const SizedBox(height: 12),
+                      _buildFamilyRow(
+                        _adults[1]['name']!, 
+                        _adults[1]['year']!, 
+                        'שם בן/בת הזוג', 
+                        showDelete: false
+                      ),
+                    ],
+                    const SizedBox(height: 30),
+                    
+                    Text(isMale ? 'האם יש לכם ילדים?' : 'האם יש לכם ילדים?', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
                     const SizedBox(height: 12),
                     SegmentedButton<bool>(
+                      style: segmentedStyle,
                       segments: const [
                         ButtonSegment(value: false, label: Text('לא')),
                         ButtonSegment(value: true, label: Text('כן')),
@@ -270,7 +304,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       OutlinedButton.icon(
                         onPressed: _addChildField,
                         icon: const Icon(Icons.add),
-                        label: const Text('הוסף ילד'),
+                        label: const Text('הוסף ילד/ה'),
                         style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF00A3FF), side: const BorderSide(color: Color(0xFF00A3FF))),
                       ),
                     ]
@@ -290,9 +324,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     if (_maritalStatus == 'single') ...[
                       _buildSetupField('משכורת / הכנסה אישית (משוער)', _income1Ctrl),
                     ] else ...[
-                      _buildSetupField('הכנסת הבעל (משוער לחודש)', _income1Ctrl),
+                      _buildSetupField('הכנסה שלך (משוער לחודש)', _income1Ctrl),
                       const SizedBox(height: 10),
-                      _buildSetupField('הכנסת האישה (משוער לחודש)', _income2Ctrl),
+                      _buildSetupField('הכנסת בן/בת הזוג (משוער לחודש)', _income2Ctrl),
                     ]
                   ],
                 ),
@@ -360,8 +394,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const Text('(הלוואות, מינוס עמוק, או תשלומים באשראי)', style: TextStyle(color: Colors.grey, fontSize: 12)),
                     const SizedBox(height: 12),
                     SegmentedButton<bool>(
+                      style: segmentedStyle,
                       segments: const [
-                        ButtonSegment(value: false, label: Text('לא, אנחנו נקיים')),
+                        ButtonSegment(value: false, label: Text('לא, נקיים')),
                         ButtonSegment(value: true, label: Text('כן, יש חובות')),
                       ],
                       selected: {_hasDebts},
@@ -372,9 +407,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const Text('(חגים ומועדים יוזנו אוטומטית לקופות חסכון שוטפות)', style: TextStyle(color: Colors.grey, fontSize: 12)),
                     const SizedBox(height: 12),
                     SegmentedButton<bool>(
+                      style: segmentedStyle,
                       segments: const [
                         ButtonSegment(value: true, label: Text('כן, הוסף')),
-                        ButtonSegment(value: false, label: Text('לא, תודה')),
+                        ButtonSegment(value: false, label: Text('לא תודה')),
                       ],
                       selected: {_includeReligion},
                       onSelectionChanged: (val) => setState(() => _includeReligion = val.first),

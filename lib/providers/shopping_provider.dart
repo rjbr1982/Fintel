@@ -1,3 +1,4 @@
+// 🔒 STATUS: EDITED (Fixed Checkbox State Loss & Added Catalog Restore Function)
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 import '../data/shopping_model.dart';
@@ -76,8 +77,23 @@ class ShoppingProvider with ChangeNotifier {
 
   Future<void> loadItems() async {
     final db = DatabaseHelper.instance;
+    
+    // 1. שימור סימונים: שמירת מזהי המוצרים שסומנו לקנייה בזיכרון הזמני
+    final checkedIds = _items
+        .where((i) => i.isChecked && i.id != null)
+        .map((i) => i.id!)
+        .toSet();
+
+    // 2. טעינת הרשימה המעודכנת
     _items = await db.getShoppingItems();
     
+    // 3. החזרת הסימונים למוצרים הרלוונטיים (מונע איפוס בזמן עריכת פריט)
+    for (int i = 0; i < _items.length; i++) {
+      if (_items[i].id != null && checkedIds.contains(_items[i].id!)) {
+        _items[i] = _items[i].copyWith(isChecked: true);
+      }
+    }
+
     if (_items.isEmpty) {
       await seedDefaultItems();
     } else {
@@ -96,7 +112,71 @@ class ShoppingProvider with ChangeNotifier {
 
   Future<void> seedDefaultItems() async {
     final db = DatabaseHelper.instance;
-    final List<ShoppingItem> defaultItems = [
+    for (var item in _getDefaultCatalog()) {
+      await db.insertShoppingItem(item);
+    }
+    await loadItems();
+  }
+
+  // פונקציית שחזור קטלוג חסר (ללא דריסת שינויים של המשתמש)
+  Future<void> restoreMissingDefaults() async {
+    final db = DatabaseHelper.instance;
+    final currentNames = _items.map((e) => e.name.trim()).toSet();
+    bool addedAny = false;
+
+    for (var item in _getDefaultCatalog()) {
+      if (!currentNames.contains(item.name.trim())) {
+        await db.insertShoppingItem(item);
+        addedAny = true;
+      }
+    }
+
+    if (addedAny) {
+      await loadItems();
+    }
+  }
+
+  Future<void> addItem(ShoppingItem item) async {
+    final db = DatabaseHelper.instance;
+    await db.insertShoppingItem(item);
+    await loadItems();
+  }
+
+  Future<void> updateItem(ShoppingItem item) async {
+    final db = DatabaseHelper.instance;
+    await db.updateShoppingItem(item);
+    await loadItems();
+  }
+
+  Future<void> deleteItem(int id) async {
+    final db = DatabaseHelper.instance;
+    await db.deleteShoppingItem(id);
+    await loadItems();
+  }
+
+  bool isChecked(int id) {
+    final index = _items.indexWhere((e) => e.id == id);
+    return index != -1 ? _items[index].isChecked : false;
+  }
+
+  void toggleItem(int id) {
+    final index = _items.indexWhere((e) => e.id == id);
+    if (index != -1) {
+      _items[index] = _items[index].copyWith(isChecked: !_items[index].isChecked);
+      notifyListeners();
+    }
+  }
+
+  void clearAllChecks() {
+    for (int i = 0; i < _items.length; i++) {
+      _items[i] = _items[i].copyWith(isChecked: false);
+    }
+    notifyListeners();
+  }
+
+  // קטלוג האמת המקורי - חולץ למתודה נפרדת כדי לאפשר שחזור חלקי
+  List<ShoppingItem> _getDefaultCatalog() {
+    return [
       ShoppingItem(name: '4 תבניות של 12 ביצים M', category: 'ביצים', price: 52.52, quantity: 1, frequencyWeeks: 1),
       ShoppingItem(name: 'קופסה בשר לחמין', category: 'בשר', price: 125.0, quantity: 1, frequencyWeeks: 1),
       ShoppingItem(name: 'חבילת נקניקיות/המבורגר/שניצלונים', category: 'בשר', price: 20.90, quantity: 1, frequencyWeeks: 1),
@@ -203,50 +283,5 @@ class ShoppingProvider with ChangeNotifier {
       ShoppingItem(name: 'פתיל צף לנרות', category: 'לבית', price: 4.00, quantity: 1, frequencyWeeks: 24),
       ShoppingItem(name: 'כוסות נייר', category: 'לבית', price: 17.90, quantity: 1, frequencyWeeks: 24),
     ];
-
-    for (var item in defaultItems) {
-      await db.insertShoppingItem(item);
-    }
-    
-    _items = await db.getShoppingItems();
-    notifyListeners();
-  }
-
-  Future<void> addItem(ShoppingItem item) async {
-    final db = DatabaseHelper.instance;
-    await db.insertShoppingItem(item);
-    await loadItems();
-  }
-
-  Future<void> updateItem(ShoppingItem item) async {
-    final db = DatabaseHelper.instance;
-    await db.updateShoppingItem(item);
-    await loadItems();
-  }
-
-  Future<void> deleteItem(int id) async {
-    final db = DatabaseHelper.instance;
-    await db.deleteShoppingItem(id);
-    await loadItems();
-  }
-
-  bool isChecked(int id) {
-    final index = _items.indexWhere((e) => e.id == id);
-    return index != -1 ? _items[index].isChecked : false;
-  }
-
-  void toggleItem(int id) {
-    final index = _items.indexWhere((e) => e.id == id);
-    if (index != -1) {
-      _items[index] = _items[index].copyWith(isChecked: !_items[index].isChecked);
-      notifyListeners();
-    }
-  }
-
-  void clearAllChecks() {
-    for (int i = 0; i < _items.length; i++) {
-      _items[i] = _items[i].copyWith(isChecked: false);
-    }
-    notifyListeners();
   }
 }

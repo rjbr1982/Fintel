@@ -1,9 +1,10 @@
-// 🔒 STATUS: EDITED (Fixed light-on-light text visibility issues in dialogs by forcing dark text styles)
+// 🔒 STATUS: EDITED (Cleaned up Settings logic, moved to GlobalHeader)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../providers/debt_provider.dart';
 import '../../utils/app_localizations.dart';
+import '../../services/premium_service.dart';
 import '../widgets/global_header.dart'; 
 import 'pnl_screen.dart'; 
 import 'shopping_screen.dart';
@@ -31,7 +32,6 @@ class _MainScreenState extends State<MainScreen> {
         await context.read<DebtProvider>().loadDebts();
       }
       
-      // הקפצת הנחיתה הרכה אם הגענו מהאשף
       if (widget.showWelcomeDialog && mounted) {
         _showSoftLandingDialog(context);
       }
@@ -207,9 +207,9 @@ class _MainScreenState extends State<MainScreen> {
                           style: const TextStyle(color: Colors.black87, fontSize: 16),
                           icon: const Icon(Icons.arrow_drop_down, color: Colors.black54),
                           items: const [
-                            DropdownMenuItem(value: 1, child: Text('שנתית (1)')),
-                            DropdownMenuItem(value: 12, child: Text('חודשית (12)')),
-                            DropdownMenuItem(value: 52, child: Text('שבועית (52)')),
+                            DropdownMenuItem<int>(value: 1, child: Text('שנתית (1)')),
+                            DropdownMenuItem<int>(value: 12, child: Text('חודשית (12)')),
+                            DropdownMenuItem<int>(value: 52, child: Text('שבועית (52)')),
                           ],
                           onChanged: (val) {
                             if (val != null) {
@@ -251,9 +251,8 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _showFamilyDrilldown(BuildContext context, BudgetProvider budget, int? targetYear) {
-    if (targetYear == null) {
-      return;
-    }
+    if (targetYear == null) return;
+    
     showDialog(
       context: context,
       builder: (ctx) {
@@ -295,7 +294,7 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildQuickAction(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildQuickAction(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap, {bool isPremium = false}) {
     return Expanded(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -312,10 +311,19 @@ class _MainScreenState extends State<MainScreen> {
             child: Icon(icon, size: 28),
           ),
           const SizedBox(height: 10),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+              if (isPremium) ...[
+                const SizedBox(width: 4),
+                const Icon(Icons.workspace_premium, color: Colors.amber, size: 14),
+              ]
+            ],
           ),
         ],
       ),
@@ -452,7 +460,12 @@ class _MainScreenState extends State<MainScreen> {
                       'ממוצע שכר', 
                       Icons.insights, 
                       Colors.orange, 
-                      () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SalaryEngineScreen()))
+                      () {
+                        PremiumService.requirePremium(context, () {
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const SalaryEngineScreen()));
+                        });
+                      },
+                      isPremium: true,
                     ),
                     _buildQuickAction(
                       context, 

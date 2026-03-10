@@ -1,3 +1,4 @@
+// 🔒 STATUS: EDITED (Fixed Frequency Violation Logic - Calendar Week Grace Period)
 class ShoppingItem {
   final int? id;
   final String name;
@@ -42,8 +43,12 @@ class ShoppingItem {
     final daysSincePurchase = DateTime.now().difference(lastDate).inDays;
     final requiredDays = frequencyWeeks * 7;
 
-    // חריגה אם עברו פחות מ-90% מהזמן הנדרש (גמישות של יומיים-שלושה)
-    return daysSincePurchase < (requiredDays * 0.9);
+    // תיקון: גמישות קלנדרית. 
+    // החסרנו 3 ימי חסד מהזמן הנדרש כדי לאפשר קנייה באותו "שבוע קלנדרי".
+    // לדוגמה: קנייה של פעם בשבוע (7 ימים) תהיה תקינה ולא תפעיל אזהרה כבר מהיום ה-4.
+    final threshold = (requiredDays - 3).clamp(1, 999);
+
+    return daysSincePurchase < threshold;
   }
 
   // מחשב כמה ימים עברו מהקנייה האחרונה (לצורך תצוגה "לפני X ימים")

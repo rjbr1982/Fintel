@@ -1053,7 +1053,6 @@ class AssetProvider with ChangeNotifier {
 
 FILE: C:\Projects\dohaham\lib\providers\budget_provider.dart
 -----------------------
-// 🔒 STATUS: EDITED (Ironclad Kids Allocation logic & Centralized Chronological Sorting Engine)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -1075,10 +1074,10 @@ class BudgetProvider with ChangeNotifier {
   static const double defaultFutureRatio = 0.85;    
 
   String _maritalStatus = 'married'; 
-  
-  bool _isFatherActive = true;
-  bool _isMotherActive = true;
-  bool _isKidsActive = true;
+  String _gender = 'male'; 
+
+  double? _customEntWarning;
+  double? _customEntSuccess;
 
   double _variableAllocationRatio = defaultVariableRatio; 
   double _futureAllocationRatio = defaultFutureRatio;    
@@ -1096,19 +1095,21 @@ class BudgetProvider with ChangeNotifier {
   StreamSubscription? _settingsSub;
   StreamSubscription? _assetsSub;
   StreamSubscription? _salaryRecordsSub; 
+  
   bool _isListening = false;
+  bool _isSyncing = false; 
+  bool _syncQueued = false; 
 
   List<Expense> get expenses => _expenses;
   List<FamilyMember> get familyMembers => _familyMembers;
   List<SalaryRecord> get salaryRecords => _salaryRecords;
   
   int get childCount => _familyMembers.where((m) => m.role == FamilyRole.child).length;
-  
   String get maritalStatus => _maritalStatus;
-  
-  bool get isFatherActive => _isFatherActive;
-  bool get isMotherActive => _isMotherActive;
-  bool get isKidsActive => _isKidsActive;
+  String get gender => _gender;
+
+  double get entWarningLimit => _customEntWarning ?? (_maritalStatus == 'single' ? 80 : 150);
+  double get entSuccessLimit => _customEntSuccess ?? (_maritalStatus == 'single' ? 250 : 500);
 
   double get variableAllocationRatio => _variableAllocationRatio;
   double get futureAllocationRatio => _futureAllocationRatio;
@@ -1128,7 +1129,7 @@ class BudgetProvider with ChangeNotifier {
     if (_unifiedCategories.containsKey(cat)) {
       return _unifiedCategories[cat]!;
     }
-    return ['ילדים - קבועות', 'אבא', 'אמא', 'חגים', 'רכב'].contains(cat);
+    return ['ילדים - קבועות', 'אבא', 'אמא', 'בעל', 'אישה', 'אישי', 'חגים', 'רכב'].contains(cat);
   }
 
   Future<void> toggleCategoryUnified(String cat, bool value) async {
@@ -1153,23 +1154,18 @@ class BudgetProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // מנוע מיון מרכזי: שומר על סדר כרונולוגי גורף לילדים (מהגדול לקטן) בכל המערכת
   void _sortInMemoryData() {
-    // 1. מיון בני המשפחה: הורים קודם, ואז ילדים לפי שנת לידה (הבוגר מופיע קודם = שנת לידה קטנה יותר)
     _familyMembers.sort((a, b) {
       if (a.role == FamilyRole.parent && b.role != FamilyRole.parent) return -1;
       if (b.role == FamilyRole.parent && a.role != FamilyRole.parent) return 1;
       return a.birthYear.compareTo(b.birthYear);
     });
 
-    // 2. חילוץ שמות הילדים הממוינים כרונולוגית לצורך סידור ההוצאות
     final kidNames = _familyMembers.where((m) => m.role == FamilyRole.child).map((m) {
       String n = m.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
-      if (n == 'אבא' || n == 'אמא' || n == 'אישי') n = '$n (ילד)';
       return n;
     }).toList();
 
-    // 3. מיון ההוצאות כך שהוצאות הילדים יסודרו לפי גיל הילד באופן גורף בכל האפליקציה
     _expenses.sort((a, b) {
       bool aIsKid = a.parentCategory == 'ילדים - משתנות' || a.parentCategory == 'ילדים - קבועות';
       bool bIsKid = b.parentCategory == 'ילדים - משתנות' || b.parentCategory == 'ילדים - קבועות';
@@ -1182,8 +1178,6 @@ class BudgetProvider with ChangeNotifier {
           return idxA.compareTo(idxB);
         }
       }
-      
-      // שמירה על יציבות (Stable Sort) לשאר ההוצאות על בסיס ה-ID המקורי מהמסד
       return (a.id ?? 0).compareTo(b.id ?? 0);
     });
   }
@@ -1193,7 +1187,7 @@ class BudgetProvider with ChangeNotifier {
       _expenses = await DatabaseHelper.instance.getExpenses();
       _familyMembers = await DatabaseHelper.instance.getFamilyMembers();
       
-      _sortInMemoryData(); // הפעלת המיון המרכזי
+      _sortInMemoryData();
 
       await syncCapitalFromAssets(); 
       _expectedYield = await DatabaseHelper.instance.getSetting('expected_yield') ?? 4.0;
@@ -1206,9 +1200,11 @@ class BudgetProvider with ChangeNotifier {
       double msVal = await DatabaseHelper.instance.getSetting('marital_status') ?? 2.0;
       _maritalStatus = msVal == 1.0 ? 'single' : 'married';
 
-      _isFatherActive = (await DatabaseHelper.instance.getSetting('father_active') ?? 1.0) == 1.0;
-      _isMotherActive = (await DatabaseHelper.instance.getSetting('mother_active') ?? 1.0) == 1.0;
-      _isKidsActive = (await DatabaseHelper.instance.getSetting('kids_active') ?? 1.0) == 1.0;
+      double genderVal = await DatabaseHelper.instance.getSetting('gender') ?? 1.0;
+      _gender = genderVal == 1.0 ? 'male' : 'female';
+
+      _customEntWarning = await DatabaseHelper.instance.getSetting('ent_warning');
+      _customEntSuccess = await DatabaseHelper.instance.getSetting('ent_success');
 
       await _forceCategorySync();
       await _performAutoRollover();
@@ -1226,15 +1222,16 @@ class BudgetProvider with ChangeNotifier {
 
   void _setupStreams() {
     _expensesSub = DatabaseHelper.instance.streamExpenses().listen((data) {
+      if (_isSyncing) return; 
       _expenses = data;
-      _sortInMemoryData(); // הפעלת המיון המרכזי
+      _sortInMemoryData();
       _recalculateAll();
       notifyListeners();
     });
 
     _familySub = DatabaseHelper.instance.streamFamilyMembers().listen((data) async {
       _familyMembers = data;
-      _sortInMemoryData(); // הפעלת המיון המרכזי
+      _sortInMemoryData();
       await _forceCategorySync(); 
       _recalculateAll();
       notifyListeners();
@@ -1280,48 +1277,57 @@ class BudgetProvider with ChangeNotifier {
           String newStatus = val == 1.0 ? 'single' : 'married';
           if (_maritalStatus != newStatus) { _maritalStatus = newStatus; changed = true; }
         }
-        if (key == 'father_active' && val != null) {
-          bool active = val == 1.0;
-          if (_isFatherActive != active) { _isFatherActive = active; changed = true; }
+
+        if (key == 'gender' && val != null) { 
+          String newGender = val == 1.0 ? 'male' : 'female';
+          if (_gender != newGender) { _gender = newGender; changed = true; }
         }
-        if (key == 'mother_active' && val != null) {
-          bool active = val == 1.0;
-          if (_isMotherActive != active) { _isMotherActive = active; changed = true; }
-        }
-        if (key == 'kids_active' && val != null) {
-          bool active = val == 1.0;
-          if (_isKidsActive != active) { _isKidsActive = active; changed = true; }
-        }
+        
+        if (key == 'ent_warning' && _customEntWarning != val) { _customEntWarning = val; changed = true; }
+        if (key == 'ent_success' && _customEntSuccess != val) { _customEntSuccess = val; changed = true; }
       }
       if (changed) {
-        _recalculateAll();
-        notifyListeners();
+        _forceCategorySync().then((_) {
+          _recalculateAll();
+          notifyListeners();
+        });
       }
     });
   }
 
-  Future<void> updateFamilyStructure({String? maritalStatus}) async {
-    if (maritalStatus != null) {
-      await DatabaseHelper.instance.saveSetting('marital_status', maritalStatus == 'single' ? 1.0 : 2.0);
-      _maritalStatus = maritalStatus;
-    }
-    await _forceCategorySync();
-    _recalculateAll();
+  Future<void> saveEntertainmentLimits(double warning, double success) async {
+    _customEntWarning = warning;
+    _customEntSuccess = success;
     notifyListeners();
+    await DatabaseHelper.instance.saveSetting('ent_warning', warning);
+    await DatabaseHelper.instance.saveSetting('ent_success', success);
   }
 
-  Future<void> toggleEntityActive(String entityType, bool isActive) async {
-    double val = isActive ? 1.0 : 0.0;
-    if (entityType == 'father') {
-      await DatabaseHelper.instance.saveSetting('father_active', val);
-      _isFatherActive = isActive;
-    } else if (entityType == 'mother') {
-      await DatabaseHelper.instance.saveSetting('mother_active', val);
-      _isMotherActive = isActive;
-    } else if (entityType == 'kids') {
-      await DatabaseHelper.instance.saveSetting('kids_active', val);
-      _isKidsActive = isActive;
+  Future<void> resetEntertainmentLimits() async {
+    _customEntWarning = null;
+    _customEntSuccess = null;
+    notifyListeners();
+    await DatabaseHelper.instance.deleteSetting('ent_warning');
+    await DatabaseHelper.instance.deleteSetting('ent_success');
+  }
+
+  Future<void> updateFamilyStructure({String? maritalStatus, String? gender}) async {
+    // 1. עדכון זיכרון מקומי באופן מיידי
+    if (maritalStatus != null) _maritalStatus = maritalStatus;
+    if (gender != null) _gender = gender;
+    
+    // 2. ריענון ה-UI ב-0 אלפיות השנייה למניעת דיליי ולחיצות כפולות
+    notifyListeners(); 
+
+    // 3. עבודה מול מסד הנתונים ברקע
+    if (maritalStatus != null) {
+      await DatabaseHelper.instance.saveSetting('marital_status', maritalStatus == 'single' ? 1.0 : 2.0);
     }
+    if (gender != null) {
+      await DatabaseHelper.instance.saveSetting('gender', gender == 'male' ? 1.0 : 2.0);
+    }
+
+    await _forceCategorySync();
     _recalculateAll();
     notifyListeners();
   }
@@ -1370,19 +1376,46 @@ class BudgetProvider with ChangeNotifier {
     return null; 
   }
 
+  String get _parent1Name => _maritalStatus == 'single' 
+      ? (childCount == 0 ? 'אישי' : (_gender == 'male' ? 'אבא' : 'אמא')) 
+      : (childCount == 0 ? 'בעל' : 'אבא');
+
+  String? get _parent2Name => _maritalStatus == 'single' 
+      ? null 
+      : (childCount == 0 ? 'אישה' : 'אמא');
+
   Map<String, double> _getDynamicVariableRatios() {
     int cCount = childCount;
     final kids = _familyMembers.where((m) => m.role == FamilyRole.child).toList();
     
     Map<String, double> ratios = {};
-    if (_maritalStatus == 'single' && cCount > 0) {
-      ratios = { 'בגדים אישי': 0.28, 'בילויים אישי': 0.33, 'טיפוח אישי': 0.15 };
-    } else if (_maritalStatus == 'married' && cCount == 0) {
-      ratios = { 'בגדים אבא': 0.25, 'בילויים אבא': 0.20, 'בגדים אמא': 0.15, 'בילויים אמא': 0.25, 'טיפוח אמא': 0.15 };
-    } else if (_maritalStatus == 'single' && cCount == 0) {
-      ratios = { 'בגדים אישי': 0.40, 'בילויים אישי': 0.45, 'טיפוח אישי': 0.15 };
-    } else {
-      ratios = { 'בגדים אבא': 0.19, 'בילויים אבא': 0.14, 'בגדים אמא': 0.09, 'בילויים אמא': 0.19, 'טיפוח אמא': 0.15 };
+    String p1 = _parent1Name;
+    String? p2 = _parent2Name;
+
+    if (_maritalStatus == 'single') {
+      if (cCount == 0) { 
+        ratios['בגדים $p1'] = _gender == 'female' ? 0.40 : 0.45;
+        ratios['בילויים $p1'] = _gender == 'female' ? 0.45 : 0.55;
+        if (_gender == 'female') ratios['טיפוח $p1'] = 0.15;
+      } else { 
+        ratios['בגדים $p1'] = 0.28;
+        ratios['בילויים $p1'] = 0.33;
+        if (_gender == 'female') ratios['טיפוח $p1'] = 0.15;
+      }
+    } else { 
+      if (cCount == 0) { 
+        ratios['בגדים $p1'] = 0.25;
+        ratios['בילויים $p1'] = 0.20;
+        ratios['בגדים ${p2!}'] = 0.15;
+        ratios['בילויים $p2'] = 0.25;
+        ratios['טיפוח $p2'] = 0.15;
+      } else { 
+        ratios['בגדים $p1'] = 0.19;
+        ratios['בילויים $p1'] = 0.14;
+        ratios['בגדים ${p2!}'] = 0.09;
+        ratios['בילויים $p2'] = 0.19;
+        ratios['טיפוח $p2'] = 0.15;
+      }
     }
 
     if (cCount > 0) {
@@ -1390,9 +1423,6 @@ class BudgetProvider with ChangeNotifier {
       double funRatio = 0.12 / cCount;
       for (var kid in kids) {
         String safeName = kid.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
-        if (safeName == 'אבא' || safeName == 'אמא' || safeName == 'אישי') {
-          safeName = '$safeName (ילד)';
-        }
         ratios['בגדים $safeName'] = clothesRatio;
         ratios['בילויים $safeName'] = funRatio;
       }
@@ -1419,7 +1449,6 @@ class BudgetProvider with ChangeNotifier {
 
     double defaultRatio = defaultRatios[nameForMatch] ?? 0.0;
 
-    // הגנה נוקשה לשחזור הקצאת ילדים
     if (_expenses[index].parentCategory == 'ילדים - משתנות') {
       defaultRatio = childCount > 0 ? (0.12 / childCount) : 0.0;
     }
@@ -1459,203 +1488,262 @@ class BudgetProvider with ChangeNotifier {
   }
 
   Future<void> _forceCategorySync() async {
-    if (_expenses.isEmpty) return;
-
-    bool changed = false;
-    final now = DateTime.now().toIso8601String();
-
-    if (childCount == 0) {
-      for (int i = _expenses.length - 1; i >= 0; i--) {
-        final e = _expenses[i];
-        if (e.parentCategory == 'ילדים - משתנות' || e.parentCategory == 'ילדים - קבועות') {
-          await DatabaseHelper.instance.deleteExpense(e.id!);
-          _expenses.removeAt(i);
-          changed = true;
-        }
-      }
+    if (_isSyncing) {
+      _syncQueued = true;
+      return;
     }
-
-    final validChildNames = _familyMembers.where((m) => m.role == FamilyRole.child).map((m) {
-      String n = m.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
-      if (n == 'אבא' || n == 'אמא' || n == 'אישי') n = '$n (ילד)';
-      return n;
-    }).toList();
-
-    final Set<String> seenKidsExpenses = {};
-    for (int i = _expenses.length - 1; i >= 0; i--) {
-      final e = _expenses[i];
-      if (e.parentCategory == 'ילדים - משתנות' && e.name != 'בגדים ילדים' && e.name != 'בילויים ילדים') {
-        String eNameForMatch = e.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
-        
-        if (seenKidsExpenses.contains(eNameForMatch)) {
-          await DatabaseHelper.instance.deleteExpense(e.id!);
-          _expenses.removeAt(i);
-          changed = true;
-          continue;
-        }
-        seenKidsExpenses.add(eNameForMatch);
-
-        bool isValid = validChildNames.any((childName) => eNameForMatch == 'בגדים $childName' || eNameForMatch == 'בילויים $childName');
-        if (!isValid) {
-          await DatabaseHelper.instance.deleteExpense(e.id!);
-          _expenses.removeAt(i);
-          changed = true;
-        }
-      }
-    }
-
-    if (childCount > 0) {
-      final kidsFixed = ['שכר לימוד', 'ציוד בית ספר', 'חוגים', 'מתנות לימי הולדת', 'קייטנות'];
-      for (String kf in kidsFixed) {
-        if (!_expenses.any((e) => e.name == kf || (kf == 'מתנות לימי הולדת' && e.name == 'מתנות ימי הולדת'))) {
-           await DatabaseHelper.instance.insertExpense(Expense(
-               name: kf, category: 'קבועות', parentCategory: 'ילדים - קבועות',
-               monthlyAmount: 0, originalAmount: 0, isSinking: true, isPerChild: true,
-               frequency: (kf == 'ציוד בית ספר' || kf == 'קייטנות') ? Frequency.YEARLY : Frequency.MONTHLY,
-               date: now, isDynamicSalary: false, isCustom: false,
-           ));
-           changed = true;
-        }
-      }
-    }
-
-    final Map<String, Map<String, String>> syncRules = {
-      'שכר לימוד': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
-      'ציוד בית ספר': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
-      'חוגים': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
-      'מתנות לימי הולדת': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'}, 
-      'מתנות ימי הולדת': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'}, 
-      'קייטנות': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
-      'תספורת': {'cat': 'קבועות', 'parent': 'תספורת'},
-      'קטנות לבית': {'cat': 'קבועות', 'parent': 'קטנות לבית'},
-    };
-
-    final Map<String, double> requiredRatios = {
-      'מקדמה לבית': 0.67, 'בר מצווה אליעזר': 0.11, 'חופשה שנתית': 0.11,
-      'תנור גז': 0.07, 'הדברה': 0.02, 'רפואי': 0.02,
-    };
-
-    final Map<String, double> targetVariableRatios = _getDynamicVariableRatios();
+    _isSyncing = true;
     
-    List<String> allKidsVarExpenses = [];
-    for(var n in validChildNames) {
-       allKidsVarExpenses.add('בגדים $n');
-       allKidsVarExpenses.add('בילויים $n');
-    }
+    try {
+      do {
+        _syncQueued = false;
+        bool changed = false;
+        final now = DateTime.now().toIso8601String();
+        
+        List<Expense> localExp = await DatabaseHelper.instance.getExpenses();
+        if (localExp.isEmpty) continue;
 
-    for (int i = 0; i < _expenses.length; i++) {
-      final e = _expenses[i];
-      
-      if (e.name == 'פארם וניקיון' || e.name == 'בגדים ילדים' || e.name == 'בילויים ילדים') {
-        await DatabaseHelper.instance.deleteExpense(e.id!);
-        changed = true;
-        continue;
-      }
+        String p1 = _parent1Name;
+        String? p2 = _parent2Name;
 
-      bool needsUpdate = false;
-      String newCat = e.category;
-      String newParent = e.parentCategory;
-      bool newIsPerChild = e.isPerChild;
-      String newName = e.name;
-      bool newIsCustom = e.isCustom;
-      String nameForMatch = e.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
+        final Map<String, double> targetVariableRatios = _getDynamicVariableRatios();
+        final List<String> validVarNames = targetVariableRatios.keys.toList();
+        final List<String> prefixes = ['בגדים', 'בילויים', 'טיפוח'];
+        
+        String preferredSuffix = _maritalStatus == 'single' ? p1 : (_gender == 'female' && p2 != null ? p2 : p1);
 
-      final oldVehicleNames = ['טסט', 'ביטוח', 'טיפול', 'תיקונים', 'דלק', 'ליסינג', 'נסיעות'];
-      if (e.parentCategory == 'רכב' && !e.name.contains('(') && oldVehicleNames.contains(e.name.trim())) {
-        newName = '${e.name} (אופנוע יסוד)';
-        newIsCustom = true; 
-        needsUpdate = true;
-      }
+        // 1. GARBAGE COLLECTION & TRANSITION SALVAGE
+        for (int i = localExp.length - 1; i >= 0; i--) {
+          final e = localExp[i];
+          bool shouldDelete = false;
+          String nameForMatch = e.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
 
-      if (syncRules.containsKey(nameForMatch)) {
-        final rule = syncRules[nameForMatch]!;
-        if (e.category != rule['cat'] || e.parentCategory != rule['parent']) {
-          newCat = rule['cat']!;
-          newParent = rule['parent']!;
-          newIsPerChild = (rule['parent']!.startsWith('ילדים - קבועות') || e.isPerChild);
-          needsUpdate = true;
-        }
-      }
+          // זיהוי קופות ליבה של טיפוח נשי
+          bool isSystemGrooming = nameForMatch == 'טיפוח אישי' || nameForMatch == 'טיפוח אישה' || nameForMatch == 'טיפוח אמא';
 
-      double? newRatio = e.allocationRatio;
+          if (nameForMatch == 'פארם וניקיון' || nameForMatch == 'בגדים ילדים' || nameForMatch == 'בילויים ילדים') {
+            shouldDelete = true;
+          }
+          else if (childCount == 0 && e.parentCategory == 'ילדים - קבועות') {
+            shouldDelete = true;
+          }
+          // חוק השמדה מוחלט לקופת טיפוח עבור זכר רווק (ללא אישה ברקע)
+          else if (_maritalStatus == 'single' && _gender == 'male' && isSystemGrooming) {
+            shouldDelete = true;
+          }
+          else if (e.category == 'משתנות' && e.parentCategory != 'קניות' && !e.isCustom) {
+            
+            bool isDynamicPrefix = prefixes.any((p) => nameForMatch.startsWith(p));
+            
+            if (isDynamicPrefix) {
+              if (!validVarNames.contains(nameForMatch)) {
+                bool salvaged = false;
+                String ePrefix = prefixes.firstWhere((p) => nameForMatch.startsWith(p), orElse: () => '');
+                
+                if (ePrefix.isNotEmpty) {
+                  String? targetName;
+                  try {
+                    targetName = validVarNames.firstWhere((v) => v.startsWith(ePrefix) && v.endsWith(preferredSuffix));
+                  } catch (_) {
+                    try {
+                      targetName = validVarNames.firstWhere((v) => v.startsWith(ePrefix) && (v.endsWith(p1) || (p2 != null && v.endsWith(p2))));
+                    } catch (_) {
+                      targetName = null;
+                    }
+                  }
 
-      // Ironclad Logic for Kids Allocation: Bypasses string matching and forces ratio based strictly on childCount
-      if (e.parentCategory == 'ילדים - משתנות') {
-        double expectedRatio = childCount > 0 ? (0.12 / childCount) : 0.0;
-        if (newRatio == null || (newRatio - expectedRatio).abs() > 0.0001) {
-            newRatio = expectedRatio;
-            needsUpdate = true;
-        }
-        if (e.isPerChild) {
-            newIsPerChild = false;
-            needsUpdate = true;
-        }
-        if (e.name != nameForMatch) {
-            newName = nameForMatch;
-            needsUpdate = true;
-        }
-      } 
-      // Regular matching for everything else
-      else if (requiredRatios.containsKey(nameForMatch)) {
-        if (newRatio != requiredRatios[nameForMatch]) {
-          newRatio = requiredRatios[nameForMatch];
-          needsUpdate = true;
-        }
-      } 
-      else if (targetVariableRatios.containsKey(nameForMatch)) {
-        double targetRatio = targetVariableRatios[nameForMatch] ?? 0.0;
-        if (newRatio != targetRatio) {
-          if (targetRatio == 0.0 || newRatio == 0 || newRatio == null || (newRatio * 100).round() == 10) {
-              newRatio = targetRatio;
-              needsUpdate = true;
+                  if (targetName != null && !localExp.any((ex) => ex.name == targetName)) {
+                    String newParent = targetName.split(' ').skip(1).join(' ').trim();
+                    if (_familyMembers.any((m) => m.role == FamilyRole.child && m.name.trim() == newParent)) {
+                       newParent = 'ילדים - משתנות';
+                    }
+
+                    final updated = Expense(
+                      id: e.id, name: targetName, category: e.category, parentCategory: newParent,
+                      monthlyAmount: e.monthlyAmount, originalAmount: e.originalAmount, frequency: e.frequency,
+                      isSinking: e.isSinking, isPerChild: e.isPerChild, targetAmount: e.targetAmount,
+                      currentBalance: e.currentBalance, allocationRatio: e.allocationRatio,
+                      lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
+                      isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: e.isCustom,
+                    );
+                    await DatabaseHelper.instance.updateExpense(updated);
+                    localExp[i] = updated; 
+                    salvaged = true;
+                    changed = true;
+                  }
+                }
+                
+                if (!salvaged) {
+                  shouldDelete = true;
+                }
+              }
+            } else if (!validVarNames.contains(nameForMatch)) {
+              shouldDelete = true;
+            }
+          }
+
+          if (shouldDelete) {
+            await DatabaseHelper.instance.deleteExpense(e.id!);
+            localExp.removeAt(i);
+            changed = true;
           }
         }
-      }
 
-      bool newIsSinking = e.isSinking;
+        // 2. INSERT MISSING
+        for (var entry in targetVariableRatios.entries) {
+          if (!localExp.any((e) => e.name == entry.key)) {
+            String parentCat = 'אחר';
+            String personName = entry.key.split(' ').skip(1).join(' ').trim();
+            
+            if (_familyMembers.any((m) => m.role == FamilyRole.child && m.name.trim() == personName)) {
+              parentCat = 'ילדים - משתנות';
+            } else if (personName == p1) {
+              parentCat = p1;
+            } else if (p2 != null && personName == p2) {
+              parentCat = p2;
+            }
 
-      if (needsUpdate) {
-        final updated = Expense(
-          id: e.id, name: newName, category: newCat, parentCategory: newParent,
-          monthlyAmount: e.monthlyAmount, originalAmount: e.originalAmount, frequency: e.frequency,
-          isSinking: newIsSinking, isPerChild: newIsPerChild,
-          targetAmount: e.targetAmount, currentBalance: e.currentBalance, allocationRatio: newRatio,
-          lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
-          isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
-          isCustom: newIsCustom,
-        );
-        await DatabaseHelper.instance.updateExpense(updated);
-        changed = true;
-      }
-    }
-
-    for (var entry in targetVariableRatios.entries) {
-      if (entry.value > 0 && !_expenses.any((e) => e.name == entry.key)) {
-        String parentCat;
-        if (allKidsVarExpenses.contains(entry.key)) {
-           parentCat = 'ילדים - משתנות';
-        } else if (entry.key.contains('אישי')) {
-           parentCat = 'אישי';
-        } else if (entry.key.contains('אבא')) {
-           parentCat = 'אבא';
-        } else {
-           parentCat = 'אמא';
+            final newE = Expense(
+              name: entry.key, category: 'משתנות', parentCategory: parentCat,
+              monthlyAmount: 0, originalAmount: 0, isSinking: true,
+              isPerChild: false, allocationRatio: entry.value,
+              date: now, isDynamicSalary: false, isCustom: false,
+            );
+            await DatabaseHelper.instance.insertExpense(newE);
+            changed = true;
+          }
         }
-        
-        await DatabaseHelper.instance.insertExpense(Expense(
-          name: entry.key, category: 'משתנות', parentCategory: parentCat,
-          monthlyAmount: 0, originalAmount: 0, isSinking: true,
-          isPerChild: false,
-          allocationRatio: entry.value,
-          date: now, isDynamicSalary: false, isCustom: false,
-        ));
-        changed = true;
-      }
-    }
-    
-    if (changed) {
-      _expenses = await DatabaseHelper.instance.getExpenses();
-      _sortInMemoryData(); // מיון מחדש לאחר הוספות או שינויים
+
+        if (childCount > 0) {
+          final kidsFixed = ['שכר לימוד', 'ציוד בית ספר', 'חוגים', 'מתנות לימי הולדת', 'קייטנות'];
+          for (String kf in kidsFixed) {
+            if (!localExp.any((e) => e.name == kf || (kf == 'מתנות לימי הולדת' && e.name == 'מתנות ימי הולדת'))) {
+               final newE = Expense(
+                   name: kf, category: 'קבועות', parentCategory: 'ילדים - קבועות',
+                   monthlyAmount: 0, originalAmount: 0, isSinking: true, isPerChild: true,
+                   frequency: (kf == 'ציוד בית ספר' || kf == 'קייטנות') ? Frequency.YEARLY : Frequency.MONTHLY,
+                   date: now, isDynamicSalary: false, isCustom: false,
+               );
+               await DatabaseHelper.instance.insertExpense(newE);
+               changed = true;
+            }
+          }
+        }
+
+        if (changed) {
+          localExp = await DatabaseHelper.instance.getExpenses();
+        }
+
+        // 3. UPDATE EXISTING RULES & RATIOS
+        final Map<String, Map<String, String>> syncRules = {
+          'שכר לימוד': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
+          'ציוד בית ספר': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
+          'חוגים': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
+          'מתנות לימי הולדת': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'}, 
+          'מתנות ימי הולדת': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'}, 
+          'קייטנות': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
+          'תספורת': {'cat': 'קבועות', 'parent': 'תספורת'},
+          'קטנות לבית': {'cat': 'קבועות', 'parent': 'קטנות לבית'},
+        };
+        final Map<String, double> requiredRatios = {
+          'מקדמה לבית': 0.67, 'בר מצווה אליעזר': 0.11, 'חופשה שנתית': 0.11,
+          'תנור גז': 0.07, 'הדברה': 0.02, 'רפואי': 0.02,
+        };
+
+        for (int i = 0; i < localExp.length; i++) {
+          final e = localExp[i];
+          bool needsUpdate = false;
+          String newCat = e.category;
+          String newParent = e.parentCategory;
+          bool newIsPerChild = e.isPerChild;
+          String newName = e.name;
+          bool newIsCustom = e.isCustom;
+          double? newRatio = e.allocationRatio;
+          bool newIsSinking = e.isSinking;
+          String nameForMatch = e.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
+
+          if (syncRules.containsKey(nameForMatch)) {
+            final rule = syncRules[nameForMatch]!;
+            if (e.category != rule['cat'] || e.parentCategory != rule['parent']) {
+              newCat = rule['cat']!;
+              newParent = rule['parent']!;
+              newIsPerChild = (rule['parent']!.startsWith('ילדים - קבועות') || e.isPerChild);
+              needsUpdate = true;
+            }
+          }
+
+          if (targetVariableRatios.containsKey(nameForMatch)) {
+            double targetRatio = targetVariableRatios[nameForMatch]!;
+            if (newRatio != targetRatio) {
+              newRatio = targetRatio;
+              needsUpdate = true;
+            }
+            
+            String personName = nameForMatch.split(' ').skip(1).join(' ').trim();
+            String expectedParent = 'אחר';
+            if (_familyMembers.any((m) => m.role == FamilyRole.child && m.name.trim() == personName)) {
+              expectedParent = 'ילדים - משתנות';
+            } else if (personName == p1) {
+              expectedParent = p1;
+            } else if (p2 != null && personName == p2) {
+              expectedParent = p2;
+            }
+            
+            if (newParent != expectedParent) {
+              newParent = expectedParent;
+              needsUpdate = true;
+            }
+          } else if (requiredRatios.containsKey(nameForMatch)) {
+            if (newRatio != requiredRatios[nameForMatch]) {
+              newRatio = requiredRatios[nameForMatch];
+              needsUpdate = true;
+            }
+          }
+
+          if (newCat == 'עתידיות' || newParent == 'חגים') {
+            if (!newIsSinking) { newIsSinking = true; needsUpdate = true; }
+          }
+          if (newParent == 'רכב') {
+            String cleanVehicleName = newName.trim();
+            if (!cleanVehicleName.startsWith('דלק') && !cleanVehicleName.startsWith('ליסינג')) {
+              if (!newIsSinking) { newIsSinking = true; needsUpdate = true; }
+            } else {
+              if (newIsSinking) { newIsSinking = false; needsUpdate = true; }
+            }
+          }
+          if (newName.trim() == 'הובלה ותיקונים' && !newIsSinking) {
+            newIsSinking = true; needsUpdate = true;
+          }
+
+          final oldVehicleNames = ['טסט', 'ביטוח', 'טיפול', 'תיקונים', 'דלק', 'ליסינג', 'נסיעות'];
+          if (e.parentCategory == 'רכב' && !e.name.contains('(') && oldVehicleNames.contains(e.name.trim())) {
+            newName = '${e.name} (אופנוע יסוד)';
+            newIsCustom = true; 
+            needsUpdate = true;
+          }
+
+          if (needsUpdate) {
+            final updated = Expense(
+              id: e.id, name: newName, category: newCat, parentCategory: newParent,
+              monthlyAmount: e.monthlyAmount, originalAmount: e.originalAmount, frequency: e.frequency,
+              isSinking: newIsSinking, isPerChild: newIsPerChild,
+              targetAmount: e.targetAmount, currentBalance: e.currentBalance, allocationRatio: newRatio,
+              lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
+              isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: newIsCustom,
+            );
+            await DatabaseHelper.instance.updateExpense(updated);
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          _expenses = await DatabaseHelper.instance.getExpenses();
+          _sortInMemoryData();
+        }
+
+      } while (_syncQueued);
+    } finally {
+      _isSyncing = false;
     }
   }
 
@@ -1693,9 +1781,7 @@ class BudgetProvider with ChangeNotifier {
   Future<void> fullAppReset() async {
     await DatabaseHelper.instance.clearAllData();
     _maritalStatus = 'married';
-    _isFatherActive = true;
-    _isMotherActive = true;
-    _isKidsActive = true;
+    _gender = 'male';
     _manualTargetIncome = null;
     _initialCapital = 0.0;
     _expectedYield = 4.0;
@@ -1704,6 +1790,8 @@ class BudgetProvider with ChangeNotifier {
     _futureAllocationRatio = defaultFutureRatio;
     _externalDebtPayment = 0;
     _isFutureMode = false;
+    _customEntWarning = null;
+    _customEntSuccess = null;
     _expenses = [];
     _familyMembers = [];
     _salaryRecords = [];
@@ -1886,15 +1974,6 @@ class BudgetProvider with ChangeNotifier {
       final e = _expenses[i];
       
       bool isAnchor = (e.allocationRatio == null || e.allocationRatio == 0);
-      bool isFatherEntity = e.parentCategory == 'אבא' || e.name.contains('אבא') || e.name.contains('אישי');
-      bool isMotherEntity = e.parentCategory == 'אמא' || e.name.contains('אמא');
-      bool isKidsEntity = e.parentCategory == 'ילדים - משתנות';
-
-      if ((isFatherEntity && !_isFatherActive) || 
-          (isMotherEntity && !_isMotherActive) || 
-          (isKidsEntity && !_isKidsActive)) {
-        continue;
-      }
 
       if (e.isLocked && e.manualAmount != null) {
         usedBudget += e.manualAmount!;
@@ -1918,24 +1997,15 @@ class BudgetProvider with ChangeNotifier {
       double calculatedAmount = 0;
       
       bool isAnchor = (e.allocationRatio == null || e.allocationRatio == 0);
-      bool isFatherEntity = e.parentCategory == 'אבא' || e.name.contains('אבא') || e.name.contains('אישי');
-      bool isMotherEntity = e.parentCategory == 'אמא' || e.name.contains('אמא');
-      bool isKidsEntity = e.parentCategory == 'ילדים - משתנות';
 
-      if ((isFatherEntity && !_isFatherActive) || 
-          (isMotherEntity && !_isMotherActive) || 
-          (isKidsEntity && !_isKidsActive)) {
-        calculatedAmount = 0; 
+      if (e.isLocked && e.manualAmount != null) {
+        calculatedAmount = e.manualAmount!;
+      } else if (isAnchor) {
+        calculatedAmount = e.originalAmount;
       } else {
-        if (e.isLocked && e.manualAmount != null) {
-          calculatedAmount = e.manualAmount!;
-        } else if (isAnchor) {
-          calculatedAmount = e.originalAmount;
-        } else {
-          if (totalActiveRatios > 0) {
-            double ratioShare = (e.allocationRatio!) / totalActiveRatios;
-            calculatedAmount = remainingBudget * ratioShare;
-          }
+        if (totalActiveRatios > 0) {
+          double ratioShare = (e.allocationRatio!) / totalActiveRatios;
+          calculatedAmount = remainingBudget * ratioShare;
         }
       }
 
@@ -2715,9 +2785,71 @@ class AiExportService {
 }
 
 
+FILE: C:\Projects\dohaham\lib\services\premium_service.dart
+-----------------------
+import 'package:flutter/material.dart';
+
+class PremiumService {
+  static bool _hasSeenFoundersGift = false;
+
+  /// עוטף פעולות הדורשות מנוי פרימיום. 
+  /// כרגע, מקפיץ הודעת "מתנת מייסדים" בפעם הראשונה ומאפשר גישה חינמית.
+  static void requirePremium(BuildContext context, VoidCallback onGranted) {
+    if (_hasSeenFoundersGift) {
+      onGranted();
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.workspace_premium, color: Colors.amber, size: 56),
+            SizedBox(height: 16),
+            Text(
+              "פיצ'ר פרימיום פתוח! 👑",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 20),
+            ),
+          ],
+        ),
+        content: const Text(
+          "זיהינו שאתה מהמשתמשים הראשונים של דוחכם.\n\nלאות תודה, כל פיצ'רי הפרימיום (מנוע החירות, מכונת הזמן לחובות וסטטיסטיקות שכר) פתוחים עבורך כרגע בחינם לחלוטין. תהנה!",
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.blueGrey, fontSize: 15, height: 1.4),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00A3FF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              elevation: 2,
+            ),
+            onPressed: () {
+              _hasSeenFoundersGift = true;
+              Navigator.pop(ctx);
+              onGranted();
+            },
+            child: const Text("תודה, המשך", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
 FILE: C:\Projects\dohaham\lib\services\seed_service.dart
 -----------------------
-// 🔒 STATUS: EDITED (Sanitized Future Categories - Generic Defaults)
+// 🔒 STATUS: EDITED (Implemented Smart Family Naming Convention: Single/Married/Parents based on Gender)
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
 import '../data/shopping_model.dart';
@@ -2725,6 +2857,7 @@ import '../data/shopping_model.dart';
 class SeedService {
   
   static Future<void> generateInitialData({
+    required String gender, // הוספנו זיהוי מגדר
     required String maritalStatus,
     required String vehicleType,
     required String housingType,
@@ -2740,12 +2873,35 @@ class SeedService {
       return; 
     }
 
+    // --- לוגיקת קביעת שמות הישויות (State Machine) ---
+    String parent1Name = '';
+    String parent2Name = '';
+
+    if (maritalStatus == 'single') {
+      if (childrenCount == 0) {
+        parent1Name = 'אישי';
+      } else {
+        parent1Name = gender == 'male' ? 'אבא' : 'אמא';
+      }
+    } else { // married
+      if (childrenCount == 0) {
+        parent1Name = 'בעל';
+        parent2Name = 'אישה';
+      } else {
+        parent1Name = 'אבא';
+        parent2Name = 'אמא';
+      }
+    }
+
     final List<Expense> initialExpenses = [
       
       // === הכנסות ===
-      _create(maritalStatus == 'single' ? 'משכורת אישית' : 'הכנסת בעל', 'הכנסות', 'הכנסות', income1 > 0 ? income1 : 10000), 
+      _create(
+        maritalStatus == 'single' ? (parent1Name == 'אישי' ? 'משכורת אישית' : 'הכנסת $parent1Name') : 'הכנסת $parent1Name', 
+        'הכנסות', 'הכנסות', income1 > 0 ? income1 : 10000
+      ), 
       if (maritalStatus == 'married') 
-        _create('הכנסת אישה', 'הכנסות', 'הכנסות', income2 > 0 ? income2 : 8000),
+        _create('הכנסת $parent2Name', 'הכנסות', 'הכנסות', income2 > 0 ? income2 : 8000),
       if (childrenCount > 0)
         _create('קצבת ילדים', 'הכנסות', 'הכנסות', childrenCount * 170.0),
       
@@ -2791,7 +2947,7 @@ class SeedService {
       _create('סלולר ואינטרנט', 'קבועות', 'מדיה', 150),
       _create('מנויים דיגיטליים', 'קבועות', 'מדיה', 0),
       
-      // ילדים - קבועות (רק אם יש ילדים)
+      // ילדים - קבועות
       if (childrenCount > 0) ...[
         _create('שכר לימוד', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true),
         _create('ציוד בית ספר', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
@@ -2800,7 +2956,7 @@ class SeedService {
         _create('קייטנות', 'קבועות', 'ילדים - קבועות', 0, isPerChild: true, isSinking: true, frequency: Frequency.YEARLY),
       ],
       
-      // חגים ואירועים (לפי תלות בדת)
+      // חגים ואירועים
       if (includeReligion) ...[
         _create('ראש השנה', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
         _create('יום כיפור', 'קבועות', 'חגים', 500, isSinking: true, frequency: Frequency.YEARLY),
@@ -2828,32 +2984,34 @@ class SeedService {
 
       // === משתנות (חלוקה דינמית לפי משפחה) ===
       if (maritalStatus == 'single' && childrenCount > 0) ...[
-        _create('בגדים אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.28, isSinking: true),
-        _create('בילויים אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.33, isSinking: true),
-        _create('טיפוח אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.15, isSinking: true),
+        _create('בגדים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.28, isSinking: true),
+        _create('בילויים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.33, isSinking: true),
+        if (gender == 'female') 
+          _create('טיפוח $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.15, isSinking: true),
         _create('בגדים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
         _create('בילויים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
       ] else if (maritalStatus == 'married' && childrenCount == 0) ...[
-        _create('בגדים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.25, isSinking: true),
-        _create('בילויים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.20, isSinking: true),
-        _create('בגדים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.15, isSinking: true),
-        _create('בילויים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.25, isSinking: true),
-        _create('טיפוח אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.15, isSinking: true),
+        _create('בגדים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.25, isSinking: true),
+        _create('בילויים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.20, isSinking: true),
+        _create('בגדים $parent2Name', 'משתנות', parent2Name, 0, allocationRatio: 0.15, isSinking: true),
+        _create('בילויים $parent2Name', 'משתנות', parent2Name, 0, allocationRatio: 0.25, isSinking: true),
+        _create('טיפוח $parent2Name', 'משתנות', parent2Name, 0, allocationRatio: 0.15, isSinking: true),
       ] else if (maritalStatus == 'single' && childrenCount == 0) ...[
-        _create('בגדים אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.40, isSinking: true),
-        _create('בילויים אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.45, isSinking: true),
-        _create('טיפוח אישי', 'משתנות', 'אישי', 0, allocationRatio: 0.15, isSinking: true),
+        _create('בגדים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: gender == 'female' ? 0.40 : 0.45, isSinking: true),
+        _create('בילויים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: gender == 'female' ? 0.45 : 0.55, isSinking: true),
+        if (gender == 'female') 
+          _create('טיפוח $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.15, isSinking: true),
       ] else ...[
-        _create('בגדים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.19, isSinking: true),
-        _create('בילויים אבא', 'משתנות', 'אבא', 0, allocationRatio: 0.14, isSinking: true),
-        _create('בגדים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.09, isSinking: true),
-        _create('בילויים אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.19, isSinking: true),
-        _create('טיפוח אמא', 'משתנות', 'אמא', 0, allocationRatio: 0.15, isSinking: true),
+        _create('בגדים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.19, isSinking: true),
+        _create('בילויים $parent1Name', 'משתנות', parent1Name, 0, allocationRatio: 0.14, isSinking: true),
+        _create('בגדים $parent2Name', 'משתנות', parent2Name, 0, allocationRatio: 0.09, isSinking: true),
+        _create('בילויים $parent2Name', 'משתנות', parent2Name, 0, allocationRatio: 0.19, isSinking: true),
+        _create('טיפוח $parent2Name', 'משתנות', parent2Name, 0, allocationRatio: 0.15, isSinking: true),
         _create('בגדים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
         _create('בילויים ילדים', 'משתנות', 'ילדים - משתנות', 0, isPerChild: true, allocationRatio: 0.12, isSinking: true),
       ],
       
-      // === עתידיות (נוקה והפך לגנרי) ===
+      // === עתידיות ===
       _create('רכישות גדולות (רכב/נכס)', 'עתידיות', 'רכישות גדולות', 0, isSinking: true, allocationRatio: 0.67),
       _create('מוצרי חשמל וריהוט', 'עתידיות', 'רכישות קטנות', 0, isSinking: true, allocationRatio: 0.07),
       _create('אירועים משפחתיים (בר מצווה/חתונה)', 'עתידיות', 'הפקת אירועים', 0, isSinking: true, allocationRatio: 0.11),
@@ -3187,7 +3345,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\category_drilldown_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Added Contextual Onboarding for Variable Expenses and Sinking Funds, Fixed Linter Warning)
+// 🔒 STATUS: EDITED (Fully Synced UI with State Machine Naming Convention)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -3285,31 +3443,73 @@ class CategoryDrilldownScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterChip(String label, bool isActive, Function(bool) onChanged) {
-    return FilterChip(
-      label: Text(label),
-      selected: isActive,
-      onSelected: onChanged,
-      selectedColor: Colors.green[600],
-      checkmarkColor: Colors.white,
-      backgroundColor: Colors.grey[300],
-      labelStyle: TextStyle(
-        color: isActive ? Colors.white : Colors.black87, 
-        fontWeight: FontWeight.bold,
-        fontSize: 14,
+  void _showEntertainmentTrafficLightEditor(BuildContext context, BudgetProvider provider) {
+    final warningCtrl = TextEditingController(text: provider.entWarningLimit.toStringAsFixed(0));
+    final successCtrl = TextEditingController(text: provider.entSuccessLimit.toStringAsFixed(0));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('כיול רמזור בילויים', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              IconButton(
+                icon: const Icon(Icons.refresh, color: Colors.blue),
+                tooltip: 'חזור לברירת מחדל אוטומטית',
+                onPressed: () async {
+                  await provider.resetEntertainmentLimits();
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+              )
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('קבע מאיזה סכום להציג התראות בקופת הבילויים שלך.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: successCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'סכום להצגת שפע (ירוק)', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: warningCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'סכום לאזהרה (כתום)', border: OutlineInputBorder()),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+            ElevatedButton(
+              onPressed: () async {
+                final warning = double.tryParse(warningCtrl.text);
+                final success = double.tryParse(successCtrl.text);
+                if (warning != null && success != null) {
+                  await provider.saveEntertainmentLimits(warning, success);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                }
+              },
+              child: const Text('שמור'),
+            ),
+          ],
+        ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
 
-  Widget _buildParentsEntertainmentCard(BudgetProvider provider) {
+  Widget _buildParentsEntertainmentCard(BuildContext context, BudgetProvider provider) {
     double totalBalance = 0;
     bool hasEntertainment = false;
     
     for (var e in provider.expenses) {
-      if ((e.name == 'בילויים אבא' && provider.isFatherActive) || 
-          (e.name == 'בילויים אמא' && provider.isMotherActive)) {
+      if (e.name == 'בילויים אבא' || e.name == 'בילויים אמא' || e.name == 'בילויים אישי' || e.name == 'בילויים בעל' || e.name == 'בילויים אישה') {
         totalBalance += (e.currentBalance ?? 0);
         hasEntertainment = true;
       }
@@ -3321,16 +3521,22 @@ class CategoryDrilldownScreen extends StatelessWidget {
 
     Color color;
     String message;
-    if (totalBalance > 500) {
+
+    final limitGreen = provider.entSuccessLimit;
+    final limitOrange = provider.entWarningLimit;
+
+    if (totalBalance >= limitGreen) {
       color = Colors.green;
       message = 'יש מספיק תקציב! צאו לבלות וליהנות החודש.';
-    } else if (totalBalance > 100) {
+    } else if (totalBalance >= limitOrange) {
       color = Colors.orange;
       message = 'שימו לב, התקציב לבילויים מוגבל. לבלות בזהירות.';
     } else {
       color = Colors.red;
       message = 'אין מספיק כסף לבילויים החודש. עדיף להישאר בבית ולהתפנק!';
     }
+    
+    String boxTitle = provider.maritalStatus == 'single' ? 'קופת הבילויים שלך' : 'קופת הבילויים שלכם';
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -3341,6 +3547,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(backgroundColor: color.withValues(alpha: 0.2), child: Icon(Icons.local_activity, color: color)),
           const SizedBox(width: 16),
@@ -3348,11 +3555,17 @@ class CategoryDrilldownScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('קופת הבילויים של ההורים: ₪${totalBalance.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color == Colors.orange ? Colors.orange[900] : color)),
+                Text('$boxTitle: ₪${totalBalance.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color == Colors.orange ? Colors.orange[900] : color)),
                 const SizedBox(height: 4),
                 Text(message, style: TextStyle(fontSize: 12, color: Colors.blueGrey[800], fontWeight: FontWeight.w500)),
               ],
             ),
+          ),
+          IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: const Icon(Icons.edit, size: 16, color: Colors.blueGrey),
+            onPressed: () => _showEntertainmentTrafficLightEditor(context, provider),
           )
         ]
       )
@@ -3382,16 +3595,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
 
           final Map<String, List<Expense>> grouped = {};
           for (var e in categoryExpenses) {
-            bool isFatherEntity = e.parentCategory == 'אבא' || e.name.contains('אבא') || e.name.contains('אישי');
-            bool isMotherEntity = e.parentCategory == 'אמא' || e.name.contains('אמא');
-            bool isKidsEntity = e.parentCategory == 'ילדים - משתנות';
-
-            if (mainCategory == 'משתנות') {
-              if (isFatherEntity && !provider.isFatherActive) { continue; }
-              if (isMotherEntity && !provider.isMotherActive) { continue; }
-              if (isKidsEntity && !provider.isKidsActive) { continue; }
-            }
-
             final pCat = e.parentCategory;
             if (!grouped.containsKey(pCat)) { grouped[pCat] = []; }
             grouped[pCat]!.add(e);
@@ -3435,34 +3638,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey[300]!, width: 1.5),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 4))
-                    ]
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('ניהול ישויות (התקציב ינורמל אוטומטית):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blueGrey)),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildFilterChip('אבא', provider.isFatherActive, (v) => provider.toggleEntityActive('father', v)),
-                          _buildFilterChip('אמא', provider.isMotherActive, (v) => provider.toggleEntityActive('mother', v)),
-                          if (provider.childCount > 0)
-                            _buildFilterChip('ילדים', provider.isKidsActive, (v) => provider.toggleEntityActive('kids', v)),
-                        ],
-                      )
-                    ]
-                  )
-                ),
                 if (provider.variableDeficit > 0)
                   Container(
                     width: double.infinity,
@@ -3483,7 +3658,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                _buildParentsEntertainmentCard(provider),
+                _buildParentsEntertainmentCard(context, provider),
               ],
                 
               Expanded(
@@ -3731,6 +3906,69 @@ class SpecificExpensesScreen extends StatelessWidget {
     );
   }
 
+  void _showAddVehicleExpenseDialog(BuildContext context, BudgetProvider provider, String vehicleName) {
+    final nameController = TextEditingController();
+    final amountController = TextEditingController();
+    bool isSinking = true;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => Theme(
+          data: ThemeData.light(),
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text('הוספת סעיף ל-$vehicleName', style: const TextStyle(fontSize: 18)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הסעיף (למשל: שטיפה)')),
+                const SizedBox(height: 10),
+                TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום חודשי משוער', suffixText: '₪')),
+                const Divider(),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('דלק וליסינג סמנו כלא צובר', style: TextStyle(fontSize: 11)),
+                  value: isSinking,
+                  activeThumbColor: Colors.green,
+                  onChanged: (val) { setDialogState(() { isSinking = val; }); },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+              ElevatedButton(
+                onPressed: () async {
+                  final amount = double.tryParse(amountController.text) ?? 0.0;
+                  if (nameController.text.isNotEmpty) {
+                    final newExpense = Expense(
+                      name: '${nameController.text.trim()} ($vehicleName)',
+                      category: 'קבועות',
+                      parentCategory: 'רכב',
+                      monthlyAmount: amount,
+                      frequency: Frequency.MONTHLY,
+                      isLocked: true, 
+                      isPerChild: false,
+                      date: DateTime.now().toIso8601String(),
+                      isDynamicSalary: false, 
+                      isSinking: isSinking,
+                      isCustom: true, 
+                      allocationRatio: 0.0,
+                    );
+                    await provider.addExpense(newExpense);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  }
+                },
+                child: const Text('הוסף'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildKidsSections(BuildContext context, BudgetProvider provider, List<Expense> currentExpenses) {
     Map<String, List<Expense>> kids = {};
     for (var e in currentExpenses) {
@@ -3786,7 +4024,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                     ]
                   )
                 ),
-                ...items.map((e) => _buildExpenseTile(context, provider, e, childName: childName))
+                ...items.map((e) => _buildExpenseTile(context, provider, e, childName: childName, isUnified: true))
               ]
             ),
           )
@@ -3809,8 +4047,10 @@ class SpecificExpensesScreen extends StatelessWidget {
       children: vehicles.entries.map((entry) {
         final vehicleName = entry.key;
         final items = entry.value;
+        
         double vehicleTotal = items.fold(0.0, (sum, e) => sum + e.monthlyAmount);
         double vehicleBalance = items.where((e)=>e.isSinking).fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
+        double vehicleSinkingTotal = items.where((e)=>e.isSinking).fold(0.0, (sum, e) => sum + e.monthlyAmount);
 
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
@@ -3825,38 +4065,64 @@ class SpecificExpensesScreen extends StatelessWidget {
               collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               leading: CircleAvatar(backgroundColor: Colors.blue[50], child: Icon(Icons.directions_car, color: Colors.blue[400])),
               title: Text(vehicleName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black)),
-              subtitle: Text('צבור: ₪${vehicleBalance.toStringAsFixed(0)} | עלות חודשית: ₪${vehicleTotal.toStringAsFixed(0)}', style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('צבור בקופה: ₪${vehicleBalance.toStringAsFixed(0)}', style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text('הפרשה חודשית לקופה: ₪${vehicleSinkingTotal.toStringAsFixed(0)} | עלות חודשית כוללת: ₪${vehicleTotal.toStringAsFixed(0)}', style: const TextStyle(color: Colors.blueGrey, fontSize: 11)),
+                ],
+              ),
               children: [
                 Container(
                   color: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(icon: const Icon(Icons.edit, color: Colors.blueGrey), tooltip: 'ערוך שם רכב', onPressed: () => _showRenameVehicle(context, provider, items, vehicleName)),
-                      IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), tooltip: 'מחק רכב זה', onPressed: () async {
-                        bool? confirm = await showDialog(
-                          context: context,
-                          builder: (c) => Theme(
-                            data: ThemeData.light(),
-                            child: AlertDialog(
-                              title: const Text('מחיקת רכב'),
-                              content: Text('האם למחוק את כל ההוצאות המשויכות לרכב "$vehicleName"?'),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('ביטול')),
-                                ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(c, true), child: const Text('מחק רכב', style: TextStyle(color: Colors.white))),
-                              ]
-                            ),
-                          )
-                        );
-                        if (confirm == true) {
-                          for (var e in items) { if (e.id != null) await provider.deleteExpense(e.id!); }
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green.withValues(alpha: 0.1), foregroundColor: Colors.green, elevation: 0),
+                        icon: const Icon(Icons.account_balance_wallet, size: 18),
+                        label: const Text('ניהול קופה', style: TextStyle(fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          final sinkingItems = items.where((e) => e.isSinking).toList();
+                          showModalBottomSheet(
+                            context: context, isScrollControlled: true,
+                            backgroundColor: const Color(0xFF121212),
+                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                            builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: 'רכב: $vehicleName', expenses: sinkingItems),
+                          );
                         }
-                      })
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(icon: const Icon(Icons.add_circle_outline, color: Colors.blue), tooltip: 'הוסף סעיף לרכב', onPressed: () => _showAddVehicleExpenseDialog(context, provider, vehicleName)),
+                          IconButton(icon: const Icon(Icons.edit, color: Colors.blueGrey), tooltip: 'ערוך שם רכב', onPressed: () => _showRenameVehicle(context, provider, items, vehicleName)),
+                          IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), tooltip: 'מחק רכב זה', onPressed: () async {
+                            bool? confirm = await showDialog(
+                              context: context,
+                              builder: (c) => Theme(
+                                data: ThemeData.light(),
+                                child: AlertDialog(
+                                  title: const Text('מחיקת רכב'),
+                                  content: Text('האם למחוק את כל ההוצאות המשויכות לרכב "$vehicleName"?'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('ביטול')),
+                                    ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(c, true), child: const Text('מחק רכב', style: TextStyle(color: Colors.white))),
+                                  ]
+                                ),
+                              )
+                            );
+                            if (confirm == true) {
+                              for (var e in items) { if (e.id != null) await provider.deleteExpense(e.id!); }
+                            }
+                          })
+                        ],
+                      )
                     ]
                   )
                 ),
-                ...items.map((e) => _buildExpenseTile(context, provider, e, isVehicle: true))
+                ...items.map((e) => _buildExpenseTile(context, provider, e, isVehicle: true, isUnified: true))
               ]
             ),
           )
@@ -3865,7 +4131,7 @@ class SpecificExpensesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildExpenseTile(BuildContext context, BudgetProvider provider, Expense expense, {bool isVehicle = false, String? childName}) {
+  Widget _buildExpenseTile(BuildContext context, BudgetProvider provider, Expense expense, {bool isVehicle = false, String? childName, bool isUnified = false}) {
     final loc = AppLocalizations.of(context);
     final multiplier = expense.isPerChild ? provider.childCount : 1;
     final displayAmount = expense.monthlyAmount * multiplier;
@@ -3891,7 +4157,10 @@ class SpecificExpensesScreen extends StatelessWidget {
     }
 
     String cleanName = expense.name;
+    String? vName;
     if (isVehicle) {
+      final match = RegExp(r'\((.*?)\)').firstMatch(expense.name);
+      vName = match != null ? match.group(1) : 'כללי';
       cleanName = cleanName.replaceAll(RegExp(r'\s*\(.*?\)'), '').trim();
     }
     if (childName != null) {
@@ -3908,10 +4177,18 @@ class SpecificExpensesScreen extends StatelessWidget {
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (expense.isPerChild)
-            Text('₪${expense.monthlyAmount.toStringAsFixed(0)} ליחידה × ${provider.childCount} ילדים', style: TextStyle(fontSize: 12, color: Colors.orange[900], fontWeight: FontWeight.w600))
-          else if ((isVariable || isFuture) && !expense.isLocked && !isAnchor)
+          if (expense.isPerChild) ...[
+            Text('₪${expense.monthlyAmount.toStringAsFixed(0)} לחודש × ${provider.childCount} ילדים', style: TextStyle(fontSize: 12, color: Colors.orange[900], fontWeight: FontWeight.w600)),
+            const SizedBox(height: 2),
+            Text('עלות שנתית לילד יחיד: ₪${(expense.monthlyAmount * 12).toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: Colors.purple[700], fontWeight: FontWeight.bold)),
+          ] else if (!expense.isPerChild && expense.parentCategory == 'ילדים - קבועות' && provider.childCount > 0) ...[
+            const SizedBox(height: 4),
+            Text('עלות חודשית לילד יחיד: ₪${(displayAmount / provider.childCount).toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: Colors.purple[700], fontWeight: FontWeight.w600)),
+            const SizedBox(height: 2),
+            Text('עלות שנתית לילד יחיד: ₪${((displayAmount / provider.childCount) * 12).toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: Colors.purple[700], fontWeight: FontWeight.bold)),
+          ] else if ((isVariable || isFuture) && !expense.isLocked && !isAnchor) ...[
             Text('${((expense.allocationRatio ?? 0) * 100).toStringAsFixed(1)}% מהיתרה', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
           
           if (isIncome && expense.isDynamicSalary)
             Padding(
@@ -3919,12 +4196,7 @@ class SpecificExpensesScreen extends StatelessWidget {
               child: Text('מחושב אוטומטית ע"פ ממוצע שכר', style: TextStyle(fontSize: 11, color: Colors.blue[700], fontWeight: FontWeight.bold)),
             ),
 
-          if (!expense.isPerChild && expense.parentCategory == 'ילדים - קבועות' && provider.childCount > 0) ...[
-            const SizedBox(height: 4),
-            Text('עלות לילד יחיד: ₪${(displayAmount / provider.childCount).toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: Colors.purple[700], fontWeight: FontWeight.w600)),
-          ],
-
-          if (expense.isSinking && !isFuture && parentCategory != 'רכב' && childName == null) ...[
+          if (expense.isSinking && !isFuture && !isUnified && childName == null) ...[
             const SizedBox(height: 4),
             Text('קופה נצברת: ₪${(expense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)),
           ],
@@ -3953,7 +4225,7 @@ class SpecificExpensesScreen extends StatelessWidget {
           ]),
           const SizedBox(width: 12),
           
-          if (expense.isSinking && parentCategory != 'רכב' && childName == null)
+          if (expense.isSinking && !isUnified && childName == null)
             IconButton(
               icon: const Icon(Icons.account_balance_wallet_outlined, size: 20, color: Colors.green),
               tooltip: 'ניהול קופה ומשיכות',
@@ -3975,7 +4247,7 @@ class SpecificExpensesScreen extends StatelessWidget {
               } else if (isVariable && (expense.allocationRatio != null || isAnchor)) {
                 _showSmartEditDialog(context, provider, expense);
               } else {
-                _showEditDialog(context, provider, expense);
+                _showEditDialog(context, provider, expense, isVehicle: isVehicle, vehicleName: vName);
               }
             },
           ),
@@ -4143,7 +4415,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                       itemCount: currentExpenses.length,
                       separatorBuilder: (ctx, i) => const Divider(),
                       itemBuilder: (context, index) {
-                        return _buildExpenseTile(context, provider, currentExpenses[index]);
+                        return _buildExpenseTile(context, provider, currentExpenses[index], isUnified: isUnified);
                       },
                   )
                 ),
@@ -4227,7 +4499,7 @@ class SpecificExpensesScreen extends StatelessWidget {
     );
   }
 
-  void _showEditDialog(BuildContext context, BudgetProvider provider, Expense expense) {
+  void _showEditDialog(BuildContext context, BudgetProvider provider, Expense expense, {bool isVehicle = false, String? vehicleName}) {
     double factor = 1.0;
     if (expense.frequency == Frequency.YEARLY) { factor = 12.0; }
     else if (expense.frequency == Frequency.BI_MONTHLY) { factor = 2.0; }
@@ -4235,7 +4507,12 @@ class SpecificExpensesScreen extends StatelessWidget {
     int multiplier = expense.isPerChild ? provider.childCount : 1;
     if (multiplier < 1) { multiplier = 1; }
     
-    final nameController = TextEditingController(text: expense.name); 
+    String cleanName = expense.name;
+    if (isVehicle && vehicleName != null) {
+      cleanName = cleanName.replaceAll('($vehicleName)', '').trim();
+    }
+
+    final nameController = TextEditingController(text: cleanName); 
     final amountController = TextEditingController();
     Frequency selectedFreq = expense.frequency;
     bool isSinking = expense.isSinking;
@@ -4343,7 +4620,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                 ElevatedButton(
                   onPressed: () async {
                     final val = double.tryParse(amountController.text);
-                    final finalName = nameController.text.trim().isNotEmpty ? nameController.text.trim() : expense.name;
+                    final rawName = nameController.text.trim().isNotEmpty ? nameController.text.trim() : cleanName;
+                    final finalName = (isVehicle && vehicleName != null) ? '$rawName ($vehicleName)' : rawName;
                     
                     if (val != null || (isIncome && isDynamic)) {
                       double monthly = val ?? 0;
@@ -4539,7 +4817,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                     double balance = double.tryParse(balanceController.text) ?? 0;
                     if (months != null && months > 0) {
                       newManualAmount = (target - balance) / months;
-                      if (newManualAmount < 0) { newManualAmount = 0; } // <-- הוסר סימן הקריאה המיותר
+                      if (newManualAmount < 0) { newManualAmount = 0; } 
                       newManualAmount = newManualAmount / multiplier;
                     }
                   }
@@ -4565,9 +4843,6 @@ class SpecificExpensesScreen extends StatelessWidget {
   }
 }
 
-// =========================================================================
-// פאנל ניהול קופות מאוחדות
-// =========================================================================
 class _UnifiedFundBottomSheet extends StatefulWidget {
   final BudgetProvider provider;
   final String parentCategory;
@@ -4681,7 +4956,6 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
         const SizedBox(height: 20),
         const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
         const SizedBox(height: 4),
-        // CONTEXTUAL ONBOARDING: Withdrawal Explanation
         const Align(alignment: Alignment.centerRight, child: Text("הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף.", style: TextStyle(fontSize: 12, color: Colors.white54))),
         const SizedBox(height: 12),
         Row(
@@ -4772,7 +5046,6 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
   }
 }
 
-// --- דיאלוג איחוד כללי לעריכת יתרות ---
 class _EditUnifiedBalancesDialog extends StatefulWidget {
   final List<Expense> expenses;
   final String parentCategory;
@@ -4839,7 +5112,6 @@ class _EditUnifiedBalancesDialogState extends State<_EditUnifiedBalancesDialog> 
   }
 }
 
-// --- דיאלוג יחידני ---
 class _EditIndividualBalanceDialog extends StatefulWidget {
   final Expense expense;
   const _EditIndividualBalanceDialog({required this.expense});
@@ -4890,7 +5162,6 @@ class _EditIndividualBalanceDialogState extends State<_EditIndividualBalanceDial
   }
 }
 
-// --- ניהול משיכות ויתרה מקופה צוברת רגילה ---
 class _SinkingFundBottomSheet extends StatefulWidget {
   final BudgetProvider provider;
   final Expense expense;
@@ -4973,7 +5244,6 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
             
             const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
             const SizedBox(height: 4),
-            // CONTEXTUAL ONBOARDING: Withdrawal Explanation
             const Align(alignment: Alignment.centerRight, child: Text("הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף.", style: TextStyle(fontSize: 12, color: Colors.white54))),
             const SizedBox(height: 12),
             Row(
@@ -5671,12 +5941,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\main_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed light-on-light text visibility issues in dialogs by forcing dark text styles)
+// 🔒 STATUS: EDITED (Removed Unused Imports)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../providers/debt_provider.dart';
 import '../../utils/app_localizations.dart';
+import '../../services/premium_service.dart';
 import '../widgets/global_header.dart'; 
 import 'pnl_screen.dart'; 
 import 'shopping_screen.dart';
@@ -5704,7 +5975,6 @@ class _MainScreenState extends State<MainScreen> {
         await context.read<DebtProvider>().loadDebts();
       }
       
-      // הקפצת הנחיתה הרכה אם הגענו מהאשף
       if (widget.showWelcomeDialog && mounted) {
         _showSoftLandingDialog(context);
       }
@@ -5880,9 +6150,9 @@ class _MainScreenState extends State<MainScreen> {
                           style: const TextStyle(color: Colors.black87, fontSize: 16),
                           icon: const Icon(Icons.arrow_drop_down, color: Colors.black54),
                           items: const [
-                            DropdownMenuItem(value: 1, child: Text('שנתית (1)')),
-                            DropdownMenuItem(value: 12, child: Text('חודשית (12)')),
-                            DropdownMenuItem(value: 52, child: Text('שבועית (52)')),
+                            DropdownMenuItem<int>(value: 1, child: Text('שנתית (1)')),
+                            DropdownMenuItem<int>(value: 12, child: Text('חודשית (12)')),
+                            DropdownMenuItem<int>(value: 52, child: Text('שבועית (52)')),
                           ],
                           onChanged: (val) {
                             if (val != null) {
@@ -5924,9 +6194,8 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _showFamilyDrilldown(BuildContext context, BudgetProvider budget, int? targetYear) {
-    if (targetYear == null) {
-      return;
-    }
+    if (targetYear == null) return;
+    
     showDialog(
       context: context,
       builder: (ctx) {
@@ -5968,7 +6237,7 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildQuickAction(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildQuickAction(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap, {bool isPremium = false}) {
     return Expanded(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -5985,10 +6254,19 @@ class _MainScreenState extends State<MainScreen> {
             child: Icon(icon, size: 28),
           ),
           const SizedBox(height: 10),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+              if (isPremium) ...[
+                const SizedBox(width: 4),
+                const Icon(Icons.workspace_premium, color: Colors.amber, size: 14),
+              ]
+            ],
           ),
         ],
       ),
@@ -6125,7 +6403,12 @@ class _MainScreenState extends State<MainScreen> {
                       'ממוצע שכר', 
                       Icons.insights, 
                       Colors.orange, 
-                      () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SalaryEngineScreen()))
+                      () {
+                        PremiumService.requirePremium(context, () {
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const SalaryEngineScreen()));
+                        });
+                      },
+                      isPremium: true,
                     ),
                     _buildQuickAction(
                       context, 
@@ -6173,7 +6456,7 @@ class _MainScreenState extends State<MainScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\onboarding_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed Dropdown deprecations & sync with new SeedService)
+// 🔒 STATUS: EDITED (Fixed SegmentedButton UI, Marital Status & Gender DB Saving, and Auto Parent/Child Logic)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -6200,8 +6483,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // --- שלב 2: משפחה ---
   bool _hasKids = false;
   final List<Map<String, TextEditingController>> _adults = [
-    {'name': TextEditingController(text: 'אבא'), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())},
-    {'name': TextEditingController(text: 'אמא'), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())}
+    {'name': TextEditingController(text: ''), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())},
+    {'name': TextEditingController(text: ''), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())}
   ];
   final List<Map<String, TextEditingController>> _children = [];
 
@@ -6231,13 +6514,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _maritalStatus = status;
       if (status == 'single') {
         if (_adults.length > 1) { _adults.removeRange(1, _adults.length); }
-        _adults[0]['name']!.text = 'אישי';
       } else {
         if (_adults.length < 2) {
-          _adults.add({'name': TextEditingController(text: 'אמא'), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())});
+          _adults.add({'name': TextEditingController(text: ''), 'year': TextEditingController(text: (DateTime.now().year - 30).toString())});
         }
-        _adults[0]['name']!.text = 'אבא';
-        _adults[1]['name']!.text = 'אמא';
       }
     });
   }
@@ -6258,6 +6538,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final income2 = _maritalStatus == 'married' ? (double.tryParse(_income2Ctrl.text) ?? 0.0) : 0.0;
 
     await SeedService.generateInitialData(
+      gender: _gender, 
       maritalStatus: _maritalStatus, 
       vehicleType: _vehicleType,
       housingType: _housingType,    
@@ -6271,6 +6552,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     final budget = Provider.of<BudgetProvider>(context, listen: false);
     
+    // שמירת הסטטוס המשפחתי כדי שלא יאופס למצב ברירת מחדל
+    await DatabaseHelper.instance.saveSetting('marital_status', _maritalStatus == 'single' ? 1.0 : 2.0);
+    // שמירת המגדר (כדי שיזכור גם אחרי ריסטארט)
+    await DatabaseHelper.instance.saveSetting('gender', _gender == 'male' ? 1.0 : 2.0);
+    
+    // שמירת מבוגרים (תמיד מוגדרים כהורים/בוגרים)
     for (var adult in _adults) {
       final name = adult['name']!.text.trim();
       if (name.isNotEmpty) {
@@ -6278,6 +6565,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
     }
     
+    // שמירת ילדים
     if (_hasKids) {
       for (var child in _children) {
         final name = child['name']!.text.trim();
@@ -6308,6 +6596,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     String welcomeText = isMale ? 'ברוך הבא לדוחכם' : 'ברוכה הבאה לדוחכם';
     String continueText = isMale ? 'המשך' : 'המשכי';
     String finishText = isMale ? 'מוכן! צור לי תקציב' : 'מוכנה! צור לי תקציב';
+
+    // עיצוב קבוע לכפתורי הבחירה כדי שהטקסט לא יעלם
+    final segmentedStyle = SegmentedButton.styleFrom(
+      selectedForegroundColor: Colors.blue[900],
+      selectedBackgroundColor: Colors.blue[100],
+      foregroundColor: Colors.grey[400],
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
@@ -6382,6 +6677,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const Text('איך תעדיף/י שאפנה אליך?', style: TextStyle(color: Colors.grey)),
                     const SizedBox(height: 12),
                     SegmentedButton<String>(
+                      style: segmentedStyle,
                       segments: const [
                         ButtonSegment(value: 'male', label: Text('זכר')),
                         ButtonSegment(value: 'female', label: Text('נקבה')),
@@ -6393,6 +6689,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     Text(isMale ? 'מה הסטטוס האישי שלך?' : 'מה הסטטוס האישי שלך?', style: const TextStyle(color: Colors.grey)),
                     const SizedBox(height: 12),
                     SegmentedButton<String>(
+                      style: segmentedStyle,
                       segments: const [
                         ButtonSegment(value: 'single', icon: Icon(Icons.person), label: Text('רווק/ה')),
                         ButtonSegment(value: 'married', icon: Icon(Icons.people), label: Text('נשוי/אה')),
@@ -6411,9 +6708,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(isMale ? 'האם יש לך ילדים?' : 'האם יש לך ילדים?', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                    const Text('פרטי הבוגרים במשפחה', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                    const SizedBox(height: 12),
+                    _buildFamilyRow(
+                      _adults[0]['name']!, 
+                      _adults[0]['year']!, 
+                      'השם שלך', 
+                      showDelete: false
+                    ),
+                    if (_maritalStatus == 'married') ...[
+                      const SizedBox(height: 12),
+                      _buildFamilyRow(
+                        _adults[1]['name']!, 
+                        _adults[1]['year']!, 
+                        'שם בן/בת הזוג', 
+                        showDelete: false
+                      ),
+                    ],
+                    const SizedBox(height: 30),
+                    
+                    Text(isMale ? 'האם יש לכם ילדים?' : 'האם יש לכם ילדים?', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
                     const SizedBox(height: 12),
                     SegmentedButton<bool>(
+                      style: segmentedStyle,
                       segments: const [
                         ButtonSegment(value: false, label: Text('לא')),
                         ButtonSegment(value: true, label: Text('כן')),
@@ -6445,7 +6762,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       OutlinedButton.icon(
                         onPressed: _addChildField,
                         icon: const Icon(Icons.add),
-                        label: const Text('הוסף ילד'),
+                        label: const Text('הוסף ילד/ה'),
                         style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF00A3FF), side: const BorderSide(color: Color(0xFF00A3FF))),
                       ),
                     ]
@@ -6465,9 +6782,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     if (_maritalStatus == 'single') ...[
                       _buildSetupField('משכורת / הכנסה אישית (משוער)', _income1Ctrl),
                     ] else ...[
-                      _buildSetupField('הכנסת הבעל (משוער לחודש)', _income1Ctrl),
+                      _buildSetupField('הכנסה שלך (משוער לחודש)', _income1Ctrl),
                       const SizedBox(height: 10),
-                      _buildSetupField('הכנסת האישה (משוער לחודש)', _income2Ctrl),
+                      _buildSetupField('הכנסת בן/בת הזוג (משוער לחודש)', _income2Ctrl),
                     ]
                   ],
                 ),
@@ -6535,8 +6852,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const Text('(הלוואות, מינוס עמוק, או תשלומים באשראי)', style: TextStyle(color: Colors.grey, fontSize: 12)),
                     const SizedBox(height: 12),
                     SegmentedButton<bool>(
+                      style: segmentedStyle,
                       segments: const [
-                        ButtonSegment(value: false, label: Text('לא, אנחנו נקיים')),
+                        ButtonSegment(value: false, label: Text('לא, נקיים')),
                         ButtonSegment(value: true, label: Text('כן, יש חובות')),
                       ],
                       selected: {_hasDebts},
@@ -6547,9 +6865,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     const Text('(חגים ומועדים יוזנו אוטומטית לקופות חסכון שוטפות)', style: TextStyle(color: Colors.grey, fontSize: 12)),
                     const SizedBox(height: 12),
                     SegmentedButton<bool>(
+                      style: segmentedStyle,
                       segments: const [
                         ButtonSegment(value: true, label: Text('כן, הוסף')),
-                        ButtonSegment(value: false, label: Text('לא, תודה')),
+                        ButtonSegment(value: false, label: Text('לא תודה')),
                       ],
                       selected: {_includeReligion},
                       onSelectionChanged: (val) => setState(() => _includeReligion = val.first),
@@ -6620,10 +6939,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\pnl_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Added support for Dynamic Entities hiding)
+// 🔒 STATUS: EDITED (Fixed Const Warnings in Freedom Card Row)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
+import '../../services/premium_service.dart';
 import '../widgets/global_header.dart';
 import 'category_drilldown_screen.dart'; 
 import 'reducing_screen.dart'; 
@@ -6646,7 +6966,6 @@ class PnLScreen extends StatelessWidget {
     final flowToFreedom = budget.totalFinancialExpenses;
     final diversionAmount = budget.financialDiversionAmount;
 
-    // שליפת נתוני התקציב המשתנה והגירעון
     final variableAllocated = budget.totalVariableExpenses;
     final variableDeficit = budget.variableDeficit;
     
@@ -6812,21 +7131,29 @@ class PnLScreen extends StatelessWidget {
   Widget _buildDebtRow(BuildContext context, double amount, bool isFutureMode) {
     return InkWell(
       onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const ReducingScreen()));
+        PremiumService.requirePremium(context, () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const ReducingScreen()));
+        });
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 8.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'מנמיכות',
-              style: TextStyle(
-                fontSize: 17, 
-                fontWeight: FontWeight.w600, 
-                color: Colors.black,
-                decoration: isFutureMode ? TextDecoration.lineThrough : null
-              )
+            Row(
+              children: [
+                Text(
+                  'מנמיכות',
+                  style: TextStyle(
+                    fontSize: 17, 
+                    fontWeight: FontWeight.w600, 
+                    color: Colors.black,
+                    decoration: isFutureMode ? TextDecoration.lineThrough : null
+                  )
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.workspace_premium, color: Colors.amber, size: 16),
+              ],
             ),
             Row(
               children: [
@@ -6869,9 +7196,9 @@ class PnLScreen extends StatelessWidget {
     return InkWell(
       onTap: () => _showFreedomSettingsDialog(context, budget),
       onLongPress: () {
-          Navigator.push(context, MaterialPageRoute(
-          builder: (context) => const AssetsScreen() 
-        ));
+        PremiumService.requirePremium(context, () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const AssetsScreen()));
+        });
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -6886,7 +7213,14 @@ class PnLScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('תזרים לחירות פיננסית', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white)),
+                // הוספת Const מפורש למניעת אזהרות Linter
+                const Row(
+                  children: [
+                    Text('תזרים לחירות פיננסית', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white)),
+                    SizedBox(width: 6),
+                    Icon(Icons.workspace_premium, color: Colors.amberAccent, size: 20),
+                  ],
+                ),
                 Text('₪${amount.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
               ],
             ),
@@ -7028,10 +7362,10 @@ class PnLScreen extends StatelessWidget {
                           value: freq,
                           isExpanded: true,
                           icon: const Icon(Icons.arrow_drop_down),
-                          items: const [
-                            DropdownMenuItem(value: 1, child: Text('שנתית (1)')),
-                            DropdownMenuItem(value: 12, child: Text('חודשית (12)')),
-                            DropdownMenuItem(value: 52, child: Text('שבועית (52)')),
+                          items: const <DropdownMenuItem<int>>[
+                            DropdownMenuItem<int>(value: 1, child: Text('שנתית (1)')),
+                            DropdownMenuItem<int>(value: 12, child: Text('חודשית (12)')),
+                            DropdownMenuItem<int>(value: 52, child: Text('שבועית (52)')),
                           ],
                           onChanged: (val) {
                             if (val != null) {
@@ -8220,7 +8554,7 @@ class _MountainChartPainter extends CustomPainter {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\shopping_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Enhanced Delta Tooltip and Contextual Onboarding)
+// 🔒 STATUS: EDITED (Enhanced Delta Tooltip, Contextual Onboarding, and Mobile Sort Sheet Fix)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/shopping_provider.dart';
@@ -8728,88 +9062,96 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // חובה למסכים קטנים כדי לאפשר גלילה חופשית מעל מקלדת/שטח מסך
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setSheetState) {
+          // מחושב גובה מקסימלי כדי למנוע חריגה מהמסך במובייל
+          final maxSheetHeight = MediaQuery.of(context).size.height * 0.75;
+          
           return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text("ניהול סדר מיון (רב-שכבתי)", style: TextStyle(fontSize: 18 * _textScale, fontWeight: FontWeight.bold, color: Colors.black87)),
-                  const SizedBox(height: 8),
-                  Text("המיון יתבצע מלמעלה למטה.\nגרור באמצעות הפסים כדי לשנות עדיפות, וסמן V כדי להפעיל.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12 * _textScale, color: Colors.grey)),
-                  const Divider(),
-                  SizedBox(
-                    height: 280 * _textScale,
-                    child: ReorderableListView(
-                      buildDefaultDragHandles: false,
-                      onReorder: (oldIndex, newIndex) {
-                        setSheetState(() {
-                          if (newIndex > oldIndex) {
-                            newIndex -= 1;
-                          }
-                          final item = currentOrder.removeAt(oldIndex);
-                          currentOrder.insert(newIndex, item);
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxSheetHeight),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min, // תופס את המינימום האפשרי, אבל לא יותר מ-maxSheetHeight
+                  children: [
+                    Text("ניהול סדר מיון (רב-שכבתי)", style: TextStyle(fontSize: 18 * _textScale, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    const SizedBox(height: 8),
+                    Text("המיון יתבצע מלמעלה למטה.\nגרור באמצעות הפסים כדי לשנות עדיפות, וסמן V כדי להפעיל.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12 * _textScale, color: Colors.grey)),
+                    const Divider(),
+                    // הרשימה הנגררת מתרחבת (Expanded) בתוך הגובה הנותר ולא חורגת מהמסך
+                    Expanded(
+                      child: ReorderableListView(
+                        buildDefaultDragHandles: false,
+                        onReorder: (oldIndex, newIndex) {
+                          setSheetState(() {
+                            if (newIndex > oldIndex) {
+                              newIndex -= 1;
+                            }
+                            final item = currentOrder.removeAt(oldIndex);
+                            currentOrder.insert(newIndex, item);
+                          });
+                        },
+                        children: currentOrder.map((option) {
+                          final isActive = currentActive.contains(option);
+                          return ReorderableDragStartListener(
+                            key: ValueKey(option),
+                            index: currentOrder.indexOf(option),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 4),
+                              decoration: BoxDecoration(
+                                color: isActive ? Colors.blue.withValues(alpha: 0.05) : Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey.withValues(alpha: 0.2))
+                              ),
+                              child: CheckboxListTile(
+                                value: isActive,
+                                activeColor: Colors.blue,
+                                side: const BorderSide(color: Colors.black54, width: 1.5),
+                                onChanged: (val) {
+                                  setSheetState(() {
+                                    if (val == true) {
+                                      currentActive.add(option);
+                                    } else {
+                                      currentActive.remove(option);
+                                    }
+                                  });
+                                },
+                                title: Text(option, style: TextStyle(fontWeight: isActive ? FontWeight.bold : FontWeight.normal, color: Colors.black87, fontSize: 14 * _textScale)),
+                                secondary: Icon(Icons.drag_handle, color: Colors.grey, size: 24 * _textScale),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // כפתור תמיד נשאר למטה
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF121212), 
+                        foregroundColor: Colors.white, 
+                        minimumSize: const Size(double.infinity, 48)
+                      ),
+                      onPressed: () {
+                        List<String> newSorts = currentOrder.where((opt) => currentActive.contains(opt)).toList();
+                        if (newSorts.isEmpty) {
+                          newSorts = ['שם'];
+                        }
+                        
+                        setState(() {
+                          _activeSorts = newSorts;
+                          _allSortOptions = List.from(currentOrder); 
                         });
+                        Navigator.pop(ctx);
                       },
-                      children: currentOrder.map((option) {
-                        final isActive = currentActive.contains(option);
-                        return ReorderableDragStartListener(
-                          key: ValueKey(option),
-                          index: currentOrder.indexOf(option),
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 4),
-                            decoration: BoxDecoration(
-                              color: isActive ? Colors.blue.withValues(alpha: 0.05) : Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey.withValues(alpha: 0.2))
-                            ),
-                            child: CheckboxListTile(
-                              value: isActive,
-                              activeColor: Colors.blue,
-                              side: const BorderSide(color: Colors.black54, width: 1.5),
-                              onChanged: (val) {
-                                setSheetState(() {
-                                  if (val == true) {
-                                    currentActive.add(option);
-                                  } else {
-                                    currentActive.remove(option);
-                                  }
-                                });
-                              },
-                              title: Text(option, style: TextStyle(fontWeight: isActive ? FontWeight.bold : FontWeight.normal, color: Colors.black87, fontSize: 14 * _textScale)),
-                              secondary: Icon(Icons.drag_handle, color: Colors.grey, size: 24 * _textScale),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF121212), 
-                      foregroundColor: Colors.white, 
-                      minimumSize: const Size(double.infinity, 48)
-                    ),
-                    onPressed: () {
-                      List<String> newSorts = currentOrder.where((opt) => currentActive.contains(opt)).toList();
-                      if (newSorts.isEmpty) {
-                        newSorts = ['שם'];
-                      }
-                      
-                      setState(() {
-                        _activeSorts = newSorts;
-                        _allSortOptions = List.from(currentOrder); 
-                      });
-                      Navigator.pop(ctx);
-                    },
-                    child: Text("החל מיון", style: TextStyle(fontSize: 14 * _textScale)),
-                  )
-                ],
+                      child: Text("החל מיון", style: TextStyle(fontSize: 14 * _textScale)),
+                    )
+                  ],
+                ),
               ),
             ),
           );
@@ -9222,7 +9564,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\sinking_funds_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Dynamic Splitting for Kids and Vehicles Unified Funds)
+// 🔒 STATUS: EDITED (Added Personal entity 'אישי' to Unified Funds logic)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -9248,7 +9590,7 @@ class SinkingFundsScreen extends StatelessWidget {
           double totalMonthlyDeposit = 0;
           double totalAccumulatedBalance = 0;
 
-          // לוגיקת הפיצול הדינמית (כל רכב או ילד מקבל קופה משלו באופן אוטומטי)
+          // לוגיקת הפיצול הדינמית
           Map<String, List<Expense>> dynamicFunds = {};
           List<Expense> individualFunds = [];
 
@@ -9260,13 +9602,15 @@ class SinkingFundsScreen extends StatelessWidget {
             String groupName = '';
             
             if (e.parentCategory == 'רכב') {
-              final match = RegExp(r'\((.*?)\)').firstMatch(e.name);
-              String vName = match != null ? match.group(1)! : 'כללי';
-              groupName = 'רכב: $vName';
-            } else if (e.parentCategory == 'ילדים - משתנות') {
+              // כל תתי-הסעיפים הצוברים של כלל הרכבים יתנקזו לקופה מאוחדת אחת ששמה 'רכב'
+              groupName = 'רכב';
+            } 
+            else if (e.parentCategory == 'ילדים - משתנות') {
               String kName = e.name.replaceAll('בגדים', '').replaceAll('בילויים', '').trim();
               groupName = 'ילדים: $kName';
-            } else if (['ילדים - קבועות', 'אבא', 'אמא', 'חגים'].contains(e.parentCategory)) {
+            } 
+            // תוקן: הוספת "אישי" לרשימת הקופות המאוחדות
+            else if (['ילדים - קבועות', 'אבא', 'אמא', 'אישי', 'חגים'].contains(e.parentCategory)) {
               groupName = e.parentCategory;
             }
 
@@ -9816,7 +10160,6 @@ class _EditUnifiedBalancesDialogState extends State<_EditUnifiedBalancesDialog> 
 
 FILE: C:\Projects\dohaham\lib\ui\widgets\global_header.dart
 -----------------------
-// 🔒 STATUS: EDITED (Changed popup menu icon from 3-dots to hamburger/menu lines)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9824,6 +10167,7 @@ import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
 import '../../utils/app_localizations.dart';
 import '../../services/ai_export_service.dart';
+import '../../services/premium_service.dart';
 import '../screens/onboarding_screen.dart';
 import '../screens/sinking_funds_screen.dart';
 import '../screens/checking_history_screen.dart';
@@ -9872,7 +10216,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: Image.asset(
-              'assets/icon/Fintel_Icon.png', // הנתיב תוקן לשם החדש
+              'assets/icon/Fintel_Icon.png', 
               width: 28,
               height: 28,
               fit: BoxFit.cover,
@@ -9900,7 +10244,6 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
         
         PopupMenuButton<MenuAction>(
-          // השינוי העיקרי כאן: הפיכת שלוש הנקודות לשלושה קווים (המבורגר)
           icon: const Icon(Icons.menu, color: brandBlue, size: 28),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           offset: const Offset(0, 40),
@@ -9920,22 +10263,26 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                 );
                 break;
               case MenuAction.salary:
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SalaryEngineScreen()),
-                );
+                PremiumService.requirePremium(context, () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SalaryEngineScreen()),
+                  );
+                });
                 break;
               case MenuAction.ai:
-                await AiExportService.generateAndCopy(context);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('הנתונים הועתקו בהצלחה! ניתן להדביק בצ\'אט עם ה-AI.'),
-                      backgroundColor: Colors.green,
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
-                }
+                PremiumService.requirePremium(context, () async {
+                  await AiExportService.generateAndCopy(context);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('הנתונים הועתקו בהצלחה! ניתן להדביק בצ\'אט עם ה-AI.'),
+                        backgroundColor: Colors.green,
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                });
                 break;
               case MenuAction.settings:
                 _showMainSettingsDialog(context, budget);
@@ -9972,7 +10319,8 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                 children: [
                   Icon(Icons.insights, color: Colors.blue, size: 22),
                   SizedBox(width: 12),
-                  Text('מנוע סטטיסטיקת שכר'),
+                  Expanded(child: Text('מנוע סטטיסטיקת שכר')),
+                  Icon(Icons.workspace_premium, color: Colors.amber, size: 18),
                 ],
               ),
             ),
@@ -9983,7 +10331,8 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                 children: [
                   Icon(Icons.psychology, color: Colors.deepPurple, size: 22),
                   SizedBox(width: 12),
-                  Text('ייצוא נתונים ל-AI'),
+                  Expanded(child: Text('ייצוא נתונים ל-AI')),
+                  Icon(Icons.workspace_premium, color: Colors.amber, size: 18),
                 ],
               ),
             ),
@@ -10005,7 +10354,66 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
+  Widget _buildUserProfileCard(BuildContext context, User user) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blueGrey.shade100),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: Colors.blueGrey.shade200,
+                backgroundImage: user.photoURL != null ? NetworkImage(user.photoURL!) : null,
+                child: user.photoURL == null ? const Icon(Icons.person, size: 30, color: Colors.white) : null,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(user.displayName ?? 'משתמש דוחכם', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+                    const SizedBox(height: 4),
+                    Text(user.email ?? '', style: TextStyle(fontSize: 13, color: Colors.blueGrey[700])),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.redAccent,
+                side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+              ),
+              icon: const Icon(Icons.logout, size: 18),
+              label: const Text('התנתקות מהחשבון', style: TextStyle(fontWeight: FontWeight.bold)),
+              onPressed: () async {
+                Navigator.pop(context); 
+                await FirebaseAuth.instance.signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+                }
+              },
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
   void _showMainSettingsDialog(BuildContext context, BudgetProvider budget) {
+    final user = FirebaseAuth.instance.currentUser;
+
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -10027,15 +10435,14 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
-                _buildSettingsCard(ctx, Icons.family_restroom_rounded, 'הגדרות משפחה', () {
+
+                if (user != null)
+                  _buildUserProfileCard(context, user),
+
+                _buildSettingsCard(ctx, Icons.family_restroom_rounded, 'הגדרות משפחה וסטטוס', () {
                     Navigator.pop(ctx);
-                    _showFamilySettingsDialog(context, budget);
+                    _showFamilySettingsDialog(context);
                 }, Colors.blue),
-                
-                _buildSettingsCard(ctx, Icons.person_off_outlined, 'ניהול ישויות דינמי (משתנות)', () {
-                    Navigator.pop(ctx);
-                    _showDynamicEntitiesDialog(context, budget);
-                }, Colors.teal),
             
                 _buildSettingsCard(ctx, Icons.pie_chart_outline, 'אחוז משתנות (רמת חיים)', () {
                     Navigator.pop(ctx);
@@ -10051,14 +10458,6 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                   padding: EdgeInsets.symmetric(vertical: 12),
                   child: Divider(height: 1),
                 ),
-                
-                _buildSettingsCard(ctx, Icons.logout, 'התנתקות מהחשבון', () async {
-                    Navigator.pop(ctx);
-                    await FirebaseAuth.instance.signOut();
-                    if (context.mounted) {
-                      Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
-                    }
-                }, Colors.blueGrey),
                 
                 _buildSettingsCard(ctx, Icons.restore, 'איפוס כל הנתונים', () {
                     Navigator.pop(ctx);
@@ -10101,49 +10500,6 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _showDynamicEntitiesDialog(BuildContext context, BudgetProvider budget) {
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('ניהול ישויות - משתנות', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('כיבוי ישות יאפס את התקציב שלה ויחלק אותו יחסית בין שאר הישויות הפעילות.', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                const SizedBox(height: 20),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('תקציב אבא פעיל', style: TextStyle(fontWeight: FontWeight.bold)),
-                  value: budget.isFatherActive,
-                  activeThumbColor: Colors.teal,
-                  onChanged: (val) { budget.toggleEntityActive('father', val); setDialogState((){}); },
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('תקציב אמא פעיל', style: TextStyle(fontWeight: FontWeight.bold)),
-                  value: budget.isMotherActive,
-                  activeThumbColor: Colors.teal,
-                  onChanged: (val) { budget.toggleEntityActive('mother', val); setDialogState((){}); },
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('תקציב ילדים פעיל', style: TextStyle(fontWeight: FontWeight.bold)),
-                  value: budget.isKidsActive,
-                  activeThumbColor: Colors.teal,
-                  onChanged: (val) { budget.toggleEntityActive('kids', val); setDialogState((){}); },
-                ),
-              ],
-            ),
-            actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('סגור'))],
-          );
-        },
       ),
     );
   }
@@ -10297,77 +10653,134 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  void _showFamilySettingsDialog(BuildContext context, BudgetProvider budget) {
+  void _showFamilySettingsDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) {
+      builder: (ctx) => Consumer<BudgetProvider>(
+        builder: (context, budget, child) {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('הגדרות משפחה', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+            title: const Text('הגדרות משפחה וסטטוס', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
             content: SizedBox(
               width: double.maxFinite,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // --- כפתורי בחירת מגדר וסטטוס ---
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blueGrey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blueGrey.shade100)
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('המגדר שלי:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                          const SizedBox(height: 8),
+                          SegmentedButton<String>(
+                            style: SegmentedButton.styleFrom(
+                              selectedForegroundColor: Colors.blue[900],
+                              selectedBackgroundColor: Colors.blue[100],
+                              foregroundColor: Colors.blueGrey[400],
+                            ),
+                            segments: const [
+                              ButtonSegment(value: 'male', label: Text('זכר')),
+                              ButtonSegment(value: 'female', label: Text('נקבה')),
+                            ],
+                            selected: {budget.gender},
+                            onSelectionChanged: (val) {
+                              budget.updateFamilyStructure(gender: val.first);
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          const Text('סטטוס אישי:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                          const SizedBox(height: 8),
+                          SegmentedButton<String>(
+                            style: SegmentedButton.styleFrom(
+                              selectedForegroundColor: Colors.blue[900],
+                              selectedBackgroundColor: Colors.blue[100],
+                              foregroundColor: Colors.blueGrey[400],
+                            ),
+                            segments: const [
+                              ButtonSegment(value: 'single', icon: Icon(Icons.person), label: Text('רווק/ה')),
+                              ButtonSegment(value: 'married', icon: Icon(Icons.people), label: Text('נשוי/אה')),
+                            ],
+                            selected: {budget.maritalStatus},
+                            onSelectionChanged: (val) {
+                              budget.updateFamilyStructure(maritalStatus: val.first);
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          const Text('* המערכת תסדר אוטומטית את קטגוריות ההוצאות בהתאם לסטטוס ולמגדר שנבחר.', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // -------------------------------------
+
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('סה"כ ילדים מעודכנים:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const Text('סה"כ ילדים רשומים:', style: TextStyle(fontWeight: FontWeight.bold)),
                           Text('${budget.childCount}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
                         ],
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: budget.familyMembers.length,
-                      itemBuilder: (context, index) {
-                        final member = budget.familyMembers[index];
-                        bool isParent = member.role == FamilyRole.parent;
-                        return Card(
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey[200]!)),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: isParent ? Colors.blue[50] : Colors.purple[50], 
-                              child: Icon(isParent ? Icons.person : Icons.child_care, color: isParent ? Colors.blue : Colors.purple)
+                    
+                    if (budget.childCount > 0)
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: budget.familyMembers.where((m) => m.role == FamilyRole.child).length,
+                        itemBuilder: (context, index) {
+                          final childrenList = budget.familyMembers.where((m) => m.role == FamilyRole.child).toList();
+                          final member = childrenList[index];
+                          
+                          return Card(
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey[200]!)),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.purple[50], 
+                                child: const Icon(Icons.child_care, color: Colors.purple)
+                              ),
+                              title: Text(member.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text('שנת לידה: ${member.birthYear}'),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.blueGrey, size: 20), 
+                                    onPressed: () => _showEditMemberDialog(context, budget, member)
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20), 
+                                    onPressed: () async { 
+                                      if (member.id != null) { 
+                                        await budget.removeFamilyMember(member.id!); 
+                                      } 
+                                    }
+                                  ),
+                                ],
+                              ),
                             ),
-                            title: Text(member.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('${isParent ? "הורה" : "ילד"} | שנת לידה: ${member.birthYear}'),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.blueGrey, size: 20), 
-                                  onPressed: () => _showEditMemberDialog(context, budget, member, setDialogState)
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20), 
-                                  onPressed: () async { 
-                                    if (member.id != null) { 
-                                      await budget.removeFamilyMember(member.id!); 
-                                      if (ctx.mounted) setDialogState(() {}); 
-                                    } 
-                                  }
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                          );
+                        },
+                      ),
+                    
                     const SizedBox(height: 12),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey[900], foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                       icon: const Icon(Icons.person_add, size: 18),
-                      label: const Text('הוסף בן משפחה'),
-                      onPressed: () => _showEditMemberDialog(context, budget, null, setDialogState)
+                      label: const Text('הוסף ילד/ה'),
+                      onPressed: () => _showEditMemberDialog(context, budget, null)
                     ),
                   ],
                 ),
@@ -10380,57 +10793,45 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  void _showEditMemberDialog(BuildContext context, BudgetProvider budget, FamilyMember? member, Function parentState) {
+  void _showEditMemberDialog(BuildContext context, BudgetProvider budget, FamilyMember? member) {
     final nameController = TextEditingController(text: member?.name ?? '');
     final yearController = TextEditingController(text: member?.birthYear.toString() ?? DateTime.now().year.toString());
-    FamilyRole selectedRole = member?.role ?? FamilyRole.child;
+    
+    // מניעת שאלת "תפקיד" - תמיד מוגדר כילד בחלון הזה
+    const FamilyRole selectedRole = FamilyRole.child;
 
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(member == null ? 'הוספת בן משפחה' : 'עריכת פרטים', style: const TextStyle(fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם מלא', border: OutlineInputBorder())),
-              const SizedBox(height: 12),
-              TextField(controller: yearController, decoration: const InputDecoration(labelText: 'שנת לידה (למשל 2015)', border: OutlineInputBorder()), keyboardType: TextInputType.number),
-              const SizedBox(height: 16),
-              const Align(alignment: Alignment.centerRight, child: Text('הגדרת תפקיד:', style: TextStyle(fontWeight: FontWeight.bold))),
-              const SizedBox(height: 8),
-              SegmentedButton<FamilyRole>(
-                segments: const [
-                  ButtonSegment(value: FamilyRole.parent, label: Text('הורה'), icon: Icon(Icons.person)), 
-                  ButtonSegment(value: FamilyRole.child, label: Text('ילד'), icon: Icon(Icons.child_care))
-                ],
-                selected: {selectedRole},
-                onSelectionChanged: (val) => setDialogState(() => selectedRole = val.first),
-              )
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
-            ElevatedButton(
-              onPressed: () async { 
-                if (nameController.text.isNotEmpty) { 
-                  final birthYear = int.tryParse(yearController.text) ?? DateTime.now().year;
-                  if (member == null) {
-                    await budget.addFamilyMember(nameController.text, birthYear, selectedRole); 
-                  } else {
-                    await budget.updateFamilyMember(FamilyMember(id: member.id, name: nameController.text, birthYear: birthYear, role: selectedRole));
-                  }
-                  if (ctx.mounted) {
-                    parentState(() {}); 
-                    Navigator.pop(ctx); 
-                  }
-                } 
-              }, 
-              child: const Text('שמור')
-            ),
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(member == null ? 'הוספת ילד/ה' : 'עריכת פרטי ילד', style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הילד/ה', border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(controller: yearController, decoration: const InputDecoration(labelText: 'שנת לידה (למשל 2015)', border: OutlineInputBorder()), keyboardType: TextInputType.number),
           ],
         ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+          ElevatedButton(
+            onPressed: () async { 
+              if (nameController.text.isNotEmpty) { 
+                final birthYear = int.tryParse(yearController.text) ?? DateTime.now().year;
+                if (member == null) {
+                  await budget.addFamilyMember(nameController.text, birthYear, selectedRole); 
+                } else {
+                  await budget.updateFamilyMember(FamilyMember(id: member.id, name: nameController.text, birthYear: birthYear, role: selectedRole));
+                }
+                if (ctx.mounted) {
+                  Navigator.pop(ctx); 
+                }
+              } 
+            }, 
+            child: const Text('שמור')
+          ),
+        ],
       ),
     );
   }

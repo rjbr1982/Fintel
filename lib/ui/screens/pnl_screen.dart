@@ -1,7 +1,8 @@
-// 🔒 STATUS: EDITED (Added support for Dynamic Entities hiding)
+// 🔒 STATUS: EDITED (Fixed Const Warnings in Freedom Card Row)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
+import '../../services/premium_service.dart';
 import '../widgets/global_header.dart';
 import 'category_drilldown_screen.dart'; 
 import 'reducing_screen.dart'; 
@@ -24,7 +25,6 @@ class PnLScreen extends StatelessWidget {
     final flowToFreedom = budget.totalFinancialExpenses;
     final diversionAmount = budget.financialDiversionAmount;
 
-    // שליפת נתוני התקציב המשתנה והגירעון
     final variableAllocated = budget.totalVariableExpenses;
     final variableDeficit = budget.variableDeficit;
     
@@ -190,21 +190,29 @@ class PnLScreen extends StatelessWidget {
   Widget _buildDebtRow(BuildContext context, double amount, bool isFutureMode) {
     return InkWell(
       onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const ReducingScreen()));
+        PremiumService.requirePremium(context, () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const ReducingScreen()));
+        });
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 8.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'מנמיכות',
-              style: TextStyle(
-                fontSize: 17, 
-                fontWeight: FontWeight.w600, 
-                color: Colors.black,
-                decoration: isFutureMode ? TextDecoration.lineThrough : null
-              )
+            Row(
+              children: [
+                Text(
+                  'מנמיכות',
+                  style: TextStyle(
+                    fontSize: 17, 
+                    fontWeight: FontWeight.w600, 
+                    color: Colors.black,
+                    decoration: isFutureMode ? TextDecoration.lineThrough : null
+                  )
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.workspace_premium, color: Colors.amber, size: 16),
+              ],
             ),
             Row(
               children: [
@@ -247,9 +255,9 @@ class PnLScreen extends StatelessWidget {
     return InkWell(
       onTap: () => _showFreedomSettingsDialog(context, budget),
       onLongPress: () {
-          Navigator.push(context, MaterialPageRoute(
-          builder: (context) => const AssetsScreen() 
-        ));
+        PremiumService.requirePremium(context, () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const AssetsScreen()));
+        });
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -264,7 +272,14 @@ class PnLScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('תזרים לחירות פיננסית', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white)),
+                // הוספת Const מפורש למניעת אזהרות Linter
+                const Row(
+                  children: [
+                    Text('תזרים לחירות פיננסית', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white)),
+                    SizedBox(width: 6),
+                    Icon(Icons.workspace_premium, color: Colors.amberAccent, size: 20),
+                  ],
+                ),
                 Text('₪${amount.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
               ],
             ),
@@ -406,10 +421,10 @@ class PnLScreen extends StatelessWidget {
                           value: freq,
                           isExpanded: true,
                           icon: const Icon(Icons.arrow_drop_down),
-                          items: const [
-                            DropdownMenuItem(value: 1, child: Text('שנתית (1)')),
-                            DropdownMenuItem(value: 12, child: Text('חודשית (12)')),
-                            DropdownMenuItem(value: 52, child: Text('שבועית (52)')),
+                          items: const <DropdownMenuItem<int>>[
+                            DropdownMenuItem<int>(value: 1, child: Text('שנתית (1)')),
+                            DropdownMenuItem<int>(value: 12, child: Text('חודשית (12)')),
+                            DropdownMenuItem<int>(value: 52, child: Text('שבועית (52)')),
                           ],
                           onChanged: (val) {
                             if (val != null) {

@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Official Fintel App Icon)
+// 🔒 STATUS: EDITED (Added animated splash GIF to login screen)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -67,22 +67,22 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // סמלון האפליקציה המקורי
+                // סמלון האפליקציה האנימטורי
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(24),
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(30),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(26),
                     child: Image.asset(
-                      'assets/icon/icon.png',
-                      width: 100,
-                      height: 100,
+                      'assets/icon/splash.gif',
+                      width: 120,
+                      height: 120,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
-                        // גיבוי למקרה שהנתיב לא הוגדר נכון
+                        // גיבוי למקרה שהנתיב לא הוגדר נכון או שהמשתמש טרם שם GIF
                         return const Icon(Icons.account_balance_wallet_rounded, size: 80, color: Color(0xFF00A3FF));
                       },
                     ),

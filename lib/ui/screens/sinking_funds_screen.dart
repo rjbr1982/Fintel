@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Dynamic Splitting for Kids, Aggregated Unified Fund for Vehicles)
+// 🔒 STATUS: EDITED (Added Personal entity 'אישי' to Unified Funds logic)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -24,7 +24,7 @@ class SinkingFundsScreen extends StatelessWidget {
           double totalMonthlyDeposit = 0;
           double totalAccumulatedBalance = 0;
 
-          // לוגיקת הפיצול הדינמית (כל ילד מקבל קופה משלו, אבל כל הרכבים מאוחדים לקופה אחת)
+          // לוגיקת הפיצול הדינמית
           Map<String, List<Expense>> dynamicFunds = {};
           List<Expense> individualFunds = [];
 
@@ -35,16 +35,16 @@ class SinkingFundsScreen extends StatelessWidget {
 
             String groupName = '';
             
-            // --- FIX: Aggregated Vehicle Fund Logic ---
             if (e.parentCategory == 'רכב') {
               // כל תתי-הסעיפים הצוברים של כלל הרכבים יתנקזו לקופה מאוחדת אחת ששמה 'רכב'
               groupName = 'רכב';
             } 
-            // ------------------------------------------
             else if (e.parentCategory == 'ילדים - משתנות') {
               String kName = e.name.replaceAll('בגדים', '').replaceAll('בילויים', '').trim();
               groupName = 'ילדים: $kName';
-            } else if (['ילדים - קבועות', 'אבא', 'אמא', 'חגים'].contains(e.parentCategory)) {
+            } 
+            // תוקן: הוספת "אישי" לרשימת הקופות המאוחדות
+            else if (['ילדים - קבועות', 'אבא', 'אמא', 'אישי', 'חגים'].contains(e.parentCategory)) {
               groupName = e.parentCategory;
             }
 
