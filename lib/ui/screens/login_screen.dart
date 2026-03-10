@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added animated splash GIF to login screen)
+// 🔒 STATUS: EDITED (Forced Google to always prompt for account selection on Web)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -24,11 +24,19 @@ class _LoginScreenState extends State<LoginScreen> {
         googleProvider.addScope('email');
         googleProvider.addScope('profile');
         
+        // התיקון: מאלץ את גוגל להקפיץ חלון לבחירת חשבון בכל פעם מחדש
+        googleProvider.setCustomParameters({'prompt': 'select_account'});
+        
         await FirebaseAuth.instance.signInWithPopup(googleProvider);
         
       } else {
         // 📱 Mobile Auth: שימוש ב-Google Sign In למכשירים ניידים
         final GoogleSignIn googleSignIn = GoogleSignIn();
+        
+        // ניקוי המטמון לפני הכניסה למניעת התחברות אוטומטית שגויה
+        try { await googleSignIn.disconnect(); } catch (_) {}
+        try { await googleSignIn.signOut(); } catch (_) {}
+        
         final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
         
         if (googleUser == null) {
@@ -82,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       height: 120,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
-                        // גיבוי למקרה שהנתיב לא הוגדר נכון או שהמשתמש טרם שם GIF
+                        // גיבוי למקרה שהנתיב לא הוגדר נכון
                         return const Icon(Icons.account_balance_wallet_rounded, size: 80, color: Color(0xFF00A3FF));
                       },
                     ),

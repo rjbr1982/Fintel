@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed autofocus typo)
+// 🔒 STATUS: EDITED (Replaced retroactive weeks with exact days/dates)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/shopping_provider.dart';
@@ -414,6 +414,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     );
   }
 
+  // --- הפתרון הנקודתי: תיעוד מדויק ברמת הימים ---
   void _showQuickHistoryAction(BuildContext context, ShoppingItem item, ShoppingProvider provider) {
     showModalBottomSheet(
       context: context,
@@ -430,26 +431,43 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
             const Divider(),
             ListTile(
               leading: Icon(Icons.today, color: Colors.blue, size: 24 * _textScale),
-              title: Text("נקנה השבוע (מחוץ לסל המרכזי)", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
+              title: Text("נקנה היום", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
               onTap: () {
-                _applyRetroactivePurchase(item, 0, provider);
+                _applyRetroactivePurchaseDate(item, DateTime.now(), provider);
                 Navigator.pop(ctx);
               },
             ),
             ListTile(
               leading: Icon(Icons.history, color: Colors.orange, size: 24 * _textScale),
-              title: Text("נקנה בשבוע שעבר", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
+              title: Text("נקנה אתמול", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
               onTap: () {
-                _applyRetroactivePurchase(item, -1, provider);
+                _applyRetroactivePurchaseDate(item, DateTime.now().subtract(const Duration(days: 1)), provider);
                 Navigator.pop(ctx);
               },
             ),
             ListTile(
-              leading: Icon(Icons.event_repeat, color: Colors.blueGrey, size: 24 * _textScale),
-              title: Text("נקנה במועד אחר...", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
+              leading: Icon(Icons.history_toggle_off, color: Colors.deepOrange, size: 24 * _textScale),
+              title: Text("נקנה שלשום", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
               onTap: () {
+                _applyRetroactivePurchaseDate(item, DateTime.now().subtract(const Duration(days: 2)), provider);
                 Navigator.pop(ctx);
-                _showHistoryPicker(context, (offset) => _applyRetroactivePurchase(item, offset, provider));
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.edit_calendar, color: Colors.blueGrey, size: 24 * _textScale),
+              title: Text("תאריך מותאם אישית...", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: DateTime.now(),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
+                  builder: (context, child) => Theme(data: ThemeData.light(), child: child!),
+                );
+                if (picked != null) {
+                  _applyRetroactivePurchaseDate(item, picked, provider);
+                }
               },
             ),
             const SizedBox(height: 10),
@@ -459,12 +477,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     );
   }
 
-  void _applyRetroactivePurchase(ShoppingItem item, int offset, ShoppingProvider provider) {
-    DateTime purchaseDate = DateTime.now();
-    if (offset != 0) {
-      purchaseDate = purchaseDate.subtract(Duration(days: offset.abs() * 7));
-    }
-    
+  void _applyRetroactivePurchaseDate(ShoppingItem item, DateTime purchaseDate, ShoppingProvider provider) {
     final updatedItem = item.copyWith(
       lastPurchaseDate: purchaseDate.toIso8601String().split('T')[0],
     );
@@ -473,7 +486,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("עודכן: ${item.name} נקנה ${_getWeekLabel(offset)}"),
+        content: Text("עודכן: ${item.name} סומן שנקנה ב-${purchaseDate.day}/${purchaseDate.month}/${purchaseDate.year}"),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
       ),
@@ -846,7 +859,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     bool isAddingNewCat = false;
     int months = item != null ? (item.frequencyWeeks ~/ 4) : 0; 
     int weeks = item != null ? (item.frequencyWeeks % 4) : 1;
-    int historyOffset = 0;
+    DateTime? selectedPurchaseDate = item?.lastPurchaseDateTime;
 
     final labelStyle = TextStyle(color: Colors.black54, fontSize: 14 * _textScale);
     final contentStyle = TextStyle(color: Colors.black87, fontSize: 16 * _textScale);
@@ -901,13 +914,23 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                   children: [
                     Text('מועד קנייה:', style: TextStyle(fontSize: 13 * _textScale, color: Colors.black54)),
                     TextButton.icon(
-                      onPressed: () {
-                        _showHistoryPicker(context, (selectedOffset) {
-                          setDialogState(() => historyOffset = selectedOffset);
-                        });
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedPurchaseDate ?? DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                          builder: (context, child) => Theme(data: ThemeData.light(), child: child!),
+                        );
+                        if (picked != null) {
+                          setDialogState(() => selectedPurchaseDate = picked);
+                        }
                       },
-                      icon: Icon(Icons.history, size: 16 * _textScale, color: historyOffset == 0 ? Colors.blue : Colors.orange),
-                      label: Text(_getWeekLabel(historyOffset), style: TextStyle(color: historyOffset == 0 ? Colors.blue : Colors.orange, fontWeight: FontWeight.bold, fontSize: 14 * _textScale)),
+                      icon: Icon(Icons.calendar_today, size: 16 * _textScale, color: selectedPurchaseDate == null ? Colors.orange : Colors.blue),
+                      label: Text(
+                        selectedPurchaseDate == null ? 'בחר תאריך' : '${selectedPurchaseDate!.day}/${selectedPurchaseDate!.month}/${selectedPurchaseDate!.year}', 
+                        style: TextStyle(color: selectedPurchaseDate == null ? Colors.orange : Colors.blue, fontWeight: FontWeight.bold, fontSize: 14 * _textScale)
+                      ),
                     ),
                   ],
                 ),
@@ -942,9 +965,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                       
                       String? finalPurchaseDateString = item?.lastPurchaseDate;
                       
-                      if (item == null && historyOffset != 0) {
-                        DateTime calcDate = DateTime.now().subtract(Duration(days: historyOffset.abs() * 7));
-                        finalPurchaseDateString = calcDate.toIso8601String().split('T')[0];
+                      if (item == null && selectedPurchaseDate != null) {
+                        finalPurchaseDateString = selectedPurchaseDate!.toIso8601String().split('T')[0];
                       }
 
                       final newItem = ShoppingItem(
@@ -972,30 +994,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
             )
           ],
         ),
-      ),
-    );
-  }
-
-  void _showHistoryPicker(BuildContext context, Function(int) onSelected) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => ListView(
-        shrinkWrap: true,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text("בחר שבוע לתיעוד", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 16 * _textScale)),
-          ),
-          ListTile(title: Text("השבוע", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)), onTap: () { onSelected(0); Navigator.pop(ctx); }),
-          ListTile(title: Text("שבוע שעבר", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)), onTap: () { onSelected(-1); Navigator.pop(ctx); }),
-          ..._getWeekOptions().map((offset) => ListTile(
-            title: Text(_getWeekLabel(offset), style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
-            onTap: () { onSelected(offset); Navigator.pop(ctx); },
-          )),
-          const SizedBox(height: 20),
-        ],
       ),
     );
   }

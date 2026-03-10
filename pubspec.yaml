@@ -52,7 +52,6 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
-  
-  # הנגשת התיקייה לשימוש בתוך הקוד
   assets:
     - assets/icon/Fintel_Icon.png
+    - assets/icon/splash.gif

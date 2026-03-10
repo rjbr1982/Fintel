@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Moved all Settings Dialogs here from MainScreen for global access)
+// 🔒 STATUS: EDITED (Added GoogleSignIn().disconnect() for deep cache wipe)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -304,12 +304,21 @@ Widget _buildUserProfileCard(BuildContext context, User user) {
             label: const Text('התנתקות מהחשבון', style: TextStyle(fontWeight: FontWeight.bold)),
             onPressed: () async {
               Navigator.pop(context); 
+              
+              // התיקון: מחיקת מטמון הגישה מכל הכיוונים
               try {
-                await GoogleSignIn().signOut();
+                await GoogleSignIn().disconnect(); // מנתק את ההרשאה לחלוטין מול שרתי גוגל
+              } catch (e) {
+                debugPrint('Google disconnect error: $e');
+              }
+              try {
+                await GoogleSignIn().signOut(); // מנקה את ה-Cache המקומי
               } catch (e) {
                 debugPrint('Google SignOut error: $e');
               }
+              
               await FirebaseAuth.instance.signOut();
+              
               if (context.mounted) {
                 Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
               }
@@ -645,7 +654,6 @@ void _showEditMemberDialog(BuildContext context, BudgetProvider budget, FamilyMe
   final nameController = TextEditingController(text: member?.name ?? '');
   final yearController = TextEditingController(text: member?.birthYear.toString() ?? DateTime.now().year.toString());
   
-  // מניעת שאלת "תפקיד" - תמיד מוגדר כילד בחלון הזה
   const FamilyRole selectedRole = FamilyRole.child;
 
   showDialog(
