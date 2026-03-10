@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Forced Google to always prompt for account selection on Web)
+// 🔒 STATUS: EDITED (Premium Light Theme Login with Static Icon Header & Dark Button)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -19,21 +19,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       if (kIsWeb) {
-        // 🌐 SaaS/Web Auth: שימוש ב-Popup הרשמי של Firebase Auth לדפדפן
         final googleProvider = GoogleAuthProvider();
         googleProvider.addScope('email');
         googleProvider.addScope('profile');
-        
-        // התיקון: מאלץ את גוגל להקפיץ חלון לבחירת חשבון בכל פעם מחדש
         googleProvider.setCustomParameters({'prompt': 'select_account'});
         
         await FirebaseAuth.instance.signInWithPopup(googleProvider);
-        
       } else {
-        // 📱 Mobile Auth: שימוש ב-Google Sign In למכשירים ניידים
         final GoogleSignIn googleSignIn = GoogleSignIn();
         
-        // ניקוי המטמון לפני הכניסה למניעת התחברות אוטומטית שגויה
         try { await googleSignIn.disconnect(); } catch (_) {}
         try { await googleSignIn.signOut(); } catch (_) {}
         
@@ -67,73 +61,102 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212), 
+      backgroundColor: Colors.white, // רקע לבן נקי ויוקרתי
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // סמלון האפליקציה האנימטורי
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(26),
+        child: Stack(
+          children: [
+            // הדר (Header) עם לוגו סטטי וטקסט - למעלה מימין
+            Positioned(
+              top: 24,
+              right: 24,
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
                     child: Image.asset(
-                      'assets/icon/splash.gif',
-                      width: 120,
-                      height: 120,
+                      'assets/icon/Fintel_Icon.png', // אייקון סטטי
+                      width: 36,
+                      height: 36,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        // גיבוי למקרה שהנתיב לא הוגדר נכון
-                        return const Icon(Icons.account_balance_wallet_rounded, size: 80, color: Color(0xFF00A3FF));
-                      },
+                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.account_balance_wallet, color: Colors.blue, size: 36),
                     ),
                   ),
-                ),
-                const SizedBox(height: 32),
-                
-                const Text(
-                  'Fintel - דוחכם',
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(height: 12),
-                
-                Text(
-                  'התחבר באמצעות Google כדי לסנכרן ולשמור את הנתונים שלך בענן בצורה מאובטחת.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.grey[400], height: 1.5),
-                ),
-                const SizedBox(height: 48),
-
-                _isLoading
-                    ? const CircularProgressIndicator(color: Color(0xFF00A3FF))
-                    : ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                          elevation: 2,
-                        ),
-                        icon: Image.network(
-                          'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/48px-Google_%22G%22_logo.svg.png',
-                          height: 24,
-                        ),
-                        label: const Text(
-                          'המשך עם Google',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        onPressed: _signInWithGoogle,
-                      ),
-              ],
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Fintel',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black87,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+            
+            // מרכז המסך - קריאה לפעולה וכפתור התחברות
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'כניסה מאובטחת',
+                      style: TextStyle(
+                        fontSize: 32, 
+                        fontWeight: FontWeight.bold, 
+                        color: Colors.black87
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    const Text(
+                      'התחבר/י לחשבון שלך כדי לגשת למערכת הניהול הפיננסי החכמה. הנתונים שלך מגובים ומאובטחים בענן בכל עת.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16, 
+                        color: Colors.blueGrey, 
+                        height: 1.6,
+                        fontWeight: FontWeight.w500
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+
+                    _isLoading
+                        ? const CircularProgressIndicator(color: Color(0xFF00A3FF))
+                        : ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1A1A1A), // כפתור פרימיום שחור
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                              elevation: 4,
+                              shadowColor: Colors.black.withValues(alpha: 0.3),
+                            ),
+                            icon: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Image.network(
+                                'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/48px-Google_%22G%22_logo.svg.png',
+                                height: 18,
+                              ),
+                            ),
+                            label: const Text(
+                              'המשך עם Google',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            onPressed: _signInWithGoogle,
+                          ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -1,8 +1,8 @@
-// 🔒 STATUS: EDITED (Implemented Premium Banking UX - Double Splash & Last Login Time)
+// 🔒 STATUS: EDITED (Premium Entry Flow: Light Theme Splashes & Animated Transitions)
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart'; // הוספת ספריה לעיצוב תאריכים
+import 'package:intl/intl.dart';
 
 import 'package:firebase_core/firebase_core.dart'; 
 import 'package:firebase_auth/firebase_auth.dart'; 
@@ -21,7 +21,6 @@ import 'utils/app_localizations.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🚀 אתחול מנוע הענן של Firebase (מותאם ל-Web/SaaS)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -89,7 +88,7 @@ class FintelApp extends StatelessWidget {
   }
 }
 
-// 🎬 שער 1: ניהול האתחול הראשוני (Pre-Login Splash)
+// 🎬 שער 1: ניהול האתחול הראשוני עם מעבר רך
 class AppBootstrapper extends StatefulWidget {
   const AppBootstrapper({super.key});
 
@@ -103,7 +102,6 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
   @override
   void initState() {
     super.initState();
-    // השהיית מינימום קשיחה של 2.5 שניות לחשיפת המותג
     Future.delayed(const Duration(milliseconds: 2500), () {
       if (mounted) setState(() => _isBooting = false);
     });
@@ -111,10 +109,14 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isBooting) {
-      return const SplashScreen();
-    }
-    return const AuthStreamGate();
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 800),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      child: _isBooting 
+          ? const SplashScreen(key: ValueKey('splash_pre')) 
+          : const AuthStreamGate(key: ValueKey('auth_gate')),
+    );
   }
 }
 
@@ -128,22 +130,20 @@ class AuthStreamGate extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SplashScreen();
+          return const SplashScreen(key: ValueKey('splash_auth'));
         }
         
         if (snapshot.hasData && snapshot.data != null) {
-          // המשתמש מחובר - נעביר אותו לשער הכניסה הפנימי (אנימציה שנייה)
-          return PostLoginRouter(user: snapshot.data!);
+          return PostLoginRouter(key: const ValueKey('post_login_router'), user: snapshot.data!);
         }
 
-        // המשתמש לא מחובר
-        return const LoginScreen();
+        return const LoginScreen(key: ValueKey('login_screen'));
       },
     );
   }
 }
 
-// 🏦 שער 3: חוויית הבנק - אנימציה שנייה ובדיקת משתמש חדש
+// 🏦 שער 3: חוויית הבנק - אנימציה שנייה (מאמת נתונים) ואז דשבורד
 class PostLoginRouter extends StatefulWidget {
   final User user;
   const PostLoginRouter({super.key, required this.user});
@@ -163,12 +163,11 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
   }
 
   Future<void> _processLogin() async {
-    // 1. נבדוק אם יש צורך בהגדרות משתמש חדש
     final expenses = await DatabaseHelper.instance.getExpenses();
     _needsOnboarding = expenses.isEmpty;
 
-    // 2. השהיה נוספת של 2 שניות להצגת "מאמת נתונים" וזמן כניסה אחרון
-    await Future.delayed(const Duration(milliseconds: 2000));
+    // השהיה של 2.5 שניות להצגת האנימציה הבהירה עם תאריך הכניסה
+    await Future.delayed(const Duration(milliseconds: 2500));
 
     if (mounted) {
       setState(() => _isProcessing = false);
@@ -177,26 +176,66 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
 
   @override
   Widget build(BuildContext context) {
+    Widget currentScreen;
     if (_isProcessing) {
-      return PostLoginSplashScreen(user: widget.user);
+      currentScreen = PostLoginSplashScreen(key: const ValueKey('splash_post'), user: widget.user);
+    } else if (_needsOnboarding) {
+      currentScreen = const OnboardingScreen(key: ValueKey('onboarding'));
+    } else {
+      currentScreen = const MainScreen(key: ValueKey('dashboard'));
     }
 
-    if (_needsOnboarding) {
-      return const OnboardingScreen();
-    }
-
-    return const MainScreen();
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 800),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      child: currentScreen,
+    );
   }
 }
 
-// 🎬 רכיב תצוגה: אנימציית פתיחה נקייה
+// 🎬 רכיב תצוגה: אנימציית פתיחה נקייה לחלוטין (רקע בהיר)
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: Colors.white, // רקע לבן פרימיום
+      body: Center(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: Image.asset(
+            'assets/icon/splash.gif',
+            width: 140,
+            height: 140,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return const CircularProgressIndicator(color: Color(0xFF00A3FF));
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// 🎬 רכיב תצוגה: אנימציית כניסה המציגה תאריך התחברות (רקע בהיר)
+class PostLoginSplashScreen extends StatelessWidget {
+  final User user;
+  const PostLoginSplashScreen({super.key, required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    final lastSignIn = user.metadata.lastSignInTime;
+    String timeText = '';
+    
+    if (lastSignIn != null) {
+      timeText = DateFormat('dd/MM/yyyy HH:mm').format(lastSignIn.toLocal());
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.white, // רקע לבן פרימיום
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -209,57 +248,6 @@ class SplashScreen extends StatelessWidget {
                 height: 120,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  return const CircularProgressIndicator(color: Color(0xFF00A3FF));
-                },
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Fintel',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white70,
-                letterSpacing: 2.0
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// 🎬 רכיב תצוגה: אנימציית כניסה (Banking Style) המציגה תאריך התחברות
-class PostLoginSplashScreen extends StatelessWidget {
-  final User user;
-  const PostLoginSplashScreen({super.key, required this.user});
-
-  @override
-  Widget build(BuildContext context) {
-    // שליפת זמן ההתחברות האחרון ממטא-דאטה של גוגל
-    final lastSignIn = user.metadata.lastSignInTime;
-    String timeText = '';
-    
-    if (lastSignIn != null) {
-      // עיצוב תאריך בסגנון ישראלי: dd/MM/yyyy HH:mm
-      timeText = DateFormat('dd/MM/yyyy HH:mm').format(lastSignIn.toLocal());
-    }
-
-    return Scaffold(
-      backgroundColor: const Color(0xFF121212),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(30),
-              child: Image.asset(
-                'assets/icon/splash.gif',
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
                   return const CircularProgressIndicator(color: Color(0xFF00FF85));
                 },
               ),
@@ -270,7 +258,7 @@ class PostLoginSplashScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Colors.black87, // טקסט כהה על רקע בהיר
               ),
             ),
             const SizedBox(height: 12),
@@ -278,10 +266,11 @@ class PostLoginSplashScreen extends StatelessWidget {
               Text(
                 'כניסה אחרונה למערכת:\n$timeText',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 14,
-                  color: Colors.blueGrey[400],
-                  height: 1.5
+                  color: Colors.blueGrey, // צבע משני אלגנטי
+                  height: 1.5,
+                  fontWeight: FontWeight.w500
                 ),
               ),
           ],
