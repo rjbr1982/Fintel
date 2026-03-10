@@ -1,7 +1,7 @@
-// 🔒 STATUS: EDITED (Added Local_Auth Biometric barrier for Mobile users)
+// 🔒 STATUS: EDITED (Added AppGlobals for Smart Session Tracking & Seamless Internal Navigation)
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // הוסף כדי לזהות Web
-import 'package:local_auth/local_auth.dart'; // הוסף את ספריית הביומטריה
+import 'package:flutter/foundation.dart' show kIsWeb; 
+import 'package:local_auth/local_auth.dart'; 
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -50,6 +50,16 @@ void main() async {
   );
 }
 
+// 🧠 מנהל זיכרון גלובלי לסשן נוכחי (למניעת כפילויות בניווט פנימי)
+class AppGlobals {
+  static bool hasCompletedColdBoot = false;
+  static bool hasAuthenticatedSession = false;
+  
+  static void resetSession() {
+    hasAuthenticatedSession = false;
+  }
+}
+
 class FintelApp extends StatelessWidget {
   const FintelApp({super.key});
 
@@ -90,7 +100,7 @@ class FintelApp extends StatelessWidget {
   }
 }
 
-// 🎬 שער 1: ניהול האתחול הראשוני עם מעבר רך
+// 🎬 שער 1: ניהול האתחול הראשוני עם דילוג חכם בניווט פנימי
 class AppBootstrapper extends StatefulWidget {
   const AppBootstrapper({super.key});
 
@@ -99,14 +109,18 @@ class AppBootstrapper extends StatefulWidget {
 }
 
 class _AppBootstrapperState extends State<AppBootstrapper> {
-  bool _isBooting = true;
+  // אם כבר ביצענו Cold Boot קודם לכן, נדלג על המסך הזה
+  bool _isBooting = !AppGlobals.hasCompletedColdBoot;
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) setState(() => _isBooting = false);
-    });
+    if (_isBooting) {
+      Future.delayed(const Duration(milliseconds: 2500), () {
+        AppGlobals.hasCompletedColdBoot = true;
+        if (mounted) setState(() => _isBooting = false);
+      });
+    }
   }
 
   @override
@@ -122,7 +136,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
   }
 }
 
-// 🔒 שער 2: מאזין לסטטוס ההתחברות מול הענן
+// 🔒 שער 2: מאזין לסטטוס ההתחברות מול הענן ולאיפוס סשן
 class AuthStreamGate extends StatelessWidget {
   const AuthStreamGate({super.key});
 
@@ -139,13 +153,15 @@ class AuthStreamGate extends StatelessWidget {
           return PostLoginRouter(key: const ValueKey('post_login_router'), user: snapshot.data!);
         }
 
+        // המשתמש מנותק (או התנתק כרגע) - מאפסים את חותמת הסשן החיה
+        AppGlobals.resetSession();
         return const LoginScreen(key: ValueKey('login_screen'));
       },
     );
   }
 }
 
-// 🏦 שער 3: חוויית הבנק - אנימציה שנייה + ביומטריה
+// 🏦 שער 3: חוויית הבנק - מזהה אם זו כניסה ראשונית לסשן או רק "חזרה לבית"
 class PostLoginRouter extends StatefulWidget {
   final User user;
   const PostLoginRouter({super.key, required this.user});
@@ -157,11 +173,14 @@ class PostLoginRouter extends StatefulWidget {
 class _PostLoginRouterState extends State<PostLoginRouter> {
   bool _isProcessing = true;
   bool _needsOnboarding = false;
-  bool _authFailed = false; // מצב לאימות ביומטרי שנכשל
+  bool _authFailed = false; 
+  late bool _isInitialAuthRun; // קובע האם להציג טקסט ואימות ביומטרי
 
   @override
   void initState() {
     super.initState();
+    // אנחנו מזהים שזו ריצה ראשונה אם לא סומן שיש סשן מאומת חי
+    _isInitialAuthRun = !AppGlobals.hasAuthenticatedSession;
     _processLogin();
   }
 
@@ -174,40 +193,49 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
     final expenses = await DatabaseHelper.instance.getExpenses();
     _needsOnboarding = expenses.isEmpty;
 
-    // שליפת הגדרת הביומטריה (רלוונטי רק למובייל)
-    double useBioNum = await DatabaseHelper.instance.getSetting('use_biometric') ?? 0.0;
-    bool useBiometric = useBioNum == 1.0;
+    if (_isInitialAuthRun) {
+      // --- מסלול כניסה ראשונית (התחברות ממש עכשיו) ---
+      double useBioNum = await DatabaseHelper.instance.getSetting('use_biometric') ?? 0.0;
+      bool useBiometric = useBioNum == 1.0;
 
-    await Future.delayed(const Duration(milliseconds: 2500));
+      // השהיה מלאה של 2.5 שניות להצגת טקסט כניסה אחרונה
+      await Future.delayed(const Duration(milliseconds: 2500));
 
-    // אם אנחנו לא ב-Web והמשתמש הדליק ביומטריה - הקפץ זיהוי
-    if (!kIsWeb && useBiometric) {
-      final LocalAuthentication auth = LocalAuthentication();
-      bool canCheckBiometrics = false;
-      try {
-        canCheckBiometrics = await auth.canCheckBiometrics || await auth.isDeviceSupported();
-      } catch (e) {
-        debugPrint('Biometric check error: $e');
-      }
-
-      if (canCheckBiometrics) {
+      if (!kIsWeb && useBiometric) {
+        final LocalAuthentication auth = LocalAuthentication();
+        bool canCheckBiometrics = false;
         try {
-          bool authenticated = await auth.authenticate(
-            localizedReason: 'אנא אמת את זהותך כדי לגשת לנתונים הפיננסיים',
-            options: const AuthenticationOptions(
-              stickyAuth: true,
-              biometricOnly: true,
-            ),
-          );
-          if (!authenticated) {
-            // המשתמש ביטל או נכשל בזיהוי
-            if (mounted) setState(() => _authFailed = true);
-            return;
-          }
+          canCheckBiometrics = await auth.canCheckBiometrics || await auth.isDeviceSupported();
         } catch (e) {
-          debugPrint('Authentication error: $e');
+          debugPrint('Biometric check error: $e');
+        }
+
+        if (canCheckBiometrics) {
+          try {
+            bool authenticated = await auth.authenticate(
+              localizedReason: 'אנא אמת את זהותך כדי לגשת לנתונים הפיננסיים',
+              options: const AuthenticationOptions(
+                stickyAuth: true,
+                biometricOnly: true,
+              ),
+            );
+            if (!authenticated) {
+              if (mounted) setState(() => _authFailed = true);
+              return;
+            }
+          } catch (e) {
+            debugPrint('Authentication error: $e');
+          }
         }
       }
+      
+      // סימון שהמשתמש עבר בהצלחה אימות והסשן באוויר
+      AppGlobals.hasAuthenticatedSession = true;
+
+    } else {
+      // --- מסלול ניווט פנימי ("חזרה לדשבורד" מתוך מסך פנימי) ---
+      // השהיה קצרה, נעימה ואלגנטית (1 שנייה), רק אנימציה נטו.
+      await Future.delayed(const Duration(milliseconds: 1000));
     }
 
     if (mounted) {
@@ -230,7 +258,7 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
               const SizedBox(height: 24),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF121212), foregroundColor: Colors.white),
-                onPressed: _processLogin, // חזרה לתהליך
+                onPressed: _processLogin, 
                 child: const Text('נסה שוב'),
               )
             ]
@@ -241,7 +269,11 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
 
     Widget currentScreen;
     if (_isProcessing) {
-      currentScreen = PostLoginSplashScreen(key: const ValueKey('splash_post'), user: widget.user);
+      currentScreen = PostLoginSplashScreen(
+        key: const ValueKey('splash_post'), 
+        user: widget.user, 
+        showText: _isInitialAuthRun // מעביר הוראה האם להציג מלל או לא
+      );
     } else if (_needsOnboarding) {
       currentScreen = const OnboardingScreen(key: ValueKey('onboarding'));
     } else {
@@ -264,7 +296,7 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // רקע לבן פרימיום
+      backgroundColor: Colors.white, 
       body: Center(
         child: ClipRRect(
           borderRadius: BorderRadius.circular(30),
@@ -283,10 +315,11 @@ class SplashScreen extends StatelessWidget {
   }
 }
 
-// 🎬 רכיב תצוגה: אנימציית כניסה המציגה תאריך התחברות (רקע בהיר)
+// 🎬 רכיב תצוגה: אנימציית כניסה חכמה (יודעת להציג או להסתיר טקסט)
 class PostLoginSplashScreen extends StatelessWidget {
   final User user;
-  const PostLoginSplashScreen({super.key, required this.user});
+  final bool showText; // פרמטר חדש
+  const PostLoginSplashScreen({super.key, required this.user, this.showText = true});
 
   @override
   Widget build(BuildContext context) {
@@ -298,7 +331,7 @@ class PostLoginSplashScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white, // רקע לבן פרימיום
+      backgroundColor: Colors.white, 
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -307,35 +340,39 @@ class PostLoginSplashScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(30),
               child: Image.asset(
                 'assets/icon/splash.gif',
-                width: 120,
-                height: 120,
+                width: showText ? 120 : 140, // אם אין טקסט נגדיל קצת את האנימציה שוב
+                height: showText ? 120 : 140,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return const CircularProgressIndicator(color: Color(0xFF00FF85));
                 },
               ),
             ),
-            const SizedBox(height: 32),
-            const Text(
-              'מאמת נתונים מאובטחים...',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87, // טקסט כהה על רקע בהיר
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (timeText.isNotEmpty)
-              Text(
-                'כניסה אחרונה למערכת:\n$timeText',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.blueGrey, // צבע משני אלגנטי
-                  height: 1.5,
-                  fontWeight: FontWeight.w500
+            
+            // תצוגת הטקסטים רק אם הוגדר showText = true (באתחול סשן בלבד)
+            if (showText) ...[
+              const SizedBox(height: 32),
+              const Text(
+                'מאמת נתונים מאובטחים...',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87, 
                 ),
               ),
+              const SizedBox(height: 12),
+              if (timeText.isNotEmpty)
+                Text(
+                  'כניסה אחרונה למערכת:\n$timeText',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.blueGrey, 
+                    height: 1.5,
+                    fontWeight: FontWeight.w500
+                  ),
+                ),
+            ]
           ],
         ),
       ),
