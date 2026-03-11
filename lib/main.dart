@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added AppGlobals for Smart Session Tracking & Seamless Internal Navigation)
+// 🔒 STATUS: EDITED (Removed aggressive session reset from StreamBuilder)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb; 
 import 'package:local_auth/local_auth.dart'; 
@@ -109,7 +109,6 @@ class AppBootstrapper extends StatefulWidget {
 }
 
 class _AppBootstrapperState extends State<AppBootstrapper> {
-  // אם כבר ביצענו Cold Boot קודם לכן, נדלג על המסך הזה
   bool _isBooting = !AppGlobals.hasCompletedColdBoot;
 
   @override
@@ -136,7 +135,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
   }
 }
 
-// 🔒 שער 2: מאזין לסטטוס ההתחברות מול הענן ולאיפוס סשן
+// 🔒 שער 2: מאזין לסטטוס ההתחברות מול הענן
 class AuthStreamGate extends StatelessWidget {
   const AuthStreamGate({super.key});
 
@@ -153,15 +152,14 @@ class AuthStreamGate extends StatelessWidget {
           return PostLoginRouter(key: const ValueKey('post_login_router'), user: snapshot.data!);
         }
 
-        // המשתמש מנותק (או התנתק כרגע) - מאפסים את חותמת הסשן החיה
-        AppGlobals.resetSession();
+        // אם הגענו לפה, המשתמש באמת מנותק. ה-reset מתבצע עכשיו בצורה בטוחה רק כפתור ההתנתקות.
         return const LoginScreen(key: ValueKey('login_screen'));
       },
     );
   }
 }
 
-// 🏦 שער 3: חוויית הבנק - מזהה אם זו כניסה ראשונית לסשן או רק "חזרה לבית"
+// 🏦 שער 3: חוויית הבנק
 class PostLoginRouter extends StatefulWidget {
   final User user;
   const PostLoginRouter({super.key, required this.user});
@@ -174,12 +172,11 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
   bool _isProcessing = true;
   bool _needsOnboarding = false;
   bool _authFailed = false; 
-  late bool _isInitialAuthRun; // קובע האם להציג טקסט ואימות ביומטרי
+  late bool _isInitialAuthRun; 
 
   @override
   void initState() {
     super.initState();
-    // אנחנו מזהים שזו ריצה ראשונה אם לא סומן שיש סשן מאומת חי
     _isInitialAuthRun = !AppGlobals.hasAuthenticatedSession;
     _processLogin();
   }
@@ -194,11 +191,9 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
     _needsOnboarding = expenses.isEmpty;
 
     if (_isInitialAuthRun) {
-      // --- מסלול כניסה ראשונית (התחברות ממש עכשיו) ---
       double useBioNum = await DatabaseHelper.instance.getSetting('use_biometric') ?? 0.0;
       bool useBiometric = useBioNum == 1.0;
 
-      // השהיה מלאה של 2.5 שניות להצגת טקסט כניסה אחרונה
       await Future.delayed(const Duration(milliseconds: 2500));
 
       if (!kIsWeb && useBiometric) {
@@ -229,12 +224,9 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
         }
       }
       
-      // סימון שהמשתמש עבר בהצלחה אימות והסשן באוויר
       AppGlobals.hasAuthenticatedSession = true;
 
     } else {
-      // --- מסלול ניווט פנימי ("חזרה לדשבורד" מתוך מסך פנימי) ---
-      // השהיה קצרה, נעימה ואלגנטית (1 שנייה), רק אנימציה נטו.
       await Future.delayed(const Duration(milliseconds: 1000));
     }
 
@@ -272,7 +264,7 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
       currentScreen = PostLoginSplashScreen(
         key: const ValueKey('splash_post'), 
         user: widget.user, 
-        showText: _isInitialAuthRun // מעביר הוראה האם להציג מלל או לא
+        showText: _isInitialAuthRun 
       );
     } else if (_needsOnboarding) {
       currentScreen = const OnboardingScreen(key: ValueKey('onboarding'));
@@ -289,7 +281,6 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
   }
 }
 
-// 🎬 רכיב תצוגה: אנימציית פתיחה נקייה לחלוטין (רקע בהיר)
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
@@ -315,10 +306,9 @@ class SplashScreen extends StatelessWidget {
   }
 }
 
-// 🎬 רכיב תצוגה: אנימציית כניסה חכמה (יודעת להציג או להסתיר טקסט)
 class PostLoginSplashScreen extends StatelessWidget {
   final User user;
-  final bool showText; // פרמטר חדש
+  final bool showText; 
   const PostLoginSplashScreen({super.key, required this.user, this.showText = true});
 
   @override
@@ -340,7 +330,7 @@ class PostLoginSplashScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(30),
               child: Image.asset(
                 'assets/icon/splash.gif',
-                width: showText ? 120 : 140, // אם אין טקסט נגדיל קצת את האנימציה שוב
+                width: showText ? 120 : 140, 
                 height: showText ? 120 : 140,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
@@ -349,7 +339,6 @@ class PostLoginSplashScreen extends StatelessWidget {
               ),
             ),
             
-            // תצוגת הטקסטים רק אם הוגדר showText = true (באתחול סשן בלבד)
             if (showText) ...[
               const SizedBox(height: 32),
               const Text(

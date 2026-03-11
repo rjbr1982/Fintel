@@ -1,6 +1,6 @@
-// 🔒 STATUS: EDITED (Fixed deprecated activeColor to activeThumbColor in SwitchListTile)
+// 🔒 STATUS: EDITED (Moved AppGlobals.resetSession() explicitly to the Logout button)
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // הוסף כדי לזהות אם אנחנו ב-Web
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -13,6 +13,7 @@ import '../screens/onboarding_screen.dart';
 import '../screens/sinking_funds_screen.dart';
 import '../screens/checking_history_screen.dart';
 import '../screens/salary_engine_screen.dart';
+import '../../main.dart'; // הוספת הייבוא כדי לגשת ל-AppGlobals
 
 enum MenuAction { savings, checking, salary, ai, settings }
 
@@ -196,10 +197,6 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-// =========================================================================
-// פונקציות תפריט ההגדרות הגלובליות
-// =========================================================================
-
 void _showMainSettingsDialog(BuildContext context, BudgetProvider budget) {
   final user = FirebaseAuth.instance.currentUser;
 
@@ -228,7 +225,6 @@ void _showMainSettingsDialog(BuildContext context, BudgetProvider budget) {
               if (user != null)
                 _buildUserProfileCard(context, user),
 
-              // מתג ביומטריה - מופיע רק בנייד (לא מופיע ב-Web)
               if (!kIsWeb)
                 Consumer<BudgetProvider>(
                   builder: (context, budgetProv, child) {
@@ -249,7 +245,7 @@ void _showMainSettingsDialog(BuildContext context, BudgetProvider budget) {
                           child: const Icon(Icons.fingerprint, color: Colors.teal, size: 20),
                         ),
                         value: budgetProv.useBiometric,
-                        activeThumbColor: Colors.teal, // <- התיקון כאן
+                        activeThumbColor: Colors.teal, 
                         onChanged: (val) {
                           budgetProv.toggleBiometric(val);
                         },
@@ -336,16 +332,11 @@ Widget _buildUserProfileCard(BuildContext context, User user) {
             onPressed: () async {
               Navigator.pop(context); 
               
-              try {
-                await GoogleSignIn().disconnect(); 
-              } catch (e) {
-                debugPrint('Google disconnect error: $e');
-              }
-              try {
-                await GoogleSignIn().signOut(); 
-              } catch (e) {
-                debugPrint('Google SignOut error: $e');
-              }
+              // פעולת האיפוס הועברה לכאן באופן בלעדי
+              AppGlobals.resetSession();
+              
+              try { await GoogleSignIn().disconnect(); } catch (e) { debugPrint('Google disconnect error: $e'); }
+              try { await GoogleSignIn().signOut(); } catch (e) { debugPrint('Google SignOut error: $e'); }
               
               await FirebaseAuth.instance.signOut();
               

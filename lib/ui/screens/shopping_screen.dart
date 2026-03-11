@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Replaced retroactive weeks with exact days/dates)
+// 🔒 STATUS: EDITED (Fixed curly_braces_in_flow_control_structures linter warnings)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/shopping_provider.dart';
@@ -16,16 +16,11 @@ class ShoppingScreen extends StatefulWidget {
 class _ShoppingScreenState extends State<ShoppingScreen> {
   String _selectedCategory = 'הכל';
   
-  // מנוע המיון הרב-שכבתי
   List<String> _allSortOptions = ['סיווג', 'שם', 'מחיר', 'תדירות', 'קנייה אחרונה'];
-  List<String> _activeSorts = ['סיווג', 'שם']; // ברירת המחדל: סיווג, ואז שם
+  List<String> _activeSorts = ['סיווג', 'שם']; 
   
   int _comparisonOffset = 0; 
-
-  // מנגנון זום מקומי למסך קניות (רספונסיביות למחשב)
   double _textScale = 1.0;
-  
-  // מצב "סינון קנייה בפועל" - מציג רק מוצרים שסומנו
   bool _showOnlyChecked = false;
 
   @override
@@ -40,13 +35,17 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
   void _zoomIn() {
     setState(() {
-      if (_textScale < 2.0) _textScale += 0.1;
+      if (_textScale < 2.0) {
+        _textScale += 0.1;
+      }
     });
   }
 
   void _zoomOut() {
     setState(() {
-      if (_textScale > 0.8) _textScale -= 0.1;
+      if (_textScale > 0.8) {
+        _textScale -= 0.1;
+      }
     });
   }
 
@@ -54,7 +53,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     if (item.lastPurchaseDateTime == null || offset == 0) {
       return false;
     }
-    
     final now = DateTime.now();
     final startOfCurrentWeek = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday % 7));
     final startOfTargetWeek = startOfCurrentWeek.add(Duration(days: offset * 7));
@@ -87,7 +85,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     final shoppingProvider = context.watch<ShoppingProvider>();
     final budgetProvider = context.watch<BudgetProvider>();
     
-    // שאיבה בטוחה של עוגן הקניות ללא קריסה למשכורת
     final groceryExpense = budgetProvider.expenses.firstWhere(
       (e) => e.name.trim() == 'קניות' || (e.category == 'משתנות' && e.parentCategory == 'קניות'),
       orElse: () => Expense(
@@ -109,7 +106,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     final double actualMonthly = shoppingProvider.actualMonthlySpent;
     final double currentBasket = shoppingProvider.currentBasketTotal;
 
-    // הגנה במידה והקטגוריה שנבחרה נמחקה
     if (!shoppingProvider.availableCategories.contains(_selectedCategory)) {
       _selectedCategory = 'הכל';
     }
@@ -118,23 +114,21 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         ? List.from(shoppingProvider.items)
         : shoppingProvider.items.where((i) => i.category == _selectedCategory).toList();
 
-    // הפעלת סינון "מסומנים בלבד" במידה והופעל
     if (_showOnlyChecked) {
       displayedItems = displayedItems.where((i) => shoppingProvider.isChecked(i.id ?? -1)).toList();
     }
 
-    // --- לוגיקת המיון הרב-שכבתית (Multi-Level Sort Engine) ---
     displayedItems.sort((a, b) {
       for (String sort in _activeSorts) {
         int result = 0;
         if (sort == 'מחיר') {
-          result = b.price.compareTo(a.price); // מהיקר לזול
+          result = b.price.compareTo(a.price); 
         } else if (sort == 'תדירות') {
-          result = a.frequencyWeeks.compareTo(b.frequencyWeeks); // תדירות גבוהה (מעט שבועות) קודם
+          result = a.frequencyWeeks.compareTo(b.frequencyWeeks);
         } else if (sort == 'קנייה אחרונה') {
           final ad = a.lastPurchaseDateTime ?? DateTime(2000);
           final bd = b.lastPurchaseDateTime ?? DateTime(2000);
-          result = bd.compareTo(ad); // קנייה חדשה יותר קודם
+          result = bd.compareTo(ad); 
         } else if (sort == 'סיווג') {
           result = a.category.compareTo(b.category);
         } else if (sort == 'שם') {
@@ -145,7 +139,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
           return result;
         }
       }
-      return a.name.compareTo(b.name); // Fallback אחרון
+      return a.name.compareTo(b.name); 
     });
 
     String sortDisplay = _activeSorts.take(2).join(' > ');
@@ -161,11 +155,12 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         centerTitle: false,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.blueGrey, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
+          },
         ),
         title: const Text('רשימת קניות', style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
         actions: [
-          // כפתור מסנן "הצג רק מסומנים"
           IconButton(
             icon: Icon(
               _showOnlyChecked ? Icons.shopping_cart : Icons.shopping_cart_outlined,
@@ -414,7 +409,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     );
   }
 
-  // --- הפתרון הנקודתי: תיעוד מדויק ברמת הימים ---
   void _showQuickHistoryAction(BuildContext context, ShoppingItem item, ShoppingProvider provider) {
     showModalBottomSheet(
       context: context,
@@ -572,19 +566,17 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     );
   }
   
-  // --- ממשק מיון מתקדם (Bottom Sheet לניהול השכבות) ---
   void _showAdvancedSortSheet(BuildContext context) {
     List<String> currentOrder = List.from(_allSortOptions);
     List<String> currentActive = List.from(_activeSorts);
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // חובה למסכים קטנים כדי לאפשר גלילה חופשית מעל מקלדת/שטח מסך
+      isScrollControlled: true, 
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setSheetState) {
-          // מחושב גובה מקסימלי כדי למנוע חריגה מהמסך במובייל
           final maxSheetHeight = MediaQuery.of(context).size.height * 0.75;
           
           return SafeArea(
@@ -593,13 +585,12 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min, // תופס את המינימום האפשרי, אבל לא יותר מ-maxSheetHeight
+                  mainAxisSize: MainAxisSize.min, 
                   children: [
                     Text("ניהול סדר מיון (רב-שכבתי)", style: TextStyle(fontSize: 18 * _textScale, fontWeight: FontWeight.bold, color: Colors.black87)),
                     const SizedBox(height: 8),
                     Text("המיון יתבצע מלמעלה למטה.\nגרור באמצעות הפסים כדי לשנות עדיפות, וסמן V כדי להפעיל.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12 * _textScale, color: Colors.grey)),
                     const Divider(),
-                    // הרשימה הנגררת מתרחבת (Expanded) בתוך הגובה הנותר ולא חורגת מהמסך
                     Expanded(
                       child: ReorderableListView(
                         buildDefaultDragHandles: false,
@@ -646,7 +637,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // כפתור תמיד נשאר למטה
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF121212), 
@@ -690,7 +680,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
             children: [
               Expanded(child: _buildStatDetail("תקציב עוגן", anchor, Colors.blueGrey)), 
               Expanded(child: _buildStatDetail("תכנון חודשי", planned, Colors.black87)), 
-              Expanded(child: _buildDeltaDetail(delta)), // Modified to include the tooltip
+              Expanded(child: _buildDeltaDetail(delta)), 
               Expanded(child: _buildStatDetail("ביצוע בפועל", actual, actual > anchor ? Colors.red : Colors.green)),
             ],
           ),
@@ -710,7 +700,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     );
   }
   
-  // CONTEXTUAL ONBOARDING: Delta Tooltip
   Widget _buildDeltaDetail(double delta) {
     final valueColor = delta >= 0 ? Colors.green : Colors.red;
     return Column(
@@ -736,7 +725,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   }
 
   Widget _buildActiveBasketBar(double total, ShoppingProvider provider) {
-    // CONTEXTUAL ONBOARDING: Frequency Violation Warning
     bool hasViolationsInBasket = false;
     for (var item in provider.items) {
       if (provider.isChecked(item.id ?? -1) && item.isFrequencyViolation) {
@@ -801,7 +789,10 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       backgroundColor: Colors.white,
       title: Text("סיום קנייה", style: TextStyle(color: Colors.black87, fontSize: 18 * _textScale)), 
       content: Text("האם לעדכן את תאריכי הקנייה עבור כל המוצרים שבסל ולאפס את הרשימה?", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
-      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(fontSize: 14 * _textScale))), TextButton(onPressed: () { provider.finalizePurchase(); Navigator.pop(ctx); }, child: Text("כן, בצע", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14 * _textScale)))],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(fontSize: 14 * _textScale))), 
+        TextButton(onPressed: () { provider.finalizePurchase(); Navigator.pop(ctx); }, child: Text("כן, בצע", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14 * _textScale)))
+      ],
     ));
   }
 
@@ -820,7 +811,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.shopping_basket_outlined, size: 48 * _textScale, color: Colors.grey[300]), SizedBox(height: 16 * _textScale), Text('הרשימה ריקה', style: TextStyle(color: Colors.grey, fontSize: 14 * _textScale))]));
   }
 
-  // --- אישור מחיקת מוצר ---
   void _confirmDelete(BuildContext context, ShoppingProvider provider, ShoppingItem item) {
     showDialog(
       context: context,
@@ -835,8 +825,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             onPressed: () {
               provider.deleteItem(item.id!);
-              Navigator.pop(ctx); // סגירת דיאלוג המחיקה
-              Navigator.pop(context); // סגירת דיאלוג העריכה
+              Navigator.pop(ctx); 
+              Navigator.pop(context); 
             },
             child: Text("מחק", style: TextStyle(fontSize: 14 * _textScale)),
           ),
@@ -845,7 +835,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     );
   }
 
-  // --- דיאלוג מאוחד להוספה ועריכה ---
   void _showItemEditor(BuildContext context, ShoppingProvider provider, {ShoppingItem? item}) {
     final nameController = TextEditingController(text: item?.name);
     final priceController = TextEditingController(text: item?.price.toString());
@@ -998,7 +987,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     );
   }
 
-  // --- ניהול קטגוריות גלובלי ---
   void _showCategoryManager(BuildContext context, ShoppingProvider provider) {
     showDialog(
       context: context,

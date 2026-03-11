@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Checkbox State Loss & Added Catalog Restore Function)
+// 🔒 STATUS: EDITED (Added Auto-Seed for empty catalogs & Fixed Checkbox State Loss)
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 import '../data/shopping_model.dart';
@@ -87,18 +87,20 @@ class ShoppingProvider with ChangeNotifier {
     // 2. טעינת הרשימה המעודכנת
     _items = await db.getShoppingItems();
     
-    // 3. החזרת הסימונים למוצרים הרלוונטיים (מונע איפוס בזמן עריכת פריט)
+    // 3. מזרק קטלוג אוטומטי (Auto-Seed) אם הרשימה ריקה לחלוטין
+    if (_items.isEmpty) {
+      await seedDefaultItems();
+      return; // ה-seedDefaultItems כבר קורא ל-loadItems בסופו
+    }
+
+    // 4. החזרת הסימונים למוצרים הרלוונטיים (מונע איפוס בזמן עריכת פריט)
     for (int i = 0; i < _items.length; i++) {
       if (_items[i].id != null && checkedIds.contains(_items[i].id!)) {
         _items[i] = _items[i].copyWith(isChecked: true);
       }
     }
 
-    if (_items.isEmpty) {
-      await seedDefaultItems();
-    } else {
-      notifyListeners();
-    }
+    notifyListeners();
   }
 
   Future<void> resetAndSeed() async {
