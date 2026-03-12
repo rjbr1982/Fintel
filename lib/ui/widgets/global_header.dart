@@ -1,9 +1,10 @@
-// 🔒 STATUS: EDITED (Moved AppGlobals.resetSession() explicitly to the Logout button)
+// 🔒 STATUS: EDITED (Added In-App Support & Legal Center + Fixed Deprecated activeColor)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
 import '../../utils/app_localizations.dart';
@@ -13,9 +14,9 @@ import '../screens/onboarding_screen.dart';
 import '../screens/sinking_funds_screen.dart';
 import '../screens/checking_history_screen.dart';
 import '../screens/salary_engine_screen.dart';
-import '../../main.dart'; // הוספת הייבוא כדי לגשת ל-AppGlobals
+import '../../main.dart'; 
 
-enum MenuAction { savings, checking, salary, ai, settings }
+enum MenuAction { savings, checking, salary, ai, settings, support }
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
@@ -129,6 +130,9 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
               case MenuAction.settings:
                 _showMainSettingsDialog(context, budget);
                 break;
+              case MenuAction.support:
+                _showSupportBottomSheet(context);
+                break;
             }
           },
           itemBuilder: (BuildContext context) => <PopupMenuEntry<MenuAction>>[
@@ -180,6 +184,17 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
             ),
             const PopupMenuDivider(),
             const PopupMenuItem<MenuAction>(
+              value: MenuAction.support,
+              child: Row(
+                children: [
+                  Icon(Icons.shield_outlined, color: Colors.teal, size: 22),
+                  SizedBox(width: 12),
+                  Text('תמיכה ומשפטי'),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem<MenuAction>(
               value: MenuAction.settings,
               child: Row(
                 children: [
@@ -187,6 +202,17 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                   SizedBox(width: 12),
                   Text('הגדרות מערכת'),
                 ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem<MenuAction>(
+              enabled: false,
+              child: Center(
+                child: Text(
+                  '© 2026 Fintel - כל הזכויות שמורות\nv1.0.0',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                ),
               ),
             ),
           ],
@@ -332,7 +358,6 @@ Widget _buildUserProfileCard(BuildContext context, User user) {
             onPressed: () async {
               Navigator.pop(context); 
               
-              // פעולת האיפוס הועברה לכאן באופן בלעדי
               AppGlobals.resetSession();
               
               try { await GoogleSignIn().disconnect(); } catch (e) { debugPrint('Google disconnect error: $e'); }
@@ -380,6 +405,145 @@ Widget _buildSettingsCard(BuildContext ctx, IconData icon, String text, VoidCall
           ],
         ),
       ),
+    ),
+  );
+}
+
+void _showSupportBottomSheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'תמיכה ומשפטי',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+            const SizedBox(height: 10),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFE3F2FD),
+                child: Icon(Icons.mail_outline, color: Colors.blue),
+              ),
+              title: const Text('פנו אלינו באימייל', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final Uri emailUri = Uri.parse(
+                  'mailto:fintel.app.info@gmail.com?subject=${Uri.encodeComponent("פידבק על אפליקציית דוחכם")}'
+                );
+                try {
+                  if (await canLaunchUrl(emailUri)) {
+                    await launchUrl(emailUri);
+                  }
+                } catch (e) {
+                  debugPrint('Error launching email: $e');
+                }
+              },
+            ),
+            const Divider(height: 1, indent: 70),
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.orange.shade50,
+                child: Icon(Icons.description_outlined, color: Colors.orange.shade700),
+              ),
+              title: const Text('תנאי שימוש', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showLegalDialog(
+                  context: context,
+                  title: 'תנאי שימוש',
+                  icon: Icons.description_outlined,
+                  iconColor: Colors.orange.shade700,
+                  content: 'האפליקציה מהווה כלי עזר חישובי בלבד לניהול תקציב אישי. המידע, התחזיות והחישובים (כולל מנוע החירות וחיסול החובות) אינם מהווים ייעוץ פנסיוני, ייעוץ השקעות או ייעוץ מס. קבלת החלטות פיננסיות על בסיס האפליקציה היא על אחריות המשתמש בלבד. האפליקציה מסופקת (As-Is) בגרסת הרצה (Beta).',
+                );
+              },
+            ),
+            const Divider(height: 1, indent: 70),
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.green.shade50,
+                child: Icon(Icons.lock_outline, color: Colors.green.shade700),
+              ),
+              title: const Text('מדיניות פרטיות', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showLegalDialog(
+                  context: context,
+                  title: 'מדיניות פרטיות',
+                  icon: Icons.lock_outline,
+                  iconColor: Colors.green.shade700,
+                  content: 'הנתונים שלך, בשליטתך: כל הנתונים הפיננסיים מוזנים מרצונך ומיועדים אך ורק לחישוב התזרים שלך באפליקציה. המידע נשמר בענן המאובטח של Google (Firebase). איש מצוות המפתחים אינו קורא או מנתח את נתוניך האישיים. אנו מתחייבים לא למכור, להעביר או לשתף את הנתונים עם שום צד שלישי. ניתן למחוק את כל המידע בכל עת דרך תפריט ההגדרות.',
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+void _showLegalDialog({
+  required BuildContext context,
+  required String title,
+  required IconData icon,
+  required Color iconColor,
+  required String content,
+}) {
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Icon(icon, color: iconColor),
+          const SizedBox(width: 10),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              content,
+              style: const TextStyle(height: 1.5, fontSize: 14),
+            ),
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 10),
+            const Center(
+              child: Text(
+                '© 2026 Fintel - כל הזכויות שמורות.',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('הבנתי, סגור'),
+        ),
+      ],
     ),
   );
 }
