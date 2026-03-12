@@ -59,7 +59,7 @@ class DefaultFirebaseOptions {
     appId: '1:281373882888:web:063f7b956d879b8b022fbd',
     messagingSenderId: '281373882888',
     projectId: 'fintel-app-2e01e',
-    authDomain: 'fintel-app-2e01e.firebaseapp.com',
+    authDomain: 'myfintelapp.com', // 🔒 EDITED: Custom Auth Domain
     storageBucket: 'fintel-app-2e01e.firebasestorage.app',
   );
 
@@ -68,7 +68,7 @@ class DefaultFirebaseOptions {
     appId: '1:281373882888:web:063f7b956d879b8b022fbd',
     messagingSenderId: '281373882888',
     projectId: 'fintel-app-2e01e',
-    authDomain: 'fintel-app-2e01e.firebaseapp.com',
+    authDomain: 'myfintelapp.com', // 🔒 EDITED: Custom Auth Domain
     storageBucket: 'fintel-app-2e01e.firebasestorage.app',
   );
 

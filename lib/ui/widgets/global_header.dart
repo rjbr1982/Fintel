@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added In-App Support & Legal Center + Fixed Deprecated activeColor)
+// 🔒 STATUS: EDITED (Fixed Text Visibility & Removed Invalid showDialog Parameter)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
@@ -441,7 +441,7 @@ void _showSupportBottomSheet(BuildContext context) {
                 backgroundColor: Color(0xFFE3F2FD),
                 child: Icon(Icons.mail_outline, color: Colors.blue),
               ),
-              title: const Text('פנו אלינו באימייל', style: TextStyle(fontWeight: FontWeight.w600)),
+              title: const Text('פנו אלינו באימייל', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
               onTap: () async {
                 Navigator.pop(ctx);
                 final Uri emailUri = Uri.parse(
@@ -462,7 +462,7 @@ void _showSupportBottomSheet(BuildContext context) {
                 backgroundColor: Colors.orange.shade50,
                 child: Icon(Icons.description_outlined, color: Colors.orange.shade700),
               ),
-              title: const Text('תנאי שימוש', style: TextStyle(fontWeight: FontWeight.w600)),
+              title: const Text('תנאי שימוש', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
               onTap: () {
                 Navigator.pop(ctx);
                 _showLegalDialog(
@@ -480,7 +480,7 @@ void _showSupportBottomSheet(BuildContext context) {
                 backgroundColor: Colors.green.shade50,
                 child: Icon(Icons.lock_outline, color: Colors.green.shade700),
               ),
-              title: const Text('מדיניות פרטיות', style: TextStyle(fontWeight: FontWeight.w600)),
+              title: const Text('מדיניות פרטיות', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
               onTap: () {
                 Navigator.pop(ctx);
                 _showLegalDialog(
@@ -510,11 +510,12 @@ void _showLegalDialog({
     context: context,
     builder: (ctx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
       title: Row(
         children: [
           Icon(icon, color: iconColor),
           const SizedBox(width: 10),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
         ],
       ),
       content: SingleChildScrollView(
@@ -524,7 +525,7 @@ void _showLegalDialog({
           children: [
             Text(
               content,
-              style: const TextStyle(height: 1.5, fontSize: 14),
+              style: const TextStyle(height: 1.5, fontSize: 14, color: Colors.black87),
             ),
             const SizedBox(height: 20),
             const Divider(),
@@ -532,7 +533,7 @@ void _showLegalDialog({
             const Center(
               child: Text(
                 '© 2026 Fintel - כל הזכויות שמורות.',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54),
               ),
             ),
           ],
