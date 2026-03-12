@@ -1,6 +1,7 @@
-// 🔒 STATUS: EDITED (Fixed Text Visibility & Removed Invalid showDialog Parameter)
+// 🔒 STATUS: EDITED (Upgraded Main Menu to BottomSheet & Fixed Email Launch)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart'; 
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -15,8 +16,6 @@ import '../screens/sinking_funds_screen.dart';
 import '../screens/checking_history_screen.dart';
 import '../screens/salary_engine_screen.dart';
 import '../../main.dart'; 
-
-enum MenuAction { savings, checking, salary, ai, settings, support }
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
@@ -86,136 +85,10 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
             },
           ),
         
-        PopupMenuButton<MenuAction>(
+        IconButton(
           icon: const Icon(Icons.menu, color: brandBlue, size: 28),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          offset: const Offset(0, 40),
-          tooltip: 'תפריט פעולות',
-          onSelected: (MenuAction action) async {
-            switch (action) {
-              case MenuAction.savings:
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SinkingFundsScreen()),
-                );
-                break;
-              case MenuAction.checking:
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const CheckingHistoryScreen()),
-                );
-                break;
-              case MenuAction.salary:
-                PremiumService.requirePremium(context, () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SalaryEngineScreen()),
-                  );
-                });
-                break;
-              case MenuAction.ai:
-                PremiumService.requirePremium(context, () async {
-                  await AiExportService.generateAndCopy(context);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('הנתונים הועתקו בהצלחה! ניתן להדביק בצ\'אט עם ה-AI.'),
-                        backgroundColor: Colors.green,
-                        duration: Duration(seconds: 3),
-                      ),
-                    );
-                  }
-                });
-                break;
-              case MenuAction.settings:
-                _showMainSettingsDialog(context, budget);
-                break;
-              case MenuAction.support:
-                _showSupportBottomSheet(context);
-                break;
-            }
-          },
-          itemBuilder: (BuildContext context) => <PopupMenuEntry<MenuAction>>[
-            if (showSavingsIcon)
-              const PopupMenuItem<MenuAction>(
-                value: MenuAction.savings,
-                child: Row(
-                  children: [
-                    Icon(Icons.savings_outlined, color: Colors.green, size: 22),
-                    SizedBox(width: 12),
-                    Text('מרכז החסכונות'),
-                  ],
-                ),
-              ),
-            if (showSavingsIcon) const PopupMenuDivider(),
-            const PopupMenuItem<MenuAction>(
-              value: MenuAction.checking,
-              child: Row(
-                children: [
-                  Icon(Icons.account_balance_wallet_outlined, color: Colors.blueGrey, size: 22),
-                  SizedBox(width: 12),
-                  Text('מעקב יתרת עו"ש'),
-                ],
-              ),
-            ),
-            const PopupMenuDivider(),
-            const PopupMenuItem<MenuAction>(
-              value: MenuAction.salary,
-              child: Row(
-                children: [
-                  Icon(Icons.insights, color: Colors.blue, size: 22),
-                  SizedBox(width: 12),
-                  Expanded(child: Text('מנוע סטטיסטיקת שכר')),
-                  Icon(Icons.workspace_premium, color: Colors.amber, size: 18),
-                ],
-              ),
-            ),
-            const PopupMenuDivider(),
-            const PopupMenuItem<MenuAction>(
-              value: MenuAction.ai,
-              child: Row(
-                children: [
-                  Icon(Icons.psychology, color: Colors.deepPurple, size: 22),
-                  SizedBox(width: 12),
-                  Expanded(child: Text('ייצוא נתונים ל-AI')),
-                  Icon(Icons.workspace_premium, color: Colors.amber, size: 18),
-                ],
-              ),
-            ),
-            const PopupMenuDivider(),
-            const PopupMenuItem<MenuAction>(
-              value: MenuAction.support,
-              child: Row(
-                children: [
-                  Icon(Icons.shield_outlined, color: Colors.teal, size: 22),
-                  SizedBox(width: 12),
-                  Text('תמיכה ומשפטי'),
-                ],
-              ),
-            ),
-            const PopupMenuDivider(),
-            const PopupMenuItem<MenuAction>(
-              value: MenuAction.settings,
-              child: Row(
-                children: [
-                  Icon(Icons.settings, color: Colors.blueGrey, size: 22),
-                  SizedBox(width: 12),
-                  Text('הגדרות מערכת'),
-                ],
-              ),
-            ),
-            const PopupMenuDivider(),
-            const PopupMenuItem<MenuAction>(
-              enabled: false,
-              child: Center(
-                child: Text(
-                  '© 2026 Fintel - כל הזכויות שמורות\nv1.0.0',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-              ),
-            ),
-          ],
+          tooltip: 'תפריט ראשי',
+          onPressed: () => _showMainMenuBottomSheet(context, budget, showSavingsIcon),
         ),
         const SizedBox(width: 4),
       ],
@@ -223,6 +96,246 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
+// =========================================================================
+// התפריט הראשי החדש (BottomSheet) - שפה עיצובית אחידה ויוקרתית
+// =========================================================================
+void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+            const SizedBox(height: 20),
+            
+            if (showSavings)
+              _buildMenuTile(
+                icon: Icons.savings_outlined, color: Colors.green, title: 'מרכז החסכונות',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SinkingFundsScreen()));
+                },
+              ),
+            
+            _buildMenuTile(
+              icon: Icons.account_balance_wallet_outlined, color: Colors.blueGrey, title: 'מעקב יתרת עו"ש',
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckingHistoryScreen()));
+              },
+            ),
+
+            const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(indent: 20, endIndent: 20)),
+
+            _buildMenuTile(
+              icon: Icons.insights, color: Colors.blue, title: 'מנוע סטטיסטיקת שכר', isPremium: true,
+              onTap: () {
+                Navigator.pop(ctx);
+                PremiumService.requirePremium(context, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SalaryEngineScreen()));
+                });
+              },
+            ),
+            
+            _buildMenuTile(
+              icon: Icons.psychology, color: Colors.deepPurple, title: 'ייצוא נתונים ל-AI', isPremium: true,
+              onTap: () {
+                Navigator.pop(ctx);
+                PremiumService.requirePremium(context, () async {
+                  await AiExportService.generateAndCopy(context);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('הנתונים הועתקו בהצלחה! ניתן להדביק בצ\'אט עם ה-AI.'), backgroundColor: Colors.green),
+                    );
+                  }
+                });
+              },
+            ),
+
+            const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(indent: 20, endIndent: 20)),
+
+            _buildMenuTile(
+              icon: Icons.shield_outlined, color: Colors.teal, title: 'תמיכה ומשפטי',
+              onTap: () {
+                Navigator.pop(ctx);
+                _showSupportBottomSheet(context);
+              },
+            ),
+
+            _buildMenuTile(
+              icon: Icons.settings, color: Colors.grey.shade700, title: 'הגדרות מערכת',
+              onTap: () {
+                Navigator.pop(ctx);
+                _showMainSettingsDialog(context, budget);
+              },
+            ),
+
+            const SizedBox(height: 24),
+            const Text(
+              '© 2026 Fintel - כל הזכויות שמורות\nv1.0.0',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: Colors.grey, height: 1.5),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildMenuTile({
+  required IconData icon, 
+  required Color color, 
+  required String title, 
+  required VoidCallback onTap, 
+  bool isPremium = false
+}) {
+  return ListTile(
+    contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
+    leading: CircleAvatar(
+      backgroundColor: color.withValues(alpha: 0.1),
+      child: Icon(icon, color: color, size: 22),
+    ),
+    title: Row(
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87)),
+        if (isPremium) ...[
+          const SizedBox(width: 8),
+          const Icon(Icons.workspace_premium, color: Colors.amber, size: 18),
+        ]
+      ],
+    ),
+    onTap: onTap,
+  );
+}
+
+// =========================================================================
+// פאנל תמיכה ומשפטי (כולל פתרון כפתור האימייל המלא)
+// =========================================================================
+void _showSupportBottomSheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+            const SizedBox(height: 20),
+            const Text('תמיכה ומשפטי', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+            const SizedBox(height: 10),
+            
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFE3F2FD), child: Icon(Icons.mail_outline, color: Colors.blue)),
+              title: const Text('פנו אלינו באימייל', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final Uri emailUri = Uri(
+                  scheme: 'mailto',
+                  path: 'fintel.app.info@gmail.com',
+                  query: 'subject=${Uri.encodeComponent("פידבק על אפליקציית דוחכם")}',
+                );
+                
+                try {
+                  // פתיחה ישירה של אפליקציית הדואר (תעבוד כעת בזכות ה-Manifest)
+                  final launched = await launchUrl(emailUri);
+                  if (!launched) throw Exception('Launch failed');
+                } catch (e) {
+                  // למקרה נדיר שאין שום אפליקציית אימייל במכשיר - נעתיק ללוח כגיבוי
+                  Clipboard.setData(const ClipboardData(text: 'fintel.app.info@gmail.com'));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('לא אותרה אפליקציית דואר. הכתובת הועתקה ללוח!'),
+                        backgroundColor: Colors.blueGrey,
+                        duration: Duration(seconds: 4),
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+            const Divider(height: 1, indent: 70),
+            
+            ListTile(
+              leading: CircleAvatar(backgroundColor: Colors.orange.shade50, child: Icon(Icons.description_outlined, color: Colors.orange.shade700)),
+              title: const Text('תנאי שימוש', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showLegalDialog(
+                  context: context, title: 'תנאי שימוש', icon: Icons.description_outlined, iconColor: Colors.orange.shade700,
+                  content: 'האפליקציה מהווה כלי עזר חישובי בלבד לניהול תקציב אישי. המידע, התחזיות והחישובים (כולל מנוע החירות וחיסול החובות) אינם מהווים ייעוץ פנסיוני, ייעוץ השקעות או ייעוץ מס. קבלת החלטות פיננסיות על בסיס האפליקציה היא על אחריות המשתמש בלבד. האפליקציה מסופקת (As-Is) בגרסת הרצה (Beta).',
+                );
+              },
+            ),
+            const Divider(height: 1, indent: 70),
+            
+            ListTile(
+              leading: CircleAvatar(backgroundColor: Colors.green.shade50, child: Icon(Icons.lock_outline, color: Colors.green.shade700)),
+              title: const Text('מדיניות פרטיות', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showLegalDialog(
+                  context: context, title: 'מדיניות פרטיות', icon: Icons.lock_outline, iconColor: Colors.green.shade700,
+                  content: 'הנתונים שלך, בשליטתך: כל הנתונים הפיננסיים מוזנים מרצונך ומיועדים אך ורק לחישוב התזרים שלך באפליקציה. המידע נשמר בענן המאובטח של Google (Firebase). איש מצוות המפתחים אינו קורא או מנתח את נתוניך האישיים. אנו מתחייבים לא למכור, להעביר או לשתף את הנתונים עם שום צד שלישי. ניתן למחוק את כל המידע בכל עת דרך תפריט ההגדרות.',
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+void _showLegalDialog({required BuildContext context, required String title, required IconData icon, required Color iconColor, required String content}) {
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
+      title: Row(
+        children: [
+          Icon(icon, color: iconColor),
+          const SizedBox(width: 10),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(content, style: const TextStyle(height: 1.5, fontSize: 14, color: Colors.black87)),
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 10),
+            const Center(child: Text('© 2026 Fintel - כל הזכויות שמורות.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
+          ],
+        ),
+      ),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('הבנתי, סגור'))],
+    ),
+  );
+}
+
+// =========================================================================
+// פאנל הגדרות ראשי
+// =========================================================================
 void _showMainSettingsDialog(BuildContext context, BudgetProvider budget) {
   final user = FirebaseAuth.instance.currentUser;
 
@@ -248,8 +361,7 @@ void _showMainSettingsDialog(BuildContext context, BudgetProvider budget) {
               ),
               const SizedBox(height: 24),
 
-              if (user != null)
-                _buildUserProfileCard(context, user),
+              if (user != null) _buildUserProfileCard(context, user),
 
               if (!kIsWeb)
                 Consumer<BudgetProvider>(
@@ -258,23 +370,14 @@ void _showMainSettingsDialog(BuildContext context, BudgetProvider budget) {
                       elevation: 0,
                       color: Colors.teal.withValues(alpha: 0.05),
                       margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: Colors.teal.withValues(alpha: 0.1))
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.teal.withValues(alpha: 0.1))),
                       child: SwitchListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                         title: Text('כניסה ביומטרית (טביעת אצבע)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey[900])),
-                        secondary: CircleAvatar(
-                          backgroundColor: Colors.teal.withValues(alpha: 0.15),
-                          radius: 18,
-                          child: const Icon(Icons.fingerprint, color: Colors.teal, size: 20),
-                        ),
+                        secondary: CircleAvatar(backgroundColor: Colors.teal.withValues(alpha: 0.15), radius: 18, child: const Icon(Icons.fingerprint, color: Colors.teal, size: 20)),
                         value: budgetProv.useBiometric,
                         activeThumbColor: Colors.teal, 
-                        onChanged: (val) {
-                          budgetProv.toggleBiometric(val);
-                        },
+                        onChanged: (val) { budgetProv.toggleBiometric(val); },
                       ),
                     );
                   }
@@ -295,10 +398,7 @@ void _showMainSettingsDialog(BuildContext context, BudgetProvider budget) {
                   _showFutureVsFinancialDialog(context, budget);
               }, Colors.purple),
               
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Divider(height: 1),
-              ),
+              const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1)),
               
               _buildSettingsCard(ctx, Icons.restore, 'איפוס כל הנתונים', () {
                   Navigator.pop(ctx);
@@ -316,18 +416,13 @@ Widget _buildUserProfileCard(BuildContext context, User user) {
   return Container(
     margin: const EdgeInsets.only(bottom: 16),
     padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.blueGrey.shade50,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.blueGrey.shade100),
-    ),
+    decoration: BoxDecoration(color: Colors.blueGrey.shade50, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.blueGrey.shade100)),
     child: Column(
       children: [
         Row(
           children: [
             CircleAvatar(
-              radius: 24,
-              backgroundColor: Colors.blueGrey.shade200,
+              radius: 24, backgroundColor: Colors.blueGrey.shade200,
               backgroundImage: user.photoURL != null ? NetworkImage(user.photoURL!) : null,
               child: user.photoURL == null ? const Icon(Icons.person, size: 30, color: Colors.white) : null,
             ),
@@ -349,25 +444,18 @@ Widget _buildUserProfileCard(BuildContext context, User user) {
           width: double.infinity,
           child: OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.redAccent,
-              side: const BorderSide(color: Colors.redAccent, width: 1.5),
+              foregroundColor: Colors.redAccent, side: const BorderSide(color: Colors.redAccent, width: 1.5),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
             ),
             icon: const Icon(Icons.logout, size: 18),
             label: const Text('התנתקות מהחשבון', style: TextStyle(fontWeight: FontWeight.bold)),
             onPressed: () async {
               Navigator.pop(context); 
-              
               AppGlobals.resetSession();
-              
               try { await GoogleSignIn().disconnect(); } catch (e) { debugPrint('Google disconnect error: $e'); }
               try { await GoogleSignIn().signOut(); } catch (e) { debugPrint('Google SignOut error: $e'); }
-              
               await FirebaseAuth.instance.signOut();
-              
-              if (context.mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
-              }
+              if (context.mounted) Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
             },
           ),
         )
@@ -378,13 +466,9 @@ Widget _buildUserProfileCard(BuildContext context, User user) {
 
 Widget _buildSettingsCard(BuildContext ctx, IconData icon, String text, VoidCallback onTap, Color iconColor) {
   return Card(
-    elevation: 0,
-    color: iconColor.withValues(alpha: 0.05),
+    elevation: 0, color: iconColor.withValues(alpha: 0.05),
     margin: const EdgeInsets.only(bottom: 12),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
-      side: BorderSide(color: iconColor.withValues(alpha: 0.1))
-    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: iconColor.withValues(alpha: 0.1))),
     child: InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -392,15 +476,9 @@ Widget _buildSettingsCard(BuildContext ctx, IconData icon, String text, VoidCall
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: iconColor.withValues(alpha: 0.15),
-              radius: 18,
-              child: Icon(icon, color: iconColor, size: 20),
-            ),
+            CircleAvatar(backgroundColor: iconColor.withValues(alpha: 0.15), radius: 18, child: Icon(icon, color: iconColor, size: 20)),
             const SizedBox(width: 16),
-            Expanded(
-              child: Text(text, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey[900])),
-            ),
+            Expanded(child: Text(text, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey[900]))),
             Icon(Icons.arrow_forward_ios, size: 14, color: Colors.blueGrey[300]),
           ],
         ),
@@ -409,145 +487,9 @@ Widget _buildSettingsCard(BuildContext ctx, IconData icon, String text, VoidCall
   );
 }
 
-void _showSupportBottomSheet(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (ctx) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'תמיכה ומשפטי',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-            ),
-            const SizedBox(height: 10),
-            ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: Color(0xFFE3F2FD),
-                child: Icon(Icons.mail_outline, color: Colors.blue),
-              ),
-              title: const Text('פנו אלינו באימייל', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final Uri emailUri = Uri.parse(
-                  'mailto:fintel.app.info@gmail.com?subject=${Uri.encodeComponent("פידבק על אפליקציית דוחכם")}'
-                );
-                try {
-                  if (await canLaunchUrl(emailUri)) {
-                    await launchUrl(emailUri);
-                  }
-                } catch (e) {
-                  debugPrint('Error launching email: $e');
-                }
-              },
-            ),
-            const Divider(height: 1, indent: 70),
-            ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.orange.shade50,
-                child: Icon(Icons.description_outlined, color: Colors.orange.shade700),
-              ),
-              title: const Text('תנאי שימוש', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showLegalDialog(
-                  context: context,
-                  title: 'תנאי שימוש',
-                  icon: Icons.description_outlined,
-                  iconColor: Colors.orange.shade700,
-                  content: 'האפליקציה מהווה כלי עזר חישובי בלבד לניהול תקציב אישי. המידע, התחזיות והחישובים (כולל מנוע החירות וחיסול החובות) אינם מהווים ייעוץ פנסיוני, ייעוץ השקעות או ייעוץ מס. קבלת החלטות פיננסיות על בסיס האפליקציה היא על אחריות המשתמש בלבד. האפליקציה מסופקת (As-Is) בגרסת הרצה (Beta).',
-                );
-              },
-            ),
-            const Divider(height: 1, indent: 70),
-            ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.green.shade50,
-                child: Icon(Icons.lock_outline, color: Colors.green.shade700),
-              ),
-              title: const Text('מדיניות פרטיות', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showLegalDialog(
-                  context: context,
-                  title: 'מדיניות פרטיות',
-                  icon: Icons.lock_outline,
-                  iconColor: Colors.green.shade700,
-                  content: 'הנתונים שלך, בשליטתך: כל הנתונים הפיננסיים מוזנים מרצונך ומיועדים אך ורק לחישוב התזרים שלך באפליקציה. המידע נשמר בענן המאובטח של Google (Firebase). איש מצוות המפתחים אינו קורא או מנתח את נתוניך האישיים. אנו מתחייבים לא למכור, להעביר או לשתף את הנתונים עם שום צד שלישי. ניתן למחוק את כל המידע בכל עת דרך תפריט ההגדרות.',
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-void _showLegalDialog({
-  required BuildContext context,
-  required String title,
-  required IconData icon,
-  required Color iconColor,
-  required String content,
-}) {
-  showDialog(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: Colors.white,
-      title: Row(
-        children: [
-          Icon(icon, color: iconColor),
-          const SizedBox(width: 10),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
-        ],
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              content,
-              style: const TextStyle(height: 1.5, fontSize: 14, color: Colors.black87),
-            ),
-            const SizedBox(height: 20),
-            const Divider(),
-            const SizedBox(height: 10),
-            const Center(
-              child: Text(
-                '© 2026 Fintel - כל הזכויות שמורות.',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54),
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('הבנתי, סגור'),
-        ),
-      ],
-    ),
-  );
-}
+// =========================================================================
+// פאנלי משנה בתוך ההגדרות (חלוקת יתרה, אחוזים, משפחה, איפוס)
+// =========================================================================
 
 void _showFutureVsFinancialDialog(BuildContext context, BudgetProvider budget) {
   final futureRatio = budget.futureAllocationRatio;
@@ -559,10 +501,11 @@ void _showFutureVsFinancialDialog(BuildContext context, BudgetProvider budget) {
     builder: (ctx) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('חלוקת יתרת החיסכון', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('חלוקת יתרת החיסכון', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
             IconButton(
               icon: const Icon(Icons.refresh, color: Colors.blue),
               onPressed: () {
@@ -582,8 +525,7 @@ void _showFutureVsFinancialDialog(BuildContext context, BudgetProvider budget) {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: futureController,
-                    keyboardType: TextInputType.number,
+                    controller: futureController, keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'עתידיות', suffixText: '%', border: OutlineInputBorder()),
                     onChanged: (val) {
                       final num = double.tryParse(val) ?? 0;
@@ -594,8 +536,7 @@ void _showFutureVsFinancialDialog(BuildContext context, BudgetProvider budget) {
                 const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.compare_arrows)),
                 Expanded(
                   child: TextField(
-                    controller: financialController,
-                    keyboardType: TextInputType.number,
+                    controller: financialController, keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'פיננסיות', suffixText: '%', border: OutlineInputBorder()),
                     onChanged: (val) {
                       final num = double.tryParse(val) ?? 0;
@@ -631,10 +572,11 @@ void _showRatioSettingsDialog(BuildContext context, BudgetProvider budget) {
     context: context,
     builder: (ctx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('הגדרת רמת חיים', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('הגדרת רמת חיים', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.blue),
             onPressed: () {
@@ -675,8 +617,9 @@ void _showFactoryResetConfirm(BuildContext context, BudgetProvider budget) {
     context: context,
     builder: (ctx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
       title: const Text('⚠️ אזהרה: איפוס נתונים', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-      content: const Text('פעולה זו תמחק הכל ותחזיר את האפליקציה למצב התחלתי. לא ניתן לבטל!'),
+      content: const Text('פעולה זו תמחק הכל ותחזיר את האפליקציה למצב התחלתי. לא ניתן לבטל!', style: TextStyle(color: Colors.black87)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול', style: TextStyle(color: Colors.blueGrey))),
         ElevatedButton(
@@ -705,7 +648,8 @@ void _showFamilySettingsDialog(BuildContext context) {
       builder: (context, budget, child) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('הגדרות משפחה וסטטוס', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.white,
+          title: const Text('הגדרות משפחה וסטטוס', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
           content: SizedBox(
             width: double.maxFinite,
             child: SingleChildScrollView(
@@ -714,48 +658,26 @@ void _showFamilySettingsDialog(BuildContext context) {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blueGrey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blueGrey.shade100)
-                    ),
+                    decoration: BoxDecoration(color: Colors.blueGrey.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blueGrey.shade100)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('המגדר שלי:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
                         const SizedBox(height: 8),
                         SegmentedButton<String>(
-                          style: SegmentedButton.styleFrom(
-                            selectedForegroundColor: Colors.blue[900],
-                            selectedBackgroundColor: Colors.blue[100],
-                            foregroundColor: Colors.blueGrey[400],
-                          ),
-                          segments: const [
-                            ButtonSegment(value: 'male', label: Text('זכר')),
-                            ButtonSegment(value: 'female', label: Text('נקבה')),
-                          ],
+                          style: SegmentedButton.styleFrom(selectedForegroundColor: Colors.blue[900], selectedBackgroundColor: Colors.blue[100], foregroundColor: Colors.blueGrey[400]),
+                          segments: const [ButtonSegment(value: 'male', label: Text('זכר')), ButtonSegment(value: 'female', label: Text('נקבה'))],
                           selected: {budget.gender},
-                          onSelectionChanged: (val) {
-                            budget.updateFamilyStructure(gender: val.first);
-                          },
+                          onSelectionChanged: (val) { budget.updateFamilyStructure(gender: val.first); },
                         ),
                         const SizedBox(height: 16),
                         const Text('סטטוס אישי:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
                         const SizedBox(height: 8),
                         SegmentedButton<String>(
-                          style: SegmentedButton.styleFrom(
-                            selectedForegroundColor: Colors.blue[900],
-                            selectedBackgroundColor: Colors.blue[100],
-                            foregroundColor: Colors.blueGrey[400],
-                          ),
-                          segments: const [
-                            ButtonSegment(value: 'single', icon: Icon(Icons.person), label: Text('רווק/ה')),
-                            ButtonSegment(value: 'married', icon: Icon(Icons.people), label: Text('נשוי/אה')),
-                          ],
+                          style: SegmentedButton.styleFrom(selectedForegroundColor: Colors.blue[900], selectedBackgroundColor: Colors.blue[100], foregroundColor: Colors.blueGrey[400]),
+                          segments: const [ButtonSegment(value: 'single', icon: Icon(Icons.person), label: Text('רווק/ה')), ButtonSegment(value: 'married', icon: Icon(Icons.people), label: Text('נשוי/אה'))],
                           selected: {budget.maritalStatus},
-                          onSelectionChanged: (val) {
-                            budget.updateFamilyStructure(maritalStatus: val.first);
-                          },
+                          onSelectionChanged: (val) { budget.updateFamilyStructure(maritalStatus: val.first); },
                         ),
                         const SizedBox(height: 8),
                         const Text('* המערכת תסדר אוטומטית את קטגוריות ההוצאות בהתאם לסטטוס ולמגדר שנבחר.', style: TextStyle(fontSize: 10, color: Colors.grey)),
@@ -770,7 +692,7 @@ void _showFamilySettingsDialog(BuildContext context) {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('סה"כ ילדים רשומים:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text('סה"כ ילדים רשומים:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
                         Text('${budget.childCount}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
                       ],
                     ),
@@ -779,38 +701,23 @@ void _showFamilySettingsDialog(BuildContext context) {
                   
                   if (budget.childCount > 0)
                     ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
                       itemCount: budget.familyMembers.where((m) => m.role == FamilyRole.child).length,
                       itemBuilder: (context, index) {
                         final childrenList = budget.familyMembers.where((m) => m.role == FamilyRole.child).toList();
                         final member = childrenList[index];
-                        
                         return Card(
-                          elevation: 0,
+                          elevation: 0, color: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey[200]!)),
                           child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.purple[50], 
-                              child: const Icon(Icons.child_care, color: Colors.purple)
-                            ),
-                            title: Text(member.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('שנת לידה: ${member.birthYear}'),
+                            leading: CircleAvatar(backgroundColor: Colors.purple[50], child: const Icon(Icons.child_care, color: Colors.purple)),
+                            title: Text(member.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                            subtitle: Text('שנת לידה: ${member.birthYear}', style: const TextStyle(color: Colors.black54)),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.blueGrey, size: 20), 
-                                  onPressed: () => _showEditMemberDialog(context, budget, member)
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20), 
-                                  onPressed: () async { 
-                                    if (member.id != null) { 
-                                      await budget.removeFamilyMember(member.id!); 
-                                    } 
-                                  }
-                                ),
+                                IconButton(icon: const Icon(Icons.edit, color: Colors.blueGrey, size: 20), onPressed: () => _showEditMemberDialog(context, budget, member)),
+                                IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20), onPressed: () async { if (member.id != null) { await budget.removeFamilyMember(member.id!); } }),
                               ],
                             ),
                           ),
@@ -839,14 +746,14 @@ void _showFamilySettingsDialog(BuildContext context) {
 void _showEditMemberDialog(BuildContext context, BudgetProvider budget, FamilyMember? member) {
   final nameController = TextEditingController(text: member?.name ?? '');
   final yearController = TextEditingController(text: member?.birthYear.toString() ?? DateTime.now().year.toString());
-  
   const FamilyRole selectedRole = FamilyRole.child;
 
   showDialog(
     context: context,
     builder: (ctx) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text(member == null ? 'הוספת ילד/ה' : 'עריכת פרטי ילד', style: const TextStyle(fontWeight: FontWeight.bold)),
+      backgroundColor: Colors.white,
+      title: Text(member == null ? 'הוספת ילד/ה' : 'עריכת פרטי ילד', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -866,9 +773,7 @@ void _showEditMemberDialog(BuildContext context, BudgetProvider budget, FamilyMe
               } else {
                 await budget.updateFamilyMember(FamilyMember(id: member.id, name: nameController.text, birthYear: birthYear, role: selectedRole));
               }
-              if (ctx.mounted) {
-                Navigator.pop(ctx); 
-              }
+              if (ctx.mounted) { Navigator.pop(ctx); }
             } 
           }, 
           child: const Text('שמור')
