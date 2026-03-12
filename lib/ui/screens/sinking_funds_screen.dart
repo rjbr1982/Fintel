@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Personal entity 'אישי' to Unified Funds logic)
+// 🔒 STATUS: EDITED (Forced Premium Light Theme & Fixed showDialog Parameter)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -18,7 +18,7 @@ class SinkingFundsScreen extends StatelessWidget {
           final sinkingExpenses = provider.expenses.where((e) => e.isSinking).toList();
 
           if (sinkingExpenses.isEmpty) {
-            return const Center(child: Text('אין כרגע הוצאות צוברות (חסכונות).'));
+            return const Center(child: Text('אין כרגע הוצאות צוברות (חסכונות).', style: TextStyle(color: Colors.black87)));
           }
 
           double totalMonthlyDeposit = 0;
@@ -123,17 +123,21 @@ class SinkingFundsScreen extends StatelessWidget {
                         }
                         
                         return Card(
+                          color: Colors.white,
+                          surfaceTintColor: Colors.transparent,
                           margin: const EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          elevation: 1,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey.shade200)),
+                          elevation: 0,
                           child: ListTile(
-                            leading: CircleAvatar(backgroundColor: Colors.green[100], child: Icon(Icons.account_balance_wallet, color: Colors.green[800])),
-                            title: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('להפרשה: ₪${fundDeposit.toStringAsFixed(0)}', style: const TextStyle(color: Colors.grey)),
+                            leading: CircleAvatar(backgroundColor: Colors.green[50], child: Icon(Icons.account_balance_wallet, color: Colors.green[700])),
+                            title: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                            subtitle: Text('להפרשה: ₪${fundDeposit.toStringAsFixed(0)}', style: const TextStyle(color: Colors.black54)),
                             trailing: Text('נצבר: ₪${fundBalance.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 15)),
                             onTap: () {
                               showModalBottomSheet(
-                                context: context, isScrollControlled: true,
+                                context: context, 
+                                isScrollControlled: true,
+                                backgroundColor: Colors.white,
                                 shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
                                 builder: (ctx) => _UnifiedFundBottomSheetFromCenter(parentCategory: entry.key, originalExpenses: entry.value),
                               );
@@ -159,17 +163,21 @@ class SinkingFundsScreen extends StatelessWidget {
                         String specificNameInfo = isFuture ? '${expense.name} | ' : '';
 
                         return Card(
+                          color: Colors.white,
+                          surfaceTintColor: Colors.transparent,
                           margin: const EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          elevation: 1,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey.shade200)),
+                          elevation: 0,
                           child: ListTile(
-                            leading: CircleAvatar(backgroundColor: Colors.blue[50], child: Icon(Icons.savings_outlined, color: Colors.blue[800])),
-                            title: Text(displayTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('$specificNameInfoלהפרשה: ₪${deposit.toStringAsFixed(0)}', style: const TextStyle(color: Colors.grey)),
+                            leading: CircleAvatar(backgroundColor: Colors.blue[50], child: Icon(Icons.savings_outlined, color: Colors.blue[700])),
+                            title: Text(displayTitle, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                            subtitle: Text('$specificNameInfoלהפרשה: ₪${deposit.toStringAsFixed(0)}', style: const TextStyle(color: Colors.black54)),
                             trailing: Text('נצבר: ₪${balance.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 15)),
                             onTap: () {
                               showModalBottomSheet(
-                                context: context, isScrollControlled: true,
+                                context: context, 
+                                isScrollControlled: true,
+                                backgroundColor: Colors.white,
                                 shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
                                 builder: (ctx) => _SinkingFundBottomSheetFromCenter(expense: expense),
                               );
@@ -256,7 +264,7 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('היסטוריה פעולות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+        const Text('היסטוריה פעולות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
         const Divider(),
         if (_isLoading) const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
         else if (_withdrawals.isEmpty) const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות בקופה זו', style: TextStyle(color: Colors.grey))))
@@ -270,8 +278,8 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
               contentPadding: EdgeInsets.zero,
               leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.green : Colors.redAccent),
               title: Text('₪${w.amount.abs().toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.redAccent)),
-              subtitle: Text('${w.note}\n${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12)),
-              trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18), onPressed: () async { await provider.deleteWithdrawal(w); _loadWithdrawals(); }),
+              subtitle: Text('${w.note}\n${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.black87)),
+              trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey), onPressed: () async { await provider.deleteWithdrawal(w); _loadWithdrawals(); }),
             );
           },
         ),
@@ -317,7 +325,7 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
             const SizedBox(width: 8),
             Expanded(flex: 3, child: TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'פירוט (לאן יצא?)', border: OutlineInputBorder(), isDense: true))),
             const SizedBox(width: 8),
-            IconButton(style: IconButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.arrow_downward), onPressed: () => _handleWithdrawal(null)),
+            IconButton(style: IconButton.styleFrom(backgroundColor: Colors.blueGrey[900], foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.arrow_downward), onPressed: () => _handleWithdrawal(null)),
           ],
         ),
         const SizedBox(height: 24),
@@ -338,7 +346,8 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('קופה מאוחדת: ${widget.parentCategory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+            Text('קופה מאוחדת: ${widget.parentCategory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
             const SizedBox(height: 16),
             _buildStandardUnifiedView(totalCurrentBalance, currentExpenses),
           ],
@@ -403,7 +412,8 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('קופה: ${currentExpense.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+            Text('קופה: ${currentExpense.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
@@ -440,11 +450,11 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
                 const SizedBox(width: 8),
                 Expanded(flex: 3, child: TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'פירוט (לאן יצא?)', border: OutlineInputBorder(), isDense: true))),
                 const SizedBox(width: 8),
-                IconButton(style: IconButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.arrow_downward), onPressed: _handleWithdrawal),
+                IconButton(style: IconButton.styleFrom(backgroundColor: Colors.blueGrey[900], foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.arrow_downward), onPressed: _handleWithdrawal),
               ],
             ),
             const SizedBox(height: 24),
-            const Align(alignment: Alignment.centerRight, child: Text('היסטוריה פעולות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
+            const Align(alignment: Alignment.centerRight, child: Text('היסטוריה פעולות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey))),
             const Divider(),
             if (_isLoading) const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())
             else if (_withdrawals.isEmpty) const Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות', style: TextStyle(color: Colors.grey)))
@@ -458,8 +468,8 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.green : Colors.redAccent),
                   title: Text('₪${w.amount.abs().toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.redAccent)),
-                  subtitle: Text('${w.note}\n${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12)),
-                  trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18), onPressed: () async { await provider.deleteWithdrawal(w); _loadWithdrawals(); }),
+                  subtitle: Text('${w.note}\n${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                  trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey), onPressed: () async { await provider.deleteWithdrawal(w); _loadWithdrawals(); }),
                 );
               },
             ),
@@ -501,7 +511,8 @@ class _EditIndividualBalanceDialogState extends State<_EditIndividualBalanceDial
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('עריכת יתרה צבורה'),
+      backgroundColor: Colors.white,
+      title: const Text('עריכת יתרה צבורה', style: TextStyle(color: Colors.black87)),
       content: TextField(
         controller: _ctrl,
         keyboardType: TextInputType.number,
@@ -553,7 +564,8 @@ class _EditUnifiedBalancesDialogState extends State<_EditUnifiedBalancesDialog> 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('עריכת יתרה - ${widget.parentCategory}'),
+      backgroundColor: Colors.white,
+      title: Text('עריכת יתרה - ${widget.parentCategory}', style: const TextStyle(color: Colors.black87)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

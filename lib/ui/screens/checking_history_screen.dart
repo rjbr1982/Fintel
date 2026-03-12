@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed deprecated withOpacity warnings)
+// 🔒 STATUS: EDITED (Added styled Empty State for checking history)
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../data/database_helper.dart';
@@ -11,6 +11,7 @@ class CheckingHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50], // התאמת רקע בהיר כמו בשאר האפליקציה
       appBar: const GlobalHeader(title: 'מעקב עו"ש (בקרה)', showBackButton: true),
       body: StreamBuilder<List<CheckingEntry>>(
         stream: DatabaseHelper.instance.streamCheckingHistory(),
@@ -38,7 +39,7 @@ class CheckingHistoryScreen extends StatelessWidget {
                 ),
               Expanded(
                 child: entries.isEmpty
-                    ? const Center(child: Text('לא נמצאו רשומות. לחץ על + כדי להוסיף דגימת עו"ש חדשה.', style: TextStyle(color: Colors.grey)))
+                    ? _buildEmptyState(context)
                     : ListView.builder(
                         itemCount: entries.length,
                         itemBuilder: (context, index) {
@@ -62,8 +63,8 @@ class CheckingHistoryScreen extends StatelessWidget {
                                 backgroundColor: entry.amount >= 0 ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
                                 child: Icon(Icons.account_balance_wallet, color: entry.amount >= 0 ? Colors.green : Colors.red),
                               ),
-                              title: Text('₪${entry.amount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                              subtitle: Text(formattedDate),
+                              title: Text('₪${entry.amount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
+                              subtitle: Text(formattedDate, style: const TextStyle(color: Colors.black54)),
                               trailing: IconButton(
                                 icon: const Icon(Icons.delete_outline, color: Colors.grey),
                                 onPressed: () => DatabaseHelper.instance.deleteCheckingEntry(entry.id!),
@@ -82,6 +83,49 @@ class CheckingHistoryScreen extends StatelessWidget {
         onPressed: () => _showAddEntryDialog(context),
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('דגימה חדשה', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  // מסך ההדרכה למשתמש החדש (Empty State)
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00A3FF).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.account_balance_wallet_outlined, size: 64, color: Color(0xFF00A3FF)),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'מעקב יתרת העו"ש',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'מסך זה נועד לבקרה בלבד. כל פעם שתרצה לבדוק את מצב הצמיחה של חשבון הבנק שלך, הזן כאן את יתרת העו"ש המדויקת באותו רגע.\n\nהמערכת תצייר עבורך גרף מגמה כדי שתוכל לראות את התקדמות היתרה שלך לאורך זמן.',
+              style: TextStyle(fontSize: 15, color: Colors.black54, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('לחץ על הכפתור למטה כדי להתחיל', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w600)),
+                SizedBox(width: 8),
+                Icon(Icons.arrow_downward, color: Colors.blueGrey, size: 18),
+              ],
+            )
+          ],
+        ),
       ),
     );
   }
@@ -129,7 +173,8 @@ class CheckingHistoryScreen extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            title: const Text('הזנת יתרת עו"ש', textAlign: TextAlign.center),
+            backgroundColor: Colors.white,
+            title: const Text('הזנת יתרת עו"ש', textAlign: TextAlign.center, style: TextStyle(color: Colors.black87)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -147,9 +192,9 @@ class CheckingHistoryScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 ListTile(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Colors.white24)),
-                  title: const Text('תאריך נכונות'),
-                  subtitle: Text(DateFormat('dd/MM/yyyy').format(selectedDate)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.grey.shade300)),
+                  title: const Text('תאריך נכונות', style: TextStyle(color: Colors.black87)),
+                  subtitle: Text(DateFormat('dd/MM/yyyy').format(selectedDate), style: const TextStyle(color: Colors.black54)),
                   trailing: const Icon(Icons.calendar_today, color: Color(0xFF00A3FF)),
                   onTap: () async {
                     final picked = await showDatePicker(
@@ -157,6 +202,18 @@ class CheckingHistoryScreen extends StatelessWidget {
                       initialDate: selectedDate,
                       firstDate: DateTime(2020),
                       lastDate: DateTime.now(),
+                      builder: (context, child) {
+                        return Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: const ColorScheme.light(
+                              primary: Color(0xFF00A3FF),
+                              onPrimary: Colors.white,
+                              onSurface: Colors.black87,
+                            ),
+                          ),
+                          child: child!,
+                        );
+                      },
                     );
                     if (picked != null) {
                       setState(() => selectedDate = picked);
