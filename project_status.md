@@ -5,15 +5,15 @@
 ## ✅ What is Working Perfectly
 * **Production Infrastructure:** Live on `myfintelapp.com` with custom domain Google Login.
 * **Authentication (Google):** Clean, robust OAuth flow with graceful popup closure handling and deep cache clearing upon logout.
-* **Deep Menu Navigation:** Nested BottomSheets with back-navigation.
-* **In-App Support Center:** Direct email integration with native fallback.
-* **Premium Light Theme:** Consistent design language across all core screens, with properly styled text inputs.
-* **Sinking Funds & Checking History:** Unified funds display cleanly, and checking history features an intuitive empty state and a dynamic custom-painted graph.
-* **Dynamic Family Management:** Full CRUD for parents and children via settings.
+* **Data Sync:** Firebase Cloud sync is active and stable for all collections (including the newly fixed Salary Records).
+* **Terminology:** Global consistency for all feature names across AppBars, Drawers, and Dashboards.
+* **Smart Withdrawals (Backend):** Data models, Database streams, and Provider execution logic are fully implemented and error-free.
 
 ## 🚧 Work In Progress (Bugs to Fix)
-* **Zero Bugs / Zero Warnings:** Current state is completely clean.
+* **Smart Withdrawal Manager (UI):** Step 3 is pending. We need to build the `smart_withdrawals_screen.dart` and connect the routing from `sinking_funds_screen.dart`.
+* **Zero Bugs / Zero Warnings:** Current state is completely clean (`flutter analyze` passes).
 
 ## 🎯 Next Steps for Next Session
-1. **Deployment:** Run `flutter build web` followed by `firebase deploy` to sync the polished UI and Auth logic to production.
-2. **Globalization Assessment:** Analyze the full codebase snapshot to determine the exact transition strategy for `AppLocalizations` (Language support).
+1. **Develop Smart Withdrawals Screen:** Build the UI for the Smart Withdrawal Manager, implementing the chronological cards, expandable breakdowns, and execution buttons.
+2. **Connect Routing:** Link the banner in the Sinking Funds center to the new screen.
+3. **Deployment:** Run `flutter build web` followed by `firebase deploy` after feature completion.

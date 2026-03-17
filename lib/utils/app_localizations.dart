@@ -1,3 +1,4 @@
+// 🔒 STATUS: EDITED (Changed debts_title to מנמיכות)
 import 'package:flutter/material.dart';
 
 class AppLocalizations {
@@ -17,7 +18,7 @@ class AppLocalizations {
       'appTitle': 'Fintel',
       'dashboard': 'דשבורד',
       'budget_title': 'תקציב',
-      'debts_title': 'ניהול חובות',
+      'debts_title': 'מנמיכות',
       'shopping_list': 'רשימת קניות',
       'loading': 'טוען נתונים...',
       'currency_symbol': '₪',

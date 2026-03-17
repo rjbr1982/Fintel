@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added FamilyRole Enum and updated FamilyMember model)
+// 🔒 STATUS: EDITED (Added PlannedWithdrawal model for Smart Withdrawal Manager)
 // ignore_for_file: constant_identifier_names
 
 // הגדרת האפשרויות לתדירות התשלום
@@ -213,6 +213,52 @@ class SalaryRecord {
       monthYear: map['monthYear'] ?? '',
       netAmount: (map['netAmount'] as num).toDouble(),
       hours: (map['hours'] as num).toDouble(),
+    );
+  }
+}
+
+// --- סטטוס משיכה מתוכננת ---
+enum PlannedWithdrawalStatus { pending, executed }
+
+// --- מודל הוצאה מתוכננת (מנהל משיכות חכם) ---
+class PlannedWithdrawal {
+  final int? id;
+  final String name;
+  final double amount;
+  final String bucketName; // שם הקופה המאוחדת (למשל 'רכב' או 'אבא')
+  final String targetDate; // תאריך יעד לתשלום
+  final PlannedWithdrawalStatus status;
+
+  PlannedWithdrawal({
+    this.id,
+    required this.name,
+    required this.amount,
+    required this.bucketName,
+    required this.targetDate,
+    this.status = PlannedWithdrawalStatus.pending,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'amount': amount,
+      'bucketName': bucketName,
+      'targetDate': targetDate,
+      'status': status.index,
+    };
+  }
+
+  factory PlannedWithdrawal.fromMap(Map<String, dynamic> map) {
+    return PlannedWithdrawal(
+      id: map['id'],
+      name: map['name'] ?? '',
+      amount: (map['amount'] as num).toDouble(),
+      bucketName: map['bucketName'] ?? '',
+      targetDate: map['targetDate'] ?? DateTime.now().toIso8601String(),
+      status: map['status'] != null 
+          ? PlannedWithdrawalStatus.values[map['status']] 
+          : PlannedWithdrawalStatus.pending,
     );
   }
 }

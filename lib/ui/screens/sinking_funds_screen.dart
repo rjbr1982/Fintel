@@ -1,9 +1,10 @@
-// 🔒 STATUS: EDITED (Removed "(דינמיות)" from unified funds title)
+// 🔒 STATUS: EDITED (Connected Smart Withdrawal Manager Routing)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
 import '../widgets/global_header.dart';
+import 'smart_withdrawals_screen.dart'; // הוספת הייבוא החדש
 
 class SinkingFundsScreen extends StatelessWidget {
   const SinkingFundsScreen({super.key});
@@ -36,14 +37,12 @@ class SinkingFundsScreen extends StatelessWidget {
             String groupName = '';
             
             if (e.parentCategory == 'רכב') {
-              // כל תתי-הסעיפים הצוברים של כלל הרכבים יתנקזו לקופה מאוחדת אחת ששמה 'רכב'
               groupName = 'רכב';
             } 
             else if (e.parentCategory == 'ילדים - משתנות') {
               String kName = e.name.replaceAll('בגדים', '').replaceAll('בילויים', '').trim();
               groupName = 'ילדים: $kName';
             } 
-            // תוקן: הוספת "אישי" לרשימת הקופות המאוחדות
             else if (['ילדים - קבועות', 'אבא', 'אמא', 'אישי', 'חגים'].contains(e.parentCategory)) {
               groupName = e.parentCategory;
             }
@@ -104,6 +103,44 @@ class SinkingFundsScreen extends StatelessWidget {
                 ),
               ),
 
+              // באנר כניסה למנהל המשיכות
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SmartWithdrawalsScreen()));
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: Colors.blue.shade100, shape: BoxShape.circle),
+                        child: Icon(Icons.event_note, color: Colors.blue.shade800, size: 24),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('מנהל משיכות חודשי', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue.shade900)),
+                            const SizedBox(height: 4),
+                            Text('תכנן ואחד משיכות מהקופות לתחנת יציאה אחת', style: TextStyle(fontSize: 13, color: Colors.blue.shade700)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios, size: 16, color: Colors.blue.shade800),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -111,7 +148,6 @@ class SinkingFundsScreen extends StatelessWidget {
                     if (dynamicFunds.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.only(bottom: 8, right: 8),
-                        // תיקון: הוסרה המילה (דינמיות)
                         child: Text('קופות מאוחדות', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
                       ),
                       ...dynamicFunds.entries.map((entry) {

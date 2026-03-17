@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Biometric Auth state management)
+// 🔒 STATUS: EDITED (Fixed String Interpolation Warning)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -33,9 +33,13 @@ class BudgetProvider with ChangeNotifier {
   int _compoundingFrequency = 12;
   double? _manualTargetIncome;
   
-  bool _useBiometric = false; // <-- ביומטריה
+  bool _useBiometric = false;
 
   List<SalaryRecord> _salaryRecords = [];
+  
+  // Smart Withdrawal Manager States
+  List<PlannedWithdrawal> _plannedWithdrawals = [];
+  final Map<String, int> _bucketWithdrawalDays = {}; 
   
   final Map<String, int> _unifiedCategoryModes = {}; 
 
@@ -44,6 +48,7 @@ class BudgetProvider with ChangeNotifier {
   StreamSubscription? _settingsSub;
   StreamSubscription? _assetsSub;
   StreamSubscription? _salaryRecordsSub; 
+  StreamSubscription? _plannedWithdrawalsSub;
   
   bool _isListening = false;
   bool _isSyncing = false; 
@@ -52,6 +57,7 @@ class BudgetProvider with ChangeNotifier {
   List<Expense> get expenses => _expenses;
   List<FamilyMember> get familyMembers => _familyMembers;
   List<SalaryRecord> get salaryRecords => _salaryRecords;
+  List<PlannedWithdrawal> get plannedWithdrawals => _plannedWithdrawals;
   
   int get childCount => _familyMembers.where((m) => m.role == FamilyRole.child).length;
   String get maritalStatus => _maritalStatus;
@@ -63,7 +69,7 @@ class BudgetProvider with ChangeNotifier {
   double get variableAllocationRatio => _variableAllocationRatio;
   double get futureAllocationRatio => _futureAllocationRatio;
   bool get isFutureMode => _isFutureMode;
-  bool get useBiometric => _useBiometric; // <-- Getter
+  bool get useBiometric => _useBiometric;
   
   double get variableDeficit => _variableDeficit;
 
@@ -87,6 +93,16 @@ class BudgetProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  int getBucketWithdrawalDay(String bucketName) {
+    return _bucketWithdrawalDays[bucketName] ?? 10; // ברירת מחדל: ב-10 לחודש
+  }
+
+  Future<void> setBucketWithdrawalDay(String bucketName, int day) async {
+    _bucketWithdrawalDays[bucketName] = day;
+    await DatabaseHelper.instance.saveSetting('bucket_day_$bucketName', day.toDouble());
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _expensesSub?.cancel();
@@ -94,6 +110,7 @@ class BudgetProvider with ChangeNotifier {
     _settingsSub?.cancel();
     _assetsSub?.cancel();
     _salaryRecordsSub?.cancel(); 
+    _plannedWithdrawalsSub?.cancel();
     super.dispose();
   }
 
@@ -135,6 +152,8 @@ class BudgetProvider with ChangeNotifier {
     try {
       _expenses = await DatabaseHelper.instance.getExpenses();
       _familyMembers = await DatabaseHelper.instance.getFamilyMembers();
+      _salaryRecords = await DatabaseHelper.instance.getSalaryRecords(); 
+      _plannedWithdrawals = await DatabaseHelper.instance.getPlannedWithdrawals();
       
       _sortInMemoryData();
 
@@ -202,6 +221,11 @@ class BudgetProvider with ChangeNotifier {
       notifyListeners();
     });
 
+    _plannedWithdrawalsSub = DatabaseHelper.instance.streamPlannedWithdrawals().listen((data) {
+      _plannedWithdrawals = data;
+      notifyListeners();
+    });
+
     _settingsSub = DatabaseHelper.instance.streamSettings().listen((snap) {
       bool changed = false;
       for (var doc in snap.docs) {
@@ -225,6 +249,14 @@ class BudgetProvider with ChangeNotifier {
              DatabaseHelper.instance.saveSetting('unified_mode_$catName', mode.toDouble());
              DatabaseHelper.instance.deleteSetting(key); 
              changed = true;
+          }
+        }
+        
+        if (key != null && key.startsWith('bucket_day_') && val != null) {
+          String bucketName = key.substring(11);
+          if (_bucketWithdrawalDays[bucketName] != val.toInt()) {
+            _bucketWithdrawalDays[bucketName] = val.toInt();
+            changed = true;
           }
         }
 
@@ -756,10 +788,12 @@ class BudgetProvider with ChangeNotifier {
     _customEntWarning = null;
     _customEntSuccess = null;
     _unifiedCategoryModes.clear();
+    _bucketWithdrawalDays.clear();
     _useBiometric = false;
     _expenses = [];
     _familyMembers = [];
     _salaryRecords = [];
+    _plannedWithdrawals = [];
     notifyListeners();
   }
 
@@ -1099,6 +1133,10 @@ class BudgetProvider with ChangeNotifier {
     return totalFinancialExpenses;
   }
 
+  // ==========================================
+  // פעולות משיכה והוצאות צוברות
+  // ==========================================
+
   Future<List<Withdrawal>> getWithdrawalsForExpense(int expenseId) async {
     return await DatabaseHelper.instance.getWithdrawals(expenseId);
   }
@@ -1148,5 +1186,79 @@ class BudgetProvider with ChangeNotifier {
       isCustom: expense.isCustom,
     );
     await DatabaseHelper.instance.updateExpense(updated);
+  }
+
+  // ==========================================
+  // מנהל משיכות חכם (Smart Withdrawal Manager)
+  // ==========================================
+  
+  Future<void> addPlannedWithdrawal(PlannedWithdrawal pw) async {
+    await DatabaseHelper.instance.insertPlannedWithdrawal(pw);
+  }
+
+  Future<void> updatePlannedWithdrawal(PlannedWithdrawal pw) async {
+    await DatabaseHelper.instance.updatePlannedWithdrawal(pw);
+  }
+
+  Future<void> deletePlannedWithdrawal(int id) async {
+    await DatabaseHelper.instance.deletePlannedWithdrawal(id);
+  }
+
+  Future<void> executePlannedWithdrawalsForBucket(String bucketName) async {
+    // 1. איתור כל המשיכות המתוכננות לקופה זו שנמצאות בסטטוס המתנה
+    final pending = _plannedWithdrawals.where((pw) => 
+        pw.bucketName == bucketName && pw.status == PlannedWithdrawalStatus.pending).toList();
+    
+    if (pending.isEmpty) return;
+
+    double totalAmount = pending.fold(0.0, (sum, item) => sum + item.amount);
+    String note = "משיכה מאוחדת: ${pending.map((p) => p.name).join(', ')}";
+
+    // 2. איתור ה-ID של ההוצאה (Expense) שאליה מקושרת הקופה כדי להוריד ממנה את היתרה בפועל
+    int? targetExpenseId;
+    
+    for (var e in _expenses.where((ex) => ex.isSinking)) {
+      String groupName = '';
+      if (e.parentCategory == 'רכב') {
+        groupName = 'רכב';
+      } else if (e.parentCategory == 'ילדים - משתנות') {
+        String kName = e.name.replaceAll('בגדים', '').replaceAll('בילויים', '').trim();
+        groupName = 'ילדים: $kName';
+      } else if (['ילדים - קבועות', 'אבא', 'אמא', 'אישי', 'חגים'].contains(e.parentCategory)) {
+        groupName = e.parentCategory;
+      }
+
+      if (groupName.isNotEmpty) {
+        if (groupName == bucketName) {
+          targetExpenseId = e.id;
+          break; // מצאנו את ההוצאה הראשונה שמייצגת את הקופה המאוחדת הזו
+        }
+      } else {
+        bool isFuture = e.category == 'עתידיות';
+        String displayTitle = isFuture ? e.parentCategory : e.name;
+        if (displayTitle == bucketName) {
+          targetExpenseId = e.id;
+          break; // מצאנו את הקופה הייעודית הבודדת
+        }
+      }
+    }
+
+    // 3. ביצוע המשיכה הממשית שמפחיתה את היתרה (אם נמצאה הקופה)
+    if (targetExpenseId != null) {
+      await addWithdrawal(targetExpenseId, totalAmount, note);
+    }
+
+    // 4. שינוי סטטוס המשיכות המתוכננות ל-"בוצע" כדי שלא יופיעו יותר כפעולות ממתינות
+    for (var pw in pending) {
+      final updated = PlannedWithdrawal(
+        id: pw.id,
+        name: pw.name,
+        amount: pw.amount,
+        bucketName: pw.bucketName,
+        targetDate: pw.targetDate,
+        status: PlannedWithdrawalStatus.executed,
+      );
+      await DatabaseHelper.instance.updatePlannedWithdrawal(updated);
+    }
   }
 }

@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed UI text visibility in input fields)
+// 🔒 STATUS: EDITED (Fixed Typo: ElevatedButton in Reset Dialog)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart'; 
@@ -157,7 +157,7 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                   ),
                 
                 _buildMenuTile(
-                  icon: Icons.account_balance_wallet_outlined, color: Colors.blueGrey, title: 'מעקב יתרת עו"ש',
+                  icon: Icons.account_balance_wallet_outlined, color: Colors.blueGrey, title: 'מעקב עו"ש',
                   onTap: () {
                     Navigator.pop(ctx);
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckingHistoryScreen()));
@@ -167,7 +167,7 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                 const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(indent: 20, endIndent: 20)),
 
                 _buildMenuTile(
-                  icon: Icons.insights, color: Colors.blue, title: 'מנוע סטטיסטיקת שכר', isPremium: true,
+                  icon: Icons.insights, color: Colors.blue, title: 'ממוצע שכר', isPremium: true,
                   onTap: () {
                     Navigator.pop(ctx);
                     PremiumService.requirePremium(context, () {

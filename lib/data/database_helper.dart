@@ -1,4 +1,4 @@
-// 🔒 STATUS: VERIFIED (Fixed Sinking Fund withdrawal query missing composite index)
+// 🔒 STATUS: EDITED (Added CRUD & Sync for PlannedWithdrawals)
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -66,6 +66,11 @@ class DatabaseHelper {
         snap.docs.map((doc) => SalaryRecord.fromMap(doc.data() as Map<String, dynamic>)).toList());
   }
 
+  Stream<List<PlannedWithdrawal>> streamPlannedWithdrawals() {
+    return _userCollection('planned_withdrawals').snapshots().map((snap) =>
+        snap.docs.map((doc) => PlannedWithdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList());
+  }
+
   // ==========================================
   // הגדרות
   // ==========================================
@@ -116,6 +121,7 @@ class DatabaseHelper {
     await _deleteCollection('withdrawals'); 
     await _deleteCollection('checking_history'); 
     await _deleteCollection('salary_records'); 
+    await _deleteCollection('planned_withdrawals'); 
   }
 
   // ==========================================
@@ -304,6 +310,32 @@ class DatabaseHelper {
 
   Future<int> deleteSalaryRecord(int id) async {
     await _userCollection('salary_records').doc(id.toString()).delete();
+    return id;
+  }
+
+  // ==========================================
+  // CRUD למנהל משיכות חכם (Planned Withdrawals)
+  // ==========================================
+  Future<List<PlannedWithdrawal>> getPlannedWithdrawals() async {
+    final snap = await _userCollection('planned_withdrawals').get();
+    return snap.docs.map((doc) => PlannedWithdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
+  }
+
+  Future<int> insertPlannedWithdrawal(PlannedWithdrawal pw) async {
+    final id = pw.id ?? _generateId();
+    final map = pw.toMap();
+    map['id'] = id;
+    await _userCollection('planned_withdrawals').doc(id.toString()).set(map);
+    return id;
+  }
+
+  Future<int> updatePlannedWithdrawal(PlannedWithdrawal pw) async {
+    await _userCollection('planned_withdrawals').doc(pw.id.toString()).update(pw.toMap());
+    return pw.id ?? 0;
+  }
+
+  Future<int> deletePlannedWithdrawal(int id) async {
+    await _userCollection('planned_withdrawals').doc(id.toString()).delete();
     return id;
   }
 }

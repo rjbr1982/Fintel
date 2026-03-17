@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Onboarding visibility for Salary Engine)
+// 🔒 STATUS: EDITED (Fixed AppBar Title to 'ממוצע שכר')
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui' as ui;
@@ -183,7 +183,7 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: const GlobalHeader(title: 'מנוע ממוצע שכר'),
+      appBar: const GlobalHeader(title: 'ממוצע שכר'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddRecordDialog(context, provider, selectedExpense.id!),
         backgroundColor: Colors.blue[900],
