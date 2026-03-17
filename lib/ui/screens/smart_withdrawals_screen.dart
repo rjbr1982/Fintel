@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed TextField visibility and Dialog layout issues)
+// 🔒 STATUS: EDITED (Forced explicit border colors and fill for TextFields in Dialog)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -65,7 +65,8 @@ class SmartWithdrawalsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
+                      color: Colors.grey.shade50,
+                      border: Border.all(color: Colors.grey.shade400),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: DropdownButtonHideUnderline(
@@ -86,7 +87,16 @@ class SmartWithdrawalsScreen extends StatelessWidget {
                   decoration: InputDecoration(
                     labelText: 'עבור מה ההוצאה? (למשל: קייטנה)',
                     labelStyle: const TextStyle(color: Colors.black54, fontSize: 14),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade400),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.blue.shade700, width: 2),
+                    ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
                 ),
@@ -100,7 +110,16 @@ class SmartWithdrawalsScreen extends StatelessWidget {
                     labelStyle: const TextStyle(color: Colors.black54, fontSize: 14),
                     suffixText: '₪',
                     suffixStyle: const TextStyle(color: Colors.black87),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade400),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.blue.shade700, width: 2),
+                    ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
                 ),
