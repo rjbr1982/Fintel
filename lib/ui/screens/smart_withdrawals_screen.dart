@@ -1,4 +1,4 @@
-// 🔒 STATUS: NEW (Smart Withdrawal Manager Screen)
+// 🔒 STATUS: EDITED (Fixed TextField visibility and Dialog layout issues)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -50,13 +50,15 @@ class SmartWithdrawalsScreen extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           backgroundColor: Colors.white,
-          title: const Text('תכנון הוצאה עתידית', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('תכנון הוצאה עתידית', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('בחר מאיזו קופה תרצה למשוך, ומנהל המשיכות יאגד אותה לתחנת היציאה הבאה.', style: TextStyle(fontSize: 13, color: Colors.grey)),
-                const SizedBox(height: 16),
+                const Text('בחר מאיזו קופה תרצה למשוך, ומנהל המשיכות יאגד אותה לתחנת היציאה הבאה.', style: TextStyle(fontSize: 13, color: Colors.blueGrey)),
+                const SizedBox(height: 20),
                 if (buckets.isEmpty)
                   const Text('אין קופות צוברות זמינות.', style: TextStyle(color: Colors.red))
                 else
@@ -64,14 +66,15 @@ class SmartWithdrawalsScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: selectedBucket,
                         isExpanded: true,
                         dropdownColor: Colors.white,
-                        items: buckets.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                        style: const TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.bold),
+                        items: buckets.map((b) => DropdownMenuItem(value: b, child: Text(b, style: const TextStyle(color: Colors.black87)))).toList(),
                         onChanged: (val) => setState(() => selectedBucket = val),
                       ),
                     ),
@@ -79,21 +82,42 @@ class SmartWithdrawalsScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 TextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'עבור מה ההוצאה? (למשל: קייטנה)', border: OutlineInputBorder()),
+                  style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
+                  decoration: InputDecoration(
+                    labelText: 'עבור מה ההוצאה? (למשל: קייטנה)',
+                    labelStyle: const TextStyle(color: Colors.black54, fontSize: 14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: amountCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'סכום משוער', suffixText: '₪', border: OutlineInputBorder()),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 16),
+                  decoration: InputDecoration(
+                    labelText: 'סכום משוער',
+                    labelStyle: const TextStyle(color: Colors.black54, fontSize: 14),
+                    suffixText: '₪',
+                    suffixStyle: const TextStyle(color: Colors.black87),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx), 
+              child: const Text('ביטול', style: TextStyle(color: Colors.blueGrey))
+            ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade900),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade900,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
               onPressed: () async {
                 final amt = double.tryParse(amountCtrl.text);
                 if (amt != null && amt > 0 && selectedBucket != null && nameCtrl.text.isNotEmpty) {
@@ -107,7 +131,7 @@ class SmartWithdrawalsScreen extends StatelessWidget {
                   if (ctx.mounted) Navigator.pop(ctx);
                 }
               },
-              child: const Text('שמור תכנון', style: TextStyle(color: Colors.white)),
+              child: const Text('שמור תכנון', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -124,40 +148,59 @@ class SmartWithdrawalsScreen extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           backgroundColor: Colors.white,
-          title: Text('תחנת יציאה: $bucketName', style: const TextStyle(color: Colors.black87)),
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('תחנת יציאה: $bucketName', style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('באיזה יום בחודש ניתן למשוך כסף מפיקדון זה?', style: TextStyle(fontSize: 14)),
+              const Text('באיזה יום בחודש ניתן למשוך כסף מפיקדון זה?', style: TextStyle(fontSize: 14, color: Colors.black87)),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('כל ', style: TextStyle(fontSize: 16)),
-                  const SizedBox(width: 8),
-                  DropdownButton<int>(
-                    value: selectedDay,
-                    dropdownColor: Colors.white,
-                    items: List.generate(31, (index) => index + 1)
-                        .map((day) => DropdownMenuItem(value: day, child: Text(day.toString(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))))
-                        .toList(),
-                    onChanged: (val) => setState(() => selectedDay = val ?? 10),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text('לחודש', style: TextStyle(fontSize: 16)),
-                ],
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('כל ', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                    const SizedBox(width: 8),
+                    DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: selectedDay,
+                        dropdownColor: Colors.white,
+                        style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
+                        items: List.generate(31, (index) => index + 1)
+                            .map((day) => DropdownMenuItem(value: day, child: Text(day.toString(), style: const TextStyle(color: Colors.black87))))
+                            .toList(),
+                        onChanged: (val) => setState(() => selectedDay = val ?? 10),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('לחודש', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                  ],
+                ),
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx), 
+              child: const Text('ביטול', style: TextStyle(color: Colors.blueGrey))
+            ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00A3FF),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
               onPressed: () async {
                 await provider.setBucketWithdrawalDay(bucketName, selectedDay);
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text('שמור', style: TextStyle(color: Colors.white)),
+              child: const Text('שמור', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -280,7 +323,7 @@ class SmartWithdrawalsScreen extends StatelessWidget {
                       ],
                     ),
                     children: [
-                      const Divider(height: 1),
+                      const Divider(height: 1, color: Colors.black12),
                       Container(
                         color: Colors.grey.shade50,
                         padding: const EdgeInsets.all(16),
