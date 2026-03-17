@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added styled Empty State for checking history)
+// 🔒 STATUS: EDITED (Updated Empty State text & Fixed text visibility in dialog)
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../data/database_helper.dart';
@@ -11,7 +11,7 @@ class CheckingHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50], // התאמת רקע בהיר כמו בשאר האפליקציה
+      backgroundColor: Colors.grey[50], 
       appBar: const GlobalHeader(title: 'מעקב עו"ש (בקרה)', showBackButton: true),
       body: StreamBuilder<List<CheckingEntry>>(
         stream: DatabaseHelper.instance.streamCheckingHistory(),
@@ -110,8 +110,9 @@ class CheckingHistoryScreen extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
+            // תיקון: עדכון הניסוח לאופציה ב' הקצרה והמדויקת
             const Text(
-              'מסך זה נועד לבקרה בלבד. כל פעם שתרצה לבדוק את מצב הצמיחה של חשבון הבנק שלך, הזן כאן את יתרת העו"ש המדויקת באותו רגע.\n\nהמערכת תצייר עבורך גרף מגמה כדי שתוכל לראות את התקדמות היתרה שלך לאורך זמן.',
+              'מסך זה נועד לבקרה בלבד. המערכת תצייר עבורך גרף מגמה כדי שתוכל לראות את התקדמות היתרה שלך לאורך זמן.\n\nטיפ: לקבלת תמונת צמיחה אמינה, הזן את היתרה ביום קבוע (מומלץ ב-20 לחודש, לאחר ירידת החיובים).',
               style: TextStyle(fontSize: 15, color: Colors.black54, height: 1.5),
               textAlign: TextAlign.center,
             ),
@@ -182,10 +183,12 @@ class CheckingHistoryScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 TextField(
                   controller: amountCtrl,
+                  style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18), // תיקון: טקסט שחור קריא ובולט
                   keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
                   autofocus: true,
                   decoration: const InputDecoration(
                     labelText: 'סכום בעו"ש (₪)',
+                    labelStyle: TextStyle(color: Colors.black54, fontSize: 14),
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.account_balance),
                   ),
@@ -194,7 +197,8 @@ class CheckingHistoryScreen extends StatelessWidget {
                 ListTile(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.grey.shade300)),
                   title: const Text('תאריך נכונות', style: TextStyle(color: Colors.black87)),
-                  subtitle: Text(DateFormat('dd/MM/yyyy').format(selectedDate), style: const TextStyle(color: Colors.black54)),
+                  // תיקון: הגדרת צבע שחור בולט לבחירת התאריך
+                  subtitle: Text(DateFormat('dd/MM/yyyy').format(selectedDate), style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
                   trailing: const Icon(Icons.calendar_today, color: Color(0xFF00A3FF)),
                   onTap: () async {
                     final picked = await showDatePicker(

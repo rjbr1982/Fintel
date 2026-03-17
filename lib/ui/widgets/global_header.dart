@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed FamilyRole.adult error & Enhanced Email Launch Logic)
+// 🔒 STATUS: EDITED (Fixed UI text visibility in input fields)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart'; 
@@ -502,6 +502,7 @@ Widget _buildSettingsCard(BuildContext ctx, IconData icon, String text, VoidCall
 InputDecoration _customInputDecoration(String label) {
   return InputDecoration(
     labelText: label,
+    labelStyle: const TextStyle(color: Colors.black87), // תיקון: הגדרת צבע התווית בבירור
     suffixText: '%',
     filled: true,
     fillColor: Colors.white,
@@ -541,6 +542,7 @@ void _showFutureVsFinancialBottomSheet(BuildContext context, BudgetProvider budg
                       Expanded(
                         child: TextField(
                           controller: futureController, keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold), // תיקון: טקסט כהה
                           decoration: _customInputDecoration('עתידיות'),
                           onChanged: (val) {
                             final num = double.tryParse(val) ?? 0;
@@ -552,6 +554,7 @@ void _showFutureVsFinancialBottomSheet(BuildContext context, BudgetProvider budg
                       Expanded(
                         child: TextField(
                           controller: financialController, keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold), // תיקון: טקסט כהה
                           decoration: _customInputDecoration('פיננסיות'),
                           onChanged: (val) {
                             final num = double.tryParse(val) ?? 0;
@@ -608,6 +611,7 @@ void _showRatioSettingsBottomSheet(BuildContext context, BudgetProvider budget, 
                   const SizedBox(height: 20),
                   TextField(
                     controller: controller, 
+                    style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold), // תיקון: טקסט כהה
                     keyboardType: const TextInputType.numberWithOptions(decimal: true), 
                     decoration: _customInputDecoration('אחוז הקצאה'),
                   ),
@@ -804,12 +808,14 @@ void _showEditMemberBottomSheet(BuildContext context, BudgetProvider budget, Fam
                 children: [
                   TextField(
                     controller: nameController, 
-                    decoration: InputDecoration(labelText: nameLabel, border: const OutlineInputBorder())
+                    style: const TextStyle(color: Colors.black87), // תיקון: טקסט כהה
+                    decoration: InputDecoration(labelText: nameLabel, labelStyle: const TextStyle(color: Colors.black87), border: const OutlineInputBorder())
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: yearController, 
-                    decoration: const InputDecoration(labelText: 'שנת לידה (למשל 1990)', border: OutlineInputBorder()), 
+                    style: const TextStyle(color: Colors.black87), // תיקון: טקסט כהה
+                    decoration: const InputDecoration(labelText: 'שנת לידה (למשל 1990)', labelStyle: TextStyle(color: Colors.black87), border: OutlineInputBorder()), 
                     keyboardType: TextInputType.number
                   ),
                   const SizedBox(height: 24),

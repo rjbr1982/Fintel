@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Premium Light Theme Login with Static Icon Header & Dark Button)
+// 🔒 STATUS: EDITED (Robust Google Auth & Deep Clean Session)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,26 +14,48 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // נוהל 5.10.8: אבטחת ניקיון מטמון - ניתוק עמוק במקרה שמשתמש הגיע לכאן בטעות עם סשן פתוח
+    _forceDeepSignOut();
+  }
+
+  Future<void> _forceDeepSignOut() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (!kIsWeb) {
+        final GoogleSignIn googleSignIn = GoogleSignIn();
+        await googleSignIn.signOut();
+      }
+    } catch (_) {}
+  }
+
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
 
     try {
+      // ניתוק מקדים לפני ניסיון התחברות כדי להבטיח בחירת חשבון נקייה
+      await _forceDeepSignOut();
+
       if (kIsWeb) {
         final googleProvider = GoogleAuthProvider();
         googleProvider.addScope('email');
         googleProvider.addScope('profile');
+        // הגדרה זו מכריחה את גוגל להציג את חלונית בחירת החשבונות תמיד
         googleProvider.setCustomParameters({'prompt': 'select_account'});
         
         await FirebaseAuth.instance.signInWithPopup(googleProvider);
       } else {
         final GoogleSignIn googleSignIn = GoogleSignIn();
         
+        // ניקוי טוקנים ישנים מהמכשיר ב-Native
         try { await googleSignIn.disconnect(); } catch (_) {}
-        try { await googleSignIn.signOut(); } catch (_) {}
         
         final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
         
         if (googleUser == null) {
+          // המשתמש סגר את חלונית ההתחברות (ביטול טבעי)
           if (mounted) setState(() => _isLoading = false);
           return;
         }
@@ -47,10 +69,23 @@ class _LoginScreenState extends State<LoginScreen> {
         await FirebaseAuth.instance.signInWithCredential(credential);
       }
       
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        // התעלמות משגיאה שבה המשתמש סגר את החלונית בעצמו או שהדפדפן חסם פופאפ
+        if (e.code == 'popup-closed-by-user') return;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('שגיאת אימות: ${e.message ?? e.code}'), 
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('שגיאה בהתחברות: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('התרחשה שגיאה: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {

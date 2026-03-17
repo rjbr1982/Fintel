@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Forced Premium Light Theme & Fixed showDialog Parameter)
+// 🔒 STATUS: EDITED (Removed "(דינמיות)" from unified funds title)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -111,7 +111,8 @@ class SinkingFundsScreen extends StatelessWidget {
                     if (dynamicFunds.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.only(bottom: 8, right: 8),
-                        child: Text('קופות מאוחדות (דינמיות)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                        // תיקון: הוסרה המילה (דינמיות)
+                        child: Text('קופות מאוחדות', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
                       ),
                       ...dynamicFunds.entries.map((entry) {
                         double fundDeposit = 0;
@@ -199,7 +200,7 @@ class SinkingFundsScreen extends StatelessWidget {
 }
 
 // =========================================================================
-// פאנלי המשיכה והעריכה (מנוקים מלוגיקת ילדים ישנה)
+// פאנלי המשיכה והעריכה
 // =========================================================================
 
 class _UnifiedFundBottomSheetFromCenter extends StatefulWidget {
