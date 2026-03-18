@@ -175,28 +175,25 @@ class SeedService {
       await db.insertExpense(expense);
     }
 
-    // --- רשימת האמת לקניות (Seed Data) ---
+    // --- רשימת האמת לקניות (Seed Data) חלופה אוניברסלית ---
     final existingShopping = await db.getShoppingItems();
     if (existingShopping.isEmpty) {
       final List<ShoppingItem> initialShoppingItems = [
-        _createShopping('ביצים (תבנית)', 'ביצים', 35.0, 1),
-        _createShopping('חלב', 'מוצרי חלב', 6.0, 1),
-        _createShopping('גבינות', 'מוצרי חלב', 30.0, 1),
-        _createShopping('לחם/פיתות', 'לחמים', 15.0, 1),
-        _createShopping('עגבניות', 'ירקות', 10.0, 1),
-        _createShopping('מלפפונים', 'ירקות', 10.0, 1),
-        _createShopping('פירות', 'פירות', 30.0, 1),
-        _createShopping('בשר/עוף לשבת', 'בשר', 100.0, 1),
+        _createShopping('ביצים', 'ביצים', 35.0, 1),
+        _createShopping('מוצרי חלב בסיסיים (חלב, גבינות, חמאה)', 'מוצרי חלב', 40.0, 1),
+        _createShopping('לחם ומאפים', 'לחמים', 20.0, 1),
+        _createShopping('ירקות בסיס (עגבניה, מלפפון, בצל, וכו\')', 'ירקות', 35.0, 1),
+        _createShopping('פירות העונה', 'פירות', 30.0, 1),
+        _createShopping('בשר ועוף מרכזי', 'בשר', 100.0, 1),
+        _createShopping('חטיפי בשר (שניצלונים/נקניקיות)', 'בשר', 45.0, 2),
         _createShopping('דגים', 'דגים', 50.0, 2),
         _createShopping('נייר טואלט', 'חומרי ניקוי', 40.0, 4),
-        _createShopping('סבון כלים', 'חומרי ניקוי', 15.0, 4),
-        _createShopping('אבקת כביסה', 'חומרי ניקוי', 35.0, 4),
-        _createShopping('שמפו/מרכך', 'טואלטיקה', 30.0, 4),
-        _createShopping('משחת שיניים', 'טואלטיקה', 15.0, 4),
-        _createShopping('פסטה/אורז', 'מזווה', 20.0, 2),
+        _createShopping('חומרי ניקוי (כלים, כביסה, רצפה)', 'חומרי ניקוי', 50.0, 4),
+        _createShopping('טואלטיקה (שמפו, משחות)', 'טואלטיקה', 45.0, 4),
+        _createShopping('פחמימות בסיס (אורז, פסטה)', 'מזווה', 25.0, 2),
         _createShopping('שמן', 'מזווה', 15.0, 4),
-        _createShopping('קפה/תה', 'מזווה', 25.0, 4),
-        _createShopping('סוכר/מלח', 'מזווה', 10.0, 4),
+        _createShopping('קפה ותה', 'מזווה', 25.0, 4),
+        _createShopping('סוכר, מלח ותבלינים', 'מזווה', 15.0, 4),
       ];
 
       for (var item in initialShoppingItems) {

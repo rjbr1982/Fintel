@@ -1,10 +1,11 @@
-// 🔒 STATUS: EDITED (Connected Smart Withdrawal Manager Routing)
+// 🔒 STATUS: EDITED (Added Bank Discrepancy Traffic Light and Editing)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
+import '../../data/database_helper.dart'; // הוספת הייבוא למסד הנתונים
 import '../widgets/global_header.dart';
-import 'smart_withdrawals_screen.dart'; // הוספת הייבוא החדש
+import 'smart_withdrawals_screen.dart'; 
 
 class SinkingFundsScreen extends StatelessWidget {
   const SinkingFundsScreen({super.key});
@@ -151,24 +152,42 @@ class SinkingFundsScreen extends StatelessWidget {
                         child: Text('קופות מאוחדות', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
                       ),
                       ...dynamicFunds.entries.map((entry) {
-                        double fundDeposit = 0;
+                        double fundExpected = 0;
+                        double fundActual = 0;
                         double fundBalance = 0;
+                        
                         for (var e in entry.value) {
                           int multiplier = e.isPerChild ? provider.childCount : 1;
-                          fundDeposit += (e.monthlyAmount * multiplier);
+                          double expected = (e.monthlyAmount * multiplier);
+                          fundExpected += expected;
+                          fundActual += (e.actualBankDeposit ?? expected);
                           fundBalance += (e.currentBalance ?? 0);
                         }
                         
+                        double diff = fundActual - fundExpected;
+                        bool hasMismatch = diff.abs() > 0.01;
+                        String diffText = diff > 0 ? '+₪${diff.abs().toStringAsFixed(0)}' : '-₪${diff.abs().toStringAsFixed(0)}';
+
                         return Card(
                           color: Colors.white,
                           surfaceTintColor: Colors.transparent,
                           margin: const EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey.shade200)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15), 
+                            side: BorderSide(color: hasMismatch ? Colors.orange.shade300 : Colors.grey.shade200, width: hasMismatch ? 1.5 : 1.0)
+                          ),
                           elevation: 0,
                           child: ListTile(
                             leading: CircleAvatar(backgroundColor: Colors.green[50], child: Icon(Icons.account_balance_wallet, color: Colors.green[700])),
                             title: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
-                            subtitle: Text('להפרשה: ₪${fundDeposit.toStringAsFixed(0)}', style: const TextStyle(color: Colors.black54)),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('להפרשה: ₪${fundExpected.toStringAsFixed(0)}', style: const TextStyle(color: Colors.black54)),
+                                if (hasMismatch)
+                                  Text('⚠️ נדרש עדכון בבנק (פער: $diffText)', style: TextStyle(color: Colors.orange[800], fontSize: 12, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
                             trailing: Text('נצבר: ₪${fundBalance.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 15)),
                             onTap: () {
                               showModalBottomSheet(
@@ -192,9 +211,14 @@ class SinkingFundsScreen extends StatelessWidget {
                       ),
                       ...individualFunds.map((expense) {
                         int multiplier = expense.isPerChild ? provider.childCount : 1;
-                        double deposit = expense.monthlyAmount * multiplier;
+                        double expectedDeposit = expense.monthlyAmount * multiplier;
+                        double actualDeposit = expense.actualBankDeposit ?? expectedDeposit;
                         double balance = expense.currentBalance ?? 0;
                         
+                        double diff = actualDeposit - expectedDeposit;
+                        bool hasMismatch = diff.abs() > 0.01;
+                        String diffText = diff > 0 ? '+₪${diff.abs().toStringAsFixed(0)}' : '-₪${diff.abs().toStringAsFixed(0)}';
+
                         bool isFuture = expense.category == 'עתידיות';
                         String displayTitle = isFuture ? expense.parentCategory : expense.name;
                         String specificNameInfo = isFuture ? '${expense.name} | ' : '';
@@ -203,12 +227,22 @@ class SinkingFundsScreen extends StatelessWidget {
                           color: Colors.white,
                           surfaceTintColor: Colors.transparent,
                           margin: const EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey.shade200)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15), 
+                            side: BorderSide(color: hasMismatch ? Colors.orange.shade300 : Colors.grey.shade200, width: hasMismatch ? 1.5 : 1.0)
+                          ),
                           elevation: 0,
                           child: ListTile(
                             leading: CircleAvatar(backgroundColor: Colors.blue[50], child: Icon(Icons.savings_outlined, color: Colors.blue[700])),
                             title: Text(displayTitle, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
-                            subtitle: Text('$specificNameInfoלהפרשה: ₪${deposit.toStringAsFixed(0)}', style: const TextStyle(color: Colors.black54)),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('$specificNameInfoלהפרשה: ₪${expectedDeposit.toStringAsFixed(0)}', style: const TextStyle(color: Colors.black54)),
+                                if (hasMismatch)
+                                  Text('⚠️ נדרש עדכון בבנק (פער: $diffText)', style: TextStyle(color: Colors.orange[800], fontSize: 12, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
                             trailing: Text('נצבר: ₪${balance.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 15)),
                             onTap: () {
                               showModalBottomSheet(
@@ -296,6 +330,13 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
     );
   }
 
+  void _showEditBankDepositDialog(List<Expense> currentExpenses, double currentActual) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _EditUnifiedBankDepositDialog(expenses: currentExpenses, parentCategory: widget.parentCategory, currentActual: currentActual),
+    );
+  }
+
   Widget _buildHistoryList() {
     final provider = Provider.of<BudgetProvider>(context, listen: false);
     return Column(
@@ -324,9 +365,12 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
     );
   }
 
-  Widget _buildStandardUnifiedView(double totalCurrentBalance, List<Expense> currentExpenses) {
+  Widget _buildStandardUnifiedView(double totalCurrentBalance, double fundExpected, double fundActual, List<Expense> currentExpenses) {
+    bool hasMismatch = (fundActual - fundExpected).abs() > 0.01;
+    
     return Column(
       children: [
+        // בלוק יתרה צבורה
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
@@ -355,6 +399,39 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
             ],
           ),
         ),
+        
+        // בלוק בקרה בנקאית
+        Container(
+          margin: const EdgeInsets.only(top: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: hasMismatch ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, fontWeight: FontWeight.bold)),
+                  Row(
+                    children: [
+                      Text('₪${fundActual.toStringAsFixed(0)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey)),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () => _showEditBankDepositDialog(currentExpenses, fundActual),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              if (hasMismatch)
+                Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
+            ],
+          ),
+        ),
         const SizedBox(height: 20),
         Row(
           children: [
@@ -375,7 +452,17 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
   Widget build(BuildContext context) {
     final provider = Provider.of<BudgetProvider>(context);
     final currentExpenses = provider.expenses.where((e) => widget.originalExpenses.any((we) => we.id == e.id)).toList();
+    
     double totalCurrentBalance = currentExpenses.fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
+    double fundExpected = 0;
+    double fundActual = 0;
+    
+    for (var e in currentExpenses) {
+      int multiplier = e.isPerChild ? provider.childCount : 1;
+      double expected = (e.monthlyAmount * multiplier);
+      fundExpected += expected;
+      fundActual += (e.actualBankDeposit ?? expected);
+    }
     
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
@@ -386,7 +473,7 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
             Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
             Text('קופה מאוחדת: ${widget.parentCategory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
             const SizedBox(height: 16),
-            _buildStandardUnifiedView(totalCurrentBalance, currentExpenses),
+            _buildStandardUnifiedView(totalCurrentBalance, fundExpected, fundActual, currentExpenses),
           ],
         ),
       ),
@@ -438,11 +525,23 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
     );
   }
 
+  void _showEditBankDepositDialog(Expense currentExpense, double currentActual) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _EditIndividualBankDepositDialog(expense: currentExpense, currentActual: currentActual),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<BudgetProvider>(context);
     final currentExpense = provider.expenses.firstWhere((e) => e.id == widget.expense.id, orElse: () => widget.expense);
     
+    int multiplier = currentExpense.isPerChild ? provider.childCount : 1;
+    double expectedDeposit = currentExpense.monthlyAmount * multiplier;
+    double actualDeposit = currentExpense.actualBankDeposit ?? expectedDeposit;
+    bool hasMismatch = (actualDeposit - expectedDeposit).abs() > 0.01;
+
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
       child: SingleChildScrollView(
@@ -452,6 +551,8 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
             Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
             Text('קופה: ${currentExpense.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
             const SizedBox(height: 16),
+            
+            // בלוק יתרה צבורה
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
@@ -480,6 +581,40 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
                 ],
               ),
             ),
+            
+            // בלוק בקרה בנקאית
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: hasMismatch ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, fontWeight: FontWeight.bold)),
+                      Row(
+                        children: [
+                          Text('₪${actualDeposit.toStringAsFixed(0)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey)),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _showEditBankDepositDialog(currentExpense, actualDeposit),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  if (hasMismatch)
+                    Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 20),
             Row(
               children: [
@@ -519,7 +654,7 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
 }
 
 // =========================================================================
-// דיאלוגים לעריכת יתרות
+// דיאלוגים לעריכת יתרות והפקדות לבנק
 // =========================================================================
 
 class _EditIndividualBalanceDialog extends StatefulWidget {
@@ -627,6 +762,136 @@ class _EditUnifiedBalancesDialogState extends State<_EditUnifiedBalancesDialog> 
                   await provider.setExpenseCurrentBalance(widget.expenses[i].id!, val);
                 } else {
                   await provider.setExpenseCurrentBalance(widget.expenses[i].id!, 0);
+                }
+              }
+              if (!context.mounted) return;
+              Navigator.pop(context);
+            }
+          },
+          child: const Text('שמור'),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditIndividualBankDepositDialog extends StatefulWidget {
+  final Expense expense;
+  final double currentActual;
+  const _EditIndividualBankDepositDialog({required this.expense, required this.currentActual});
+
+  @override
+  State<_EditIndividualBankDepositDialog> createState() => _EditIndividualBankDepositDialogState();
+}
+
+class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDepositDialog> {
+  late TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.currentActual.toStringAsFixed(0));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      title: const Text('בקרת הפרשה לבנק', style: TextStyle(color: Colors.black87)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('הזן את סכום הוראת הקבע שמוגדר בפועל בבנק:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _ctrl,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', suffixText: '₪'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
+          onPressed: () async {
+            final val = double.tryParse(_ctrl.text);
+            if (val != null) {
+              final updatedExpense = widget.expense.copyWith(actualBankDeposit: val);
+              await DatabaseHelper.instance.updateExpense(updatedExpense);
+              if (!context.mounted) return;
+              Navigator.pop(context);
+            }
+          },
+          child: const Text('שמור'),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditUnifiedBankDepositDialog extends StatefulWidget {
+  final List<Expense> expenses;
+  final String parentCategory;
+  final double currentActual;
+  const _EditUnifiedBankDepositDialog({required this.expenses, required this.parentCategory, required this.currentActual});
+
+  @override
+  State<_EditUnifiedBankDepositDialog> createState() => _EditUnifiedBankDepositDialogState();
+}
+
+class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDialog> {
+  late TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.currentActual.toStringAsFixed(0));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      title: Text('בקרה לבנק - ${widget.parentCategory}', style: const TextStyle(color: Colors.black87)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('הזן את סכום הוראת הקבע הכולל שמוגדר בפועל בבנק עבור כלל הקופה:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _ctrl,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', suffixText: '₪', border: OutlineInputBorder()),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
+          onPressed: () async {
+            final val = double.tryParse(_ctrl.text);
+            if (val != null && widget.expenses.isNotEmpty) {
+              for (int i = 0; i < widget.expenses.length; i++) {
+                if (i == 0) {
+                  // שומרים את כל הערך של הקופה המאוחדת על הפריט הראשון
+                  await DatabaseHelper.instance.updateExpense(widget.expenses[i].copyWith(actualBankDeposit: val));
+                } else {
+                  // מאפסים את השאר כדי שהסיכום הכולל יישאר מדויק
+                  await DatabaseHelper.instance.updateExpense(widget.expenses[i].copyWith(actualBankDeposit: 0));
                 }
               }
               if (!context.mounted) return;

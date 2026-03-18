@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Business Model, Dynamic Sub-Items, and Passive Income Logic)
+// 🔒 STATUS: EDITED (Added actualBankDeposit and copyWith for Sinking Funds Control)
 // ignore_for_file: constant_identifier_names
 
 import 'dart:convert';
@@ -88,7 +88,7 @@ class Expense {
   final bool isDynamicSalary;
   final String? salaryStartDate;
 
-  // --- שדות לעסק והכנסה פסיבית (New) ---
+  // --- שדות לעסק והכנסה פסיבית ---
   final bool isBusiness;
   final String businessIncomes; // JSON String
   final String businessExpenses; // JSON String
@@ -98,6 +98,9 @@ class Expense {
   final bool isCustom; 
 
   final String date; 
+
+  // --- שדה בקרת הפקדה בבנק (קופות צוברות) ---
+  final double? actualBankDeposit; 
 
   Expense({
     this.id,
@@ -123,7 +126,63 @@ class Expense {
     this.businessWorkingHours = 0.0,
     this.isCustom = false, 
     required this.date,
+    this.actualBankDeposit,
   }) : originalAmount = originalAmount ?? monthlyAmount;
+
+  // --- מתודת העתקה (לעדכון כירורגי במצב) ---
+  Expense copyWith({
+    int? id,
+    String? name,
+    String? category,
+    String? parentCategory,
+    double? monthlyAmount,
+    Frequency? frequency,
+    double? originalAmount,
+    bool? isSinking,
+    bool? isPerChild,
+    double? targetAmount,
+    double? currentBalance,
+    double? allocationRatio,
+    String? lastUpdateDate,
+    bool? isLocked,
+    double? manualAmount,
+    bool? isDynamicSalary,
+    String? salaryStartDate,
+    bool? isBusiness,
+    String? businessIncomes,
+    String? businessExpenses,
+    double? businessWorkingHours,
+    bool? isCustom,
+    String? date,
+    double? actualBankDeposit,
+  }) {
+    return Expense(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      parentCategory: parentCategory ?? this.parentCategory,
+      monthlyAmount: monthlyAmount ?? this.monthlyAmount,
+      frequency: frequency ?? this.frequency,
+      originalAmount: originalAmount ?? this.originalAmount,
+      isSinking: isSinking ?? this.isSinking,
+      isPerChild: isPerChild ?? this.isPerChild,
+      targetAmount: targetAmount ?? this.targetAmount,
+      currentBalance: currentBalance ?? this.currentBalance,
+      allocationRatio: allocationRatio ?? this.allocationRatio,
+      lastUpdateDate: lastUpdateDate ?? this.lastUpdateDate,
+      isLocked: isLocked ?? this.isLocked,
+      manualAmount: manualAmount ?? this.manualAmount,
+      isDynamicSalary: isDynamicSalary ?? this.isDynamicSalary,
+      salaryStartDate: salaryStartDate ?? this.salaryStartDate,
+      isBusiness: isBusiness ?? this.isBusiness,
+      businessIncomes: businessIncomes ?? this.businessIncomes,
+      businessExpenses: businessExpenses ?? this.businessExpenses,
+      businessWorkingHours: businessWorkingHours ?? this.businessWorkingHours,
+      isCustom: isCustom ?? this.isCustom,
+      date: date ?? this.date,
+      actualBankDeposit: actualBankDeposit ?? this.actualBankDeposit,
+    );
+  }
 
   // --- לוגיקת עסק (Business Logic) ---
   List<BusinessSubItem> get parsedBusinessIncomes {
@@ -179,6 +238,7 @@ class Expense {
       'businessWorkingHours': businessWorkingHours,
       'isCustom': isCustom ? 1 : 0,
       'date': date,
+      'actualBankDeposit': actualBankDeposit,
     };
   }
 
@@ -207,6 +267,7 @@ class Expense {
       businessWorkingHours: (map['businessWorkingHours'] as num?)?.toDouble() ?? 0.0,
       isCustom: (map['isCustom'] ?? 0) == 1,
       date: map['date'] ?? DateTime.now().toIso8601String(),
+      actualBankDeposit: (map['actualBankDeposit'] as num?)?.toDouble(),
     );
   }
 }
