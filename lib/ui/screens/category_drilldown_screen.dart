@@ -1,4 +1,5 @@
-// 🔒 STATUS: EDITED (Replaced deprecated RadioListTile with modern SegmentedButton)
+// 🔒 STATUS: EDITED (Fixed 4 Linter Warnings: Deprecated Dropdown, Null assertions, and missing Business methods in SpecificExpensesScreen)
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -154,6 +155,42 @@ class CategoryDrilldownScreen extends StatelessWidget {
     );
   }
 
+  void _showAddIncomeTypeDialog(BuildContext context, BudgetProvider provider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('מה תרצה להוסיף?', textAlign: TextAlign.center),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.attach_money, color: Colors.green),
+                title: const Text('הכנסה רגילה (משכורת, קצבה)'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showAddParentCategoryDialog(context, provider, mainCategory);
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.storefront, color: Colors.blue),
+                title: const Text('עסק / הכנסה צדדית מורכבת'),
+                subtitle: const Text('כולל שורות הכנסות והוצאות', style: TextStyle(fontSize: 11)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showBusinessDialog(context, provider);
+                },
+              ),
+            ],
+          ),
+        ),
+      )
+    );
+  }
+
   void _showEntertainmentTrafficLightEditor(BuildContext context, BudgetProvider provider) {
     final warningCtrl = TextEditingController(text: provider.entWarningLimit.toStringAsFixed(0));
     final successCtrl = TextEditingController(text: provider.entSuccessLimit.toStringAsFixed(0));
@@ -291,9 +328,15 @@ class CategoryDrilldownScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       appBar: GlobalHeader(title: displayTitle),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddParentCategoryDialog(context, context.read<BudgetProvider>(), mainCategory),
+        onPressed: () {
+          if (mainCategory == 'הכנסות') {
+            _showAddIncomeTypeDialog(context, context.read<BudgetProvider>());
+          } else {
+            _showAddParentCategoryDialog(context, context.read<BudgetProvider>(), mainCategory);
+          }
+        },
         backgroundColor: Colors.blue,
-        tooltip: 'הוסף קבוצת הוצאות',
+        tooltip: 'הוסף קבוצת הוצאות/הכנסות',
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: Consumer<BudgetProvider>(
@@ -301,11 +344,15 @@ class CategoryDrilldownScreen extends StatelessWidget {
           final categoryExpenses = provider.expenses.where((e) => e.category == mainCategory).toList();
 
           if (categoryExpenses.isEmpty) {
-            return const Center(child: Text('אין הוצאות בקטגוריה זו', style: TextStyle(color: Colors.black)));
+            return const Center(child: Text('אין נתונים בקטגוריה זו', style: TextStyle(color: Colors.black)));
           }
 
+          // פיצול בין הכנסות רגילות לעסקים במידה ואנו במסך הכנסות
+          final regularExpenses = categoryExpenses.where((e) => !e.isBusiness).toList();
+          final businessExpenses = categoryExpenses.where((e) => e.isBusiness).toList();
+
           final Map<String, List<Expense>> grouped = {};
-          for (var e in categoryExpenses) {
+          for (var e in regularExpenses) {
             final pCat = e.parentCategory;
             if (!grouped.containsKey(pCat)) { grouped[pCat] = []; }
             grouped[pCat]!.add(e);
@@ -326,7 +373,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
           return Column(
             children: [
               if (mainCategory == 'משתנות') ...[
-                // CONTEXTUAL ONBOARDING BANNER: Anchor vs Percentages
                 Container(
                   margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   padding: const EdgeInsets.all(12),
@@ -375,120 +421,431 @@ class CategoryDrilldownScreen extends StatelessWidget {
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.all(16.0),
-                  children: entries.map((entry) {
-                    final parentName = entry.key;
-                    final items = entry.value;
+                  children: [
+                    // === רשימת הכנסות/הוצאות רגילות ===
+                    ...entries.map((entry) {
+                      final parentName = entry.key;
+                      final items = entry.value;
 
-                    double total = 0;
-                    double totalBalance = 0;
-                    double totalTarget = 0;
-                    double monthlySinkingTotal = 0;
-                    bool hasTarget = false;
+                      double total = 0;
+                      double totalBalance = 0;
+                      double totalTarget = 0;
+                      double monthlySinkingTotal = 0;
+                      bool hasTarget = false;
 
-                    for (var e in items) {
-                      int multiplier = e.isPerChild ? provider.childCount : 1;
-                      total += e.monthlyAmount * multiplier;
-                      totalBalance += (e.currentBalance ?? 0);
-                      if (e.isSinking) { monthlySinkingTotal += e.monthlyAmount * multiplier; }
-                      if ((e.targetAmount ?? 0) > 0) { totalTarget += e.targetAmount!; hasTarget = true; }
-                    }
+                      for (var e in items) {
+                        int multiplier = e.isPerChild ? provider.childCount : 1;
+                        total += e.monthlyAmount * multiplier;
+                        totalBalance += (e.currentBalance ?? 0);
+                        if (e.isSinking) { monthlySinkingTotal += e.monthlyAmount * multiplier; }
+                        if ((e.targetAmount ?? 0) > 0) { totalTarget += e.targetAmount!; hasTarget = true; }
+                      }
 
-                    int unifiedMode = provider.getCategoryUnifiedMode(parentName);
+                      int unifiedMode = provider.getCategoryUnifiedMode(parentName);
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      elevation: 1,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey[200]!)),
-                      color: Colors.white,
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        title: Row(
-                          children: [
-                            Text(_formatParentName(parentName), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
-                            const SizedBox(width: 8),
-                            if (parentName != 'קניות' && parentName != 'ילדים - משתנות')
-                              PopupMenuButton<String>(
-                                icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
-                                padding: EdgeInsets.zero,
-                                onSelected: (val) {
-                                  if (val == 'rename') _showRenameParentDialog(context, provider, parentName);
-                                  if (val == 'manage_unified') _showUnifiedModeDialog(context, provider, parentName);
-                                },
-                                itemBuilder: (ctx) => [
-                                  if (parentName != 'רכב')
-                                    const PopupMenuItem(value: 'rename', child: Text('שינוי שם קבוצה', style: TextStyle(fontSize: 14))),
-                                  const PopupMenuItem(
-                                    value: 'manage_unified',
-                                    child: Text('הגדרת מצב קופה (0/1/2)', style: TextStyle(fontSize: 14)),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
-                        subtitle: (mainCategory == 'עתידיות' || (parentName == 'ילדים' && provider.childCount > 0) || unifiedMode > 0) 
-                          ? Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (mainCategory == 'עתידיות') ...[
-                                    if (hasTarget)
-                                      LinearProgressIndicator(value: (totalTarget > 0) ? (totalBalance / totalTarget).clamp(0.0, 1.0) : 0.0, backgroundColor: Colors.grey[200], color: Colors.green, minHeight: 5, borderRadius: BorderRadius.circular(4)),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      hasTarget ? 'נצבר: ₪${totalBalance.toStringAsFixed(0)} מתוך ₪${totalTarget.toStringAsFixed(0)}' : 'נצבר בקופה: ₪${totalBalance.toStringAsFixed(0)}',
-                                      style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold),
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        elevation: 1,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey[200]!)),
+                        color: Colors.white,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          title: Row(
+                            children: [
+                              Text(_formatParentName(parentName), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
+                              const SizedBox(width: 8),
+                              if (parentName != 'קניות' && parentName != 'ילדים - משתנות')
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                                  padding: EdgeInsets.zero,
+                                  onSelected: (val) {
+                                    if (val == 'rename') _showRenameParentDialog(context, provider, parentName);
+                                    if (val == 'manage_unified') _showUnifiedModeDialog(context, provider, parentName);
+                                  },
+                                  itemBuilder: (ctx) => [
+                                    if (parentName != 'רכב')
+                                      const PopupMenuItem(value: 'rename', child: Text('שינוי שם קבוצה', style: TextStyle(fontSize: 14))),
+                                    const PopupMenuItem(
+                                      value: 'manage_unified',
+                                      child: Text('הגדרת מצב קופה (0/1/2)', style: TextStyle(fontSize: 14)),
                                     ),
                                   ],
-                                  if (unifiedMode > 0 && mainCategory != 'עתידיות') ...[
-                                    Text('להפרשה חודשית לקופה: ₪${monthlySinkingTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)),
+                                ),
+                            ],
+                          ),
+                          subtitle: (mainCategory == 'עתידיות' || (parentName == 'ילדים' && provider.childCount > 0) || unifiedMode > 0) 
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (mainCategory == 'עתידיות') ...[
+                                      if (hasTarget)
+                                        LinearProgressIndicator(value: (totalTarget > 0) ? (totalBalance / totalTarget).clamp(0.0, 1.0) : 0.0, backgroundColor: Colors.grey[200], color: Colors.green, minHeight: 5, borderRadius: BorderRadius.circular(4)),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        hasTarget ? 'נצבר: ₪${totalBalance.toStringAsFixed(0)} מתוך ₪${totalTarget.toStringAsFixed(0)}' : 'נצבר בקופה: ₪${totalBalance.toStringAsFixed(0)}',
+                                        style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                    if (unifiedMode > 0 && mainCategory != 'עתידיות') ...[
+                                      Text('להפרשה חודשית לקופה: ₪${monthlySinkingTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)),
+                                    ],
                                   ],
+                                ),
+                              ) 
+                            : null,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text('${loc?.get('currency_symbol') ?? '₪'}${(total).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue)),
+                                  Text('${loc?.get('currency_symbol') ?? '₪'}${(total * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                                 ],
                               ),
-                            ) 
-                          : null,
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text('${loc?.get('currency_symbol') ?? '₪'}${(total).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue)),
-                                Text('${loc?.get('currency_symbol') ?? '₪'}${(total * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                              ],
-                            ),
-                            const SizedBox(width: 8),
-                            if (unifiedMode > 0 && parentName != 'רכב')
-                              IconButton(
-                                icon: const Icon(Icons.account_balance_wallet, color: Colors.green),
-                                tooltip: 'ניהול קופה מאוחדת',
-                                onPressed: () {
-                                  showModalBottomSheet(
-                                    context: context, isScrollControlled: true,
-                                    backgroundColor: const Color(0xFF121212),
-                                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                                    builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: parentName, expenses: items),
-                                  );
-                                }
-                              ),
-                            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
-                          ],
+                              const SizedBox(width: 8),
+                              if (unifiedMode > 0 && parentName != 'רכב')
+                                IconButton(
+                                  icon: const Icon(Icons.account_balance_wallet, color: Colors.green),
+                                  tooltip: 'ניהול קופה מאוחדת',
+                                  onPressed: () {
+                                    showModalBottomSheet(
+                                      context: context, isScrollControlled: true,
+                                      backgroundColor: const Color(0xFF121212),
+                                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                                      builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: parentName, expenses: items),
+                                    );
+                                  }
+                                ),
+                              const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                            ],
+                          ),
+                          onTap: () {
+                            Navigator.push(context, MaterialPageRoute(
+                              builder: (context) => SpecificExpensesScreen(parentCategory: parentName, mainCategory: mainCategory)
+                            ));
+                          },
                         ),
-                        onTap: () {
-                          Navigator.push(context, MaterialPageRoute(
-                            builder: (context) => SpecificExpensesScreen(parentCategory: parentName, mainCategory: mainCategory)
-                          ));
-                        },
+                      );
+                    }),
+                    
+                    // === רשימת עסקים צדדיים (מופיע רק במסך הכנסות) ===
+                    if (businessExpenses.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.only(top: 24, bottom: 8, right: 8),
+                        child: Text("עסקים והכנסות צדדיות", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
                       ),
-                    );
-                  }).toList(),
+                      ...businessExpenses.map((business) => _buildBusinessTile(context, provider, business)),
+                    ]
+                  ],
                 ),
               ),
             ],
           );
         },
       ),
+    );
+  }
+
+  // === מודול ויזואלי לעסק בכרטיסיה ===
+  Widget _buildBusinessTile(BuildContext context, BudgetProvider provider, Expense business) {
+    double netProfit = business.getBusinessNetProfit();
+    bool isPassive = business.isPassive;
+    
+    return Dismissible(
+      key: Key(business.id?.toString() ?? UniqueKey().toString()),
+      direction: DismissDirection.endToStart,
+      background: Container(color: Colors.red, alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: 20), child: const Icon(Icons.delete, color: Colors.white)),
+      onDismissed: (direction) => provider.deleteExpense(business.id!),
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: isPassive ? Colors.green.shade200 : Colors.blue.shade200)),
+        color: isPassive ? Colors.green.shade50 : Colors.white,
+        child: InkWell(
+          onTap: () => _showBusinessDialog(context, provider, business: business),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.storefront, color: isPassive ? Colors.green[800] : Colors.blue[800]),
+                        const SizedBox(width: 8),
+                        Text(business.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                      ],
+                    ),
+                    const Icon(Icons.edit, size: 18, color: Colors.grey),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('רווח נטו חודשי', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                        Text(
+                          '₪${netProfit.toStringAsFixed(0)}', 
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: netProfit >= 0 ? Colors.green[800] : Colors.red[800])
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('השקעה שבועית: ${business.businessWorkingHours.toStringAsFixed(1)} שעות', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                        if (isPassive)
+                          Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(color: Colors.green[600], borderRadius: BorderRadius.circular(8)),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.verified, color: Colors.white, size: 12),
+                                SizedBox(width: 4),
+                                Text('נכס פסיבי!', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          )
+                      ],
+                    )
+                  ],
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // === חלונית עריכת והוספת עסק ===
+  void _showBusinessDialog(BuildContext context, BudgetProvider provider, {Expense? business}) {
+    final nameController = TextEditingController(text: business?.name ?? 'עסק חדש');
+    
+    // ניהול המצב הפנימי של התתי-סעיפים (Incomes/Expenses)
+    List<BusinessSubItem> incomes = business?.parsedBusinessIncomes ?? [BusinessSubItem(id: UniqueKey().toString(), name: '', amount: 0.0)];
+    if (incomes.isEmpty) incomes.add(BusinessSubItem(id: UniqueKey().toString(), name: '', amount: 0.0));
+    
+    List<BusinessSubItem> expenses = business?.parsedBusinessExpenses ?? [BusinessSubItem(id: UniqueKey().toString(), name: '', amount: 0.0)];
+    if (expenses.isEmpty) expenses.add(BusinessSubItem(id: UniqueKey().toString(), name: '', amount: 0.0));
+    
+    String timeScale = 'week'; 
+    final hoursCtrl = TextEditingController(text: business != null ? business.businessWorkingHours.toString() : '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          
+          double calculateNet() {
+            double i = incomes.fold(0.0, (s, e) => s + e.amount);
+            double e = expenses.fold(0.0, (s, e) => s + e.amount);
+            return i - e;
+          }
+          
+          double net = calculateNet();
+          double weeklyH = double.tryParse(hoursCtrl.text) ?? 0.0;
+          if (timeScale == 'day') weeklyH *= 5; // חישוב 5 ימי עסקים בשבוע
+          bool isPassiveNow = net > 0 && weeklyH <= 4.0;
+
+          Widget buildSubItemList(String title, List<BusinessSubItem> list, Color iconColor) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    IconButton(
+                      icon: Icon(Icons.add_circle, color: iconColor),
+                      padding: EdgeInsets.zero, constraints: const BoxConstraints(),
+                      onPressed: () => setDialogState(() => list.add(BusinessSubItem(id: UniqueKey().toString(), name: '', amount: 0))),
+                    )
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...list.map((item) {
+                  int idx = list.indexOf(item);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: TextFormField(
+                            initialValue: item.name,
+                            decoration: const InputDecoration(labelText: 'שם סעיף', isDense: true, border: OutlineInputBorder()),
+                            onChanged: (val) => item.name = val,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 1,
+                          child: TextFormField(
+                            initialValue: item.amount == 0 ? '' : item.amount.toStringAsFixed(0),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(labelText: 'סכום', suffixText: '₪', isDense: true, border: OutlineInputBorder()),
+                            onChanged: (val) {
+                              item.amount = double.tryParse(val) ?? 0;
+                              setDialogState((){}); // עדכון רווח נטו דינמי בחלונית
+                            },
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
+                          padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 30),
+                          onPressed: () => setDialogState(() { if(list.length > 1) list.removeAt(idx); }),
+                        )
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            );
+          }
+
+          return Theme(
+            data: ThemeData.light(),
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text('הגדרת עסק / הכנסה צדדית', style: TextStyle(fontSize: 18)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם העסק / המיזם', border: OutlineInputBorder())),
+                    const SizedBox(height: 16),
+                    
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
+                      child: Column(
+                        children: [
+                          buildSubItemList('מקורות הכנסה בעסק', incomes, Colors.green),
+                          const Divider(height: 24),
+                          buildSubItemList('הוצאות העסק', expenses, Colors.red),
+                        ],
+                      )
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // --- מחשבון זמן / פסיביות ---
+                    const Align(alignment: Alignment.centerRight, child: Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold))),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            controller: hoursCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(labelText: 'כמות שעות', border: OutlineInputBorder(), isDense: true),
+                            onChanged: (_) => setDialogState((){}),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 1,
+                          child: InputDecorator(
+                            decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4), isDense: true),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: timeScale,
+                                isExpanded: true,
+                                items: const [
+                                  DropdownMenuItem(value: 'day', child: Text('ביום')),
+                                  DropdownMenuItem(value: 'week', child: Text('בשבוע')),
+                                ],
+                                onChanged: (val) => setDialogState(() => timeScale = val!),
+                              )
+                            )
+                          )
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // --- תצוגת חיווי נטו ופסיביות ---
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: isPassiveNow ? Colors.green.shade50 : Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('רווח נטו מחושב:', style: TextStyle(fontSize: 12)),
+                              Text('₪${net.toStringAsFixed(0)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: net >= 0 ? Colors.green[800] : Colors.red[800])),
+                            ],
+                          ),
+                          if (isPassiveNow)
+                            const Row(
+                              children: [
+                                Icon(Icons.verified, color: Colors.green),
+                                SizedBox(width: 4),
+                                Text('נכס פסיבי!', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))
+                              ],
+                            )
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (nameController.text.isNotEmpty) {
+                      String incJson = jsonEncode(incomes.map((e) => e.toMap()).toList());
+                      String expJson = jsonEncode(expenses.map((e) => e.toMap()).toList());
+                      
+                      double finalHours = double.tryParse(hoursCtrl.text) ?? 0.0;
+                      if (timeScale == 'day') finalHours *= 5;
+
+                      final newExpense = Expense(
+                        id: business?.id,
+                        name: nameController.text.trim(),
+                        category: 'הכנסות',
+                        parentCategory: business?.parentCategory ?? 'עסקים',
+                        monthlyAmount: 0, 
+                        isLocked: false,
+                        isCustom: true,
+                        date: business?.date ?? DateTime.now().toIso8601String(),
+                        isBusiness: true,
+                        businessIncomes: incJson,
+                        businessExpenses: expJson,
+                        businessWorkingHours: finalHours,
+                      );
+                      
+                      if (business == null) {
+                        await provider.addExpense(newExpense);
+                      } else {
+                        await provider.updateExpense(newExpense);
+                      }
+                      
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    }
+                  },
+                  child: Text(business == null ? 'הוסף עסק' : 'שמור שינויים'),
+                )
+              ]
+            ),
+          );
+        }
+      )
     );
   }
 }
@@ -553,16 +910,21 @@ class SpecificExpensesScreen extends StatelessWidget {
               children: [
                 TextField(controller: nameController, decoration: const InputDecoration(labelText: 'כינוי הרכב (למשל: מאזדה 3)')),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedType, 
-                  decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'סוג רכב'),
-                  items: const [
-                    DropdownMenuItem(value: 'car', child: Text('מכונית פרטית')),
-                    DropdownMenuItem(value: 'motorcycle', child: Text('קטנוע / אופנוע')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) { setDialogState(() => selectedType = val); }
-                  }
+                InputDecorator(
+                  decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'סוג רכב', contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedType, 
+                      isExpanded: true,
+                      items: const [
+                        DropdownMenuItem(value: 'car', child: Text('מכונית פרטית')),
+                        DropdownMenuItem(value: 'motorcycle', child: Text('קטנוע / אופנוע')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) { setDialogState(() => selectedType = val); }
+                      }
+                    )
+                  )
                 )
               ]
             ),
@@ -580,6 +942,42 @@ class SpecificExpensesScreen extends StatelessWidget {
             ]
           ),
         )
+      )
+    );
+  }
+
+  void _showAddIncomeTypeDialog(BuildContext context, BudgetProvider provider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('מה תרצה להוסיף?', textAlign: TextAlign.center),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.attach_money, color: Colors.green),
+                title: const Text('הכנסה רגילה (משכורת, קצבה)'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showAddExpenseDialog(context, provider, parentCategory, mainCategory);
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.storefront, color: Colors.blue),
+                title: const Text('עסק / הכנסה צדדית מורכבת'),
+                subtitle: const Text('כולל שורות הכנסות והוצאות', style: TextStyle(fontSize: 11)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showBusinessDialog(context, provider);
+                },
+              ),
+            ],
+          ),
+        ),
       )
     );
   }
@@ -846,6 +1244,304 @@ class SpecificExpensesScreen extends StatelessWidget {
     );
   }
 
+  // === מודול ויזואלי לעסק בכרטיסיה במסך הפירוט הפנימי ===
+  Widget _buildBusinessTile(BuildContext context, BudgetProvider provider, Expense business) {
+    double netProfit = business.getBusinessNetProfit();
+    bool isPassive = business.isPassive;
+    
+    return Dismissible(
+      key: Key(business.id?.toString() ?? UniqueKey().toString()),
+      direction: DismissDirection.endToStart,
+      background: Container(color: Colors.red, alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: 20), child: const Icon(Icons.delete, color: Colors.white)),
+      onDismissed: (direction) => provider.deleteExpense(business.id!),
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: isPassive ? Colors.green.shade200 : Colors.blue.shade200)),
+        color: isPassive ? Colors.green.shade50 : Colors.white,
+        child: InkWell(
+          onTap: () => _showBusinessDialog(context, provider, business: business),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.storefront, color: isPassive ? Colors.green[800] : Colors.blue[800]),
+                        const SizedBox(width: 8),
+                        Text(business.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                      ],
+                    ),
+                    const Icon(Icons.edit, size: 18, color: Colors.grey),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('רווח נטו חודשי', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                        Text(
+                          '₪${netProfit.toStringAsFixed(0)}', 
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: netProfit >= 0 ? Colors.green[800] : Colors.red[800])
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('השקעה שבועית: ${business.businessWorkingHours.toStringAsFixed(1)} שעות', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                        if (isPassive)
+                          Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(color: Colors.green[600], borderRadius: BorderRadius.circular(8)),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.verified, color: Colors.white, size: 12),
+                                SizedBox(width: 4),
+                                Text('נכס פסיבי!', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          )
+                      ],
+                    )
+                  ],
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // === חלונית עריכת והוספת עסק במסך הפירוט הפנימי ===
+  void _showBusinessDialog(BuildContext context, BudgetProvider provider, {Expense? business}) {
+    final nameController = TextEditingController(text: business?.name ?? 'עסק חדש');
+    
+    List<BusinessSubItem> incomes = business?.parsedBusinessIncomes ?? [BusinessSubItem(id: UniqueKey().toString(), name: '', amount: 0.0)];
+    if (incomes.isEmpty) incomes.add(BusinessSubItem(id: UniqueKey().toString(), name: '', amount: 0.0));
+    
+    List<BusinessSubItem> expenses = business?.parsedBusinessExpenses ?? [BusinessSubItem(id: UniqueKey().toString(), name: '', amount: 0.0)];
+    if (expenses.isEmpty) expenses.add(BusinessSubItem(id: UniqueKey().toString(), name: '', amount: 0.0));
+    
+    String timeScale = 'week'; 
+    final hoursCtrl = TextEditingController(text: business != null ? business.businessWorkingHours.toString() : '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          
+          double calculateNet() {
+            double i = incomes.fold(0.0, (s, e) => s + e.amount);
+            double e = expenses.fold(0.0, (s, e) => s + e.amount);
+            return i - e;
+          }
+          
+          double net = calculateNet();
+          double weeklyH = double.tryParse(hoursCtrl.text) ?? 0.0;
+          if (timeScale == 'day') weeklyH *= 5; 
+          bool isPassiveNow = net > 0 && weeklyH <= 4.0;
+
+          Widget buildSubItemList(String title, List<BusinessSubItem> list, Color iconColor) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    IconButton(
+                      icon: Icon(Icons.add_circle, color: iconColor),
+                      padding: EdgeInsets.zero, constraints: const BoxConstraints(),
+                      onPressed: () => setDialogState(() => list.add(BusinessSubItem(id: UniqueKey().toString(), name: '', amount: 0))),
+                    )
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...list.map((item) {
+                  int idx = list.indexOf(item);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: TextFormField(
+                            initialValue: item.name,
+                            decoration: const InputDecoration(labelText: 'שם סעיף', isDense: true, border: OutlineInputBorder()),
+                            onChanged: (val) => item.name = val,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 1,
+                          child: TextFormField(
+                            initialValue: item.amount == 0 ? '' : item.amount.toStringAsFixed(0),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(labelText: 'סכום', suffixText: '₪', isDense: true, border: OutlineInputBorder()),
+                            onChanged: (val) {
+                              item.amount = double.tryParse(val) ?? 0;
+                              setDialogState((){}); 
+                            },
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
+                          padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 30),
+                          onPressed: () => setDialogState(() { if(list.length > 1) list.removeAt(idx); }),
+                        )
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            );
+          }
+
+          return Theme(
+            data: ThemeData.light(),
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text('הגדרת עסק / הכנסה צדדית', style: TextStyle(fontSize: 18)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם העסק / המיזם', border: OutlineInputBorder())),
+                    const SizedBox(height: 16),
+                    
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
+                      child: Column(
+                        children: [
+                          buildSubItemList('מקורות הכנסה בעסק', incomes, Colors.green),
+                          const Divider(height: 24),
+                          buildSubItemList('הוצאות העסק', expenses, Colors.red),
+                        ],
+                      )
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // --- מחשבון זמן / פסיביות ---
+                    const Align(alignment: Alignment.centerRight, child: Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold))),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            controller: hoursCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(labelText: 'כמות שעות', border: OutlineInputBorder(), isDense: true),
+                            onChanged: (_) => setDialogState((){}),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 1,
+                          child: InputDecorator(
+                            decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4), isDense: true),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: timeScale,
+                                isExpanded: true,
+                                items: const [
+                                  DropdownMenuItem(value: 'day', child: Text('ביום')),
+                                  DropdownMenuItem(value: 'week', child: Text('בשבוע')),
+                                ],
+                                onChanged: (val) => setDialogState(() => timeScale = val!),
+                              )
+                            )
+                          )
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // --- תצוגת חיווי נטו ופסיביות ---
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: isPassiveNow ? Colors.green.shade50 : Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('רווח נטו מחושב:', style: TextStyle(fontSize: 12)),
+                              Text('₪${net.toStringAsFixed(0)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: net >= 0 ? Colors.green[800] : Colors.red[800])),
+                            ],
+                          ),
+                          if (isPassiveNow)
+                            const Row(
+                              children: [
+                                Icon(Icons.verified, color: Colors.green),
+                                SizedBox(width: 4),
+                                Text('נכס פסיבי!', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))
+                              ],
+                            )
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (nameController.text.isNotEmpty) {
+                      String incJson = jsonEncode(incomes.map((e) => e.toMap()).toList());
+                      String expJson = jsonEncode(expenses.map((e) => e.toMap()).toList());
+                      
+                      double finalHours = double.tryParse(hoursCtrl.text) ?? 0.0;
+                      if (timeScale == 'day') finalHours *= 5;
+
+                      final newExpense = Expense(
+                        id: business?.id,
+                        name: nameController.text.trim(),
+                        category: 'הכנסות',
+                        parentCategory: parentCategory, 
+                        monthlyAmount: 0, 
+                        isLocked: false,
+                        isCustom: true,
+                        date: business?.date ?? DateTime.now().toIso8601String(),
+                        isBusiness: true,
+                        businessIncomes: incJson,
+                        businessExpenses: expJson,
+                        businessWorkingHours: finalHours,
+                      );
+                      
+                      if (business == null) {
+                        await provider.addExpense(newExpense);
+                      } else {
+                        await provider.updateExpense(newExpense);
+                      }
+                      
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    }
+                  },
+                  child: Text(business == null ? 'הוסף עסק' : 'שמור שינויים'),
+                )
+              ]
+            ),
+          );
+        }
+      )
+    );
+  }
+
   Widget _buildExpenseTile(BuildContext context, BudgetProvider provider, Expense expense, {bool isVehicle = false, String? childName, int unifiedMode = 0}) {
     final loc = AppLocalizations.of(context);
     final multiplier = expense.isPerChild ? provider.childCount : 1;
@@ -1008,6 +1704,10 @@ class SpecificExpensesScreen extends StatelessWidget {
 
     int unifiedMode = provider.getCategoryUnifiedMode(parentCategory);
 
+    // חילוץ עסקים מהכנסות רגילות במידה ומדובר במסך הכנסות הפנימי (נדיר שיהיה מופרד, אבל ליתר ביטחון)
+    final regularExpenses = currentExpenses.where((e) => !e.isBusiness).toList();
+    final businessExpenses = currentExpenses.where((e) => e.isBusiness).toList();
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: GlobalHeader(title: _formatParentName(parentCategory)),
@@ -1015,6 +1715,8 @@ class SpecificExpensesScreen extends StatelessWidget {
         onPressed: () {
           if (parentCategory == 'רכב') {
             _showAddVehicleDialog(context, provider);
+          } else if (mainCategory == 'הכנסות') {
+            _showAddIncomeTypeDialog(context, provider);
           } else {
             _showAddExpenseDialog(context, provider, parentCategory, mainCategory);
           }
@@ -1051,9 +1753,9 @@ class SpecificExpensesScreen extends StatelessWidget {
                             if (val == 'manage_unified') _showUnifiedModeDialog(context, provider, parentCategory);
                           },
                           itemBuilder: (ctx) => [
-                            if (parentCategory != 'קניות' && parentCategory != 'רכב' && parentCategory != 'ילדים - משתנות')
+                            if (parentCategory != 'קניות' && parentCategory != 'רכב' && parentCategory != 'ילדים - משתנות' && parentCategory != 'עסקים')
                               const PopupMenuItem(value: 'rename', child: Text('שינוי שם קבוצה', style: TextStyle(fontSize: 14))),
-                            if (parentCategory != 'קניות' && parentCategory != 'ילדים - משתנות')
+                            if (parentCategory != 'קניות' && parentCategory != 'ילדים - משתנות' && parentCategory != 'עסקים')
                               const PopupMenuItem(
                                 value: 'manage_unified',
                                 child: Text('הגדרת מצב קופה (0/1/2)', style: TextStyle(fontSize: 14)),
@@ -1125,14 +1827,24 @@ class SpecificExpensesScreen extends StatelessWidget {
               ? _buildVehicleSections(context, provider, currentExpenses)
               : (parentCategory == 'ילדים - משתנות' 
                   ? _buildKidsSections(context, provider, currentExpenses)
-                  : ListView.separated(
+                  : ListView(
                       padding: const EdgeInsets.all(16),
-                      itemCount: currentExpenses.length,
-                      separatorBuilder: (ctx, i) => const Divider(),
-                      itemBuilder: (context, index) {
-                        return _buildExpenseTile(context, provider, currentExpenses[index], unifiedMode: unifiedMode);
-                      },
-                  )
+                      children: [
+                        ...regularExpenses.map((e) => Column(
+                          children: [
+                            _buildExpenseTile(context, provider, e, unifiedMode: unifiedMode),
+                            const Divider()
+                          ],
+                        )),
+                        if (businessExpenses.isNotEmpty) ...[
+                          const Padding(
+                            padding: EdgeInsets.only(top: 24, bottom: 8, right: 8),
+                            child: Text("עסקים והכנסות צדדיות", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                          ),
+                          ...businessExpenses.map((business) => _buildBusinessTile(context, provider, business)),
+                        ]
+                      ],
+                    )
                 ),
           ),
         ],
@@ -1311,10 +2023,15 @@ class SpecificExpensesScreen extends StatelessWidget {
                       )
                     ),
                     const SizedBox(height: 16),
-                    DropdownButton<Frequency>(
-                      value: selectedFreq, isExpanded: true,
-                      items: const [DropdownMenuItem(value: Frequency.MONTHLY, child: Text('חודשי')), DropdownMenuItem(value: Frequency.BI_MONTHLY, child: Text('דו-חודשי')), DropdownMenuItem(value: Frequency.YEARLY, child: Text('שנתי'))],
-                      onChanged: (isIncome && isDynamic) ? null : (val) { if (val != null) { setDialogState(() => selectedFreq = val); } },
+                    InputDecorator(
+                      decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4), isDense: true),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<Frequency>(
+                          value: selectedFreq, isExpanded: true,
+                          items: const [DropdownMenuItem(value: Frequency.MONTHLY, child: Text('חודשי')), DropdownMenuItem(value: Frequency.BI_MONTHLY, child: Text('דו-חודשי')), DropdownMenuItem(value: Frequency.YEARLY, child: Text('שנתי'))],
+                          onChanged: (isIncome && isDynamic) ? null : (val) { if (val != null) { setDialogState(() => selectedFreq = val); } },
+                        )
+                      )
                     ),
                     
                     if (!isIncome) ...[
@@ -1350,6 +2067,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                         isSinking: isSinking, isPerChild: expense.isPerChild, allocationRatio: expense.allocationRatio, 
                         isLocked: expense.isLocked, manualAmount: expense.manualAmount, date: expense.date,
                         isDynamicSalary: isDynamic, salaryStartDate: startDateStr, targetAmount: expense.targetAmount, currentBalance: expense.currentBalance, isCustom: expense.isCustom,
+                        isBusiness: expense.isBusiness, businessIncomes: expense.businessIncomes, businessExpenses: expense.businessExpenses, businessWorkingHours: expense.businessWorkingHours,
                       ));
                       
                       await provider.loadData();

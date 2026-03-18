@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Implemented Smart Family Naming Convention: Single/Married/Parents based on Gender)
+// 🔒 STATUS: EDITED (Fixed Housing/Utilities exclusion and expanded universal Shopping Seed List)
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
 import '../data/shopping_model.dart';
@@ -6,7 +6,7 @@ import '../data/shopping_model.dart';
 class SeedService {
   
   static Future<void> generateInitialData({
-    required String gender, // הוספנו זיהוי מגדר
+    required String gender,
     required String maritalStatus,
     required String vehicleType,
     required String housingType,
@@ -58,16 +58,15 @@ class SeedService {
       if (includeReligion) _create('צדקה ומעשרות', 'קבועות', 'צדקה', 0)
       else _create('תרומות לקהילה', 'קבועות', 'תרומות', 0),
 
-      if (housingType != 'none')
-        _create(housingType == 'mortgage' ? 'משכנתא' : 'שכירות', 'קבועות', 'דיור', 3300),
       if (housingType != 'none') ...[
+        _create(housingType == 'mortgage' ? 'משכנתא' : 'שכירות', 'קבועות', 'דיור', 3300),
         _create('וועד בית', 'קבועות', 'דיור', 150),
         _create('ארנונה', 'קבועות', 'דיור', 380),
+        _create('הובלה ותיקונים', 'קבועות', 'דיור', 0, isSinking: true),
+        _create('חשמל', 'קבועות', 'מגורים', 750, frequency: Frequency.BI_MONTHLY), 
+        _create('מים', 'קבועות', 'מגורים', 250, frequency: Frequency.BI_MONTHLY),
+        _create('גז', 'קבועות', 'מגורים', 50),
       ],
-      _create('הובלה ותיקונים', 'קבועות', 'דיור', 0, isSinking: true),
-      _create('חשמל', 'קבועות', 'מגורים', 750, frequency: Frequency.BI_MONTHLY), 
-      _create('מים', 'קבועות', 'מגורים', 250, frequency: Frequency.BI_MONTHLY),
-      _create('גז', 'קבועות', 'מגורים', 50),
       
       // רכב (מוזרק דינמית לפי בחירה)
       if (vehicleType == 'car' || vehicleType == 'two_cars') ...[
@@ -182,13 +181,22 @@ class SeedService {
       final List<ShoppingItem> initialShoppingItems = [
         _createShopping('ביצים (תבנית)', 'ביצים', 35.0, 1),
         _createShopping('חלב', 'מוצרי חלב', 6.0, 1),
+        _createShopping('גבינות', 'מוצרי חלב', 30.0, 1),
         _createShopping('לחם/פיתות', 'לחמים', 15.0, 1),
         _createShopping('עגבניות', 'ירקות', 10.0, 1),
         _createShopping('מלפפונים', 'ירקות', 10.0, 1),
+        _createShopping('פירות', 'פירות', 30.0, 1),
         _createShopping('בשר/עוף לשבת', 'בשר', 100.0, 1),
+        _createShopping('דגים', 'דגים', 50.0, 2),
         _createShopping('נייר טואלט', 'חומרי ניקוי', 40.0, 4),
         _createShopping('סבון כלים', 'חומרי ניקוי', 15.0, 4),
+        _createShopping('אבקת כביסה', 'חומרי ניקוי', 35.0, 4),
+        _createShopping('שמפו/מרכך', 'טואלטיקה', 30.0, 4),
+        _createShopping('משחת שיניים', 'טואלטיקה', 15.0, 4),
         _createShopping('פסטה/אורז', 'מזווה', 20.0, 2),
+        _createShopping('שמן', 'מזווה', 15.0, 4),
+        _createShopping('קפה/תה', 'מזווה', 25.0, 4),
+        _createShopping('סוכר/מלח', 'מזווה', 10.0, 4),
       ];
 
       for (var item in initialShoppingItems) {

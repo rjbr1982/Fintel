@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added CRUD & Sync for PlannedWithdrawals)
+// 🔒 STATUS: EDITED (Maintains full SaaS NoSQL compatibility for Business / Passive Income data)
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';

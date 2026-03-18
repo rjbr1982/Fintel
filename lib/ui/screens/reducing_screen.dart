@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Icon error and Onboarding visibility for Time Machine banner)
+// 🔒 STATUS: EDITED (Fixed Target Debt Accelerated Payment UI rendering)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/debt_provider.dart';
@@ -362,10 +362,11 @@ class ReducingScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('החזר בסיס: ₪${debt.monthlyPayment.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, color: Colors.black38)),
-                    Text(
-                      'החזר מואץ: ₪${acceleratedPayment.toStringAsFixed(0)}', 
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red[900], fontSize: 15)
-                    ),
+                    if (isTarget)
+                      Text(
+                        'החזר מואץ: ₪${acceleratedPayment.toStringAsFixed(0)}', 
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red[900], fontSize: 15)
+                      ),
                   ],
                 ),
                 Row(

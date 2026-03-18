@@ -1,10 +1,13 @@
+// 🔒 STATUS: EDITED (Documented Passive Income target adjustment handling)
 class ProjectionEngine {
   /// מחשב כמה חודשים נותרו עד שההכנסה הפסיבית תכסה את היעד החודשי.
   /// 
   /// [currentNetWorth]: הון עצמי נוכחי (נכסים פחות חובות).
   /// [monthlyContribution]: כמה כסף מושקע כל חודש (PCF + Financial).
   /// [annualYield]: תשואה שנתית ממוצעת באחוזים (למשל 4.0).
-  /// [targetMonthlyIncome]: היעד החודשי (למשל 20,000).
+  /// [targetMonthlyIncome]: היעד החודשי הנדרש. (הערה אדריכלית: סכום זה כבר מקוזז מראש 
+  /// מול כל הכנסה עסקית שסווגה כ"הכנסה פסיבית" בשכבת ה-BudgetProvider, ולכן אין צורך 
+  /// לקזז אותה שוב כאן).
   static int calculateMonthsToFreedom({
     required double currentNetWorth,
     required double monthlyContribution,

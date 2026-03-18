@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Const Warnings in Freedom Card Row)
+// 🔒 STATUS: EDITED (Added Passive Income Reduction UI Indicator on Freedom Card)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -7,9 +7,12 @@ import '../widgets/global_header.dart';
 import 'category_drilldown_screen.dart'; 
 import 'reducing_screen.dart'; 
 import 'assets_screen.dart'; 
+import 'main_screen.dart'; 
 
 class PnLScreen extends StatelessWidget {
-  const PnLScreen({super.key});
+  final bool isCalibrationMode; 
+  
+  const PnLScreen({super.key, this.isCalibrationMode = false});
 
   @override
   Widget build(BuildContext context) {
@@ -35,8 +38,19 @@ class PnLScreen extends StatelessWidget {
       appBar: const GlobalHeader(
         title: 'תזרים', 
       ),
+      floatingActionButton: isCalibrationMode ? FloatingActionButton.extended(
+        backgroundColor: const Color(0xFF00C853),
+        onPressed: () {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainScreen()));
+        },
+        label: const Text('התקציב שלי מוכן!', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
+        icon: const Icon(Icons.check_circle, color: Colors.white),
+      ) : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       body: Column(
         children: [
+          if (isCalibrationMode) const _PulsingCalibrationBanner(),
+          
           _buildFutureToggle(context, budget, isFutureMode),
           
           Expanded(
@@ -93,7 +107,7 @@ class PnLScreen extends StatelessWidget {
                 _buildSectionLabel('שלב ג: חירות'),
                 _buildFreedomCard(context, flowToFreedom, diversionAmount, isFutureMode, budget),
 
-                const SizedBox(height: 30),
+                const SizedBox(height: 80), 
               ],
             ),
           ),
@@ -251,6 +265,7 @@ class PnLScreen extends StatelessWidget {
   Widget _buildFreedomCard(BuildContext context, double amount, double diversion, bool isFutureMode, BudgetProvider budget) {
     const color = Color(0xFF00C853); 
     bool isDiverting = diversion > 0 && !isFutureMode;
+    double passiveReduction = budget.totalPassiveIncome;
 
     return InkWell(
       onTap: () => _showFreedomSettingsDialog(context, budget),
@@ -272,7 +287,6 @@ class PnLScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // הוספת Const מפורש למניעת אזהרות Linter
                 const Row(
                   children: [
                     Text('תזרים לחירות פיננסית', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white)),
@@ -298,6 +312,20 @@ class PnLScreen extends StatelessWidget {
                 ),
               ],
             ),
+
+            if (passiveReduction > 0) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(Icons.shield, color: Colors.white, size: 14),
+                  const SizedBox(width: 6),
+                  Text(
+                    'נכסים פסיביים מקזזים ₪${passiveReduction.toStringAsFixed(0)} מיעד המחייה',
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              )
+            ],
 
             if (isDiverting) ...[
               const SizedBox(height: 12),
@@ -460,6 +488,63 @@ class PnLScreen extends StatelessWidget {
               ],
             );
           }
+        );
+      }
+    );
+  }
+}
+
+class _PulsingCalibrationBanner extends StatefulWidget {
+  const _PulsingCalibrationBanner();
+
+  @override
+  State<_PulsingCalibrationBanner> createState() => _PulsingCalibrationBannerState();
+}
+
+class _PulsingCalibrationBannerState extends State<_PulsingCalibrationBanner> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Color?> _colorAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat(reverse: true);
+    _colorAnim = ColorTween(
+      begin: Colors.blue[50], 
+      end: Colors.blue[100]
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _colorAnim,
+      builder: (context, child) {
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _colorAnim.value,
+            border: Border(bottom: BorderSide(color: Colors.blue.withValues(alpha: 0.3), width: 1)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue, size: 28),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'זהו התקציב הראשוני שלך. אנא עבור על הסעיפים ועדכן סכומים (במיוחד קניות ודיור). כשתסיים, לחץ על הכפתור למטה.',
+                  style: TextStyle(fontSize: 14, color: Colors.blue, fontWeight: FontWeight.bold, height: 1.4),
+                ),
+              ),
+            ],
+          ),
         );
       }
     );

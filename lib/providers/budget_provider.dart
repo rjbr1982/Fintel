@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed String Interpolation Warning)
+// 🔒 STATUS: EDITED (Integrated Business Net Profit and Passive Income Target Reduction)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -34,6 +34,9 @@ class BudgetProvider with ChangeNotifier {
   double? _manualTargetIncome;
   
   bool _useBiometric = false;
+  
+  // דגל ניהול "שער החירות"
+  bool _hasCompletedGrandReveal = true; // ברירת מחדל true למשתמשים קיימים
 
   List<SalaryRecord> _salaryRecords = [];
   
@@ -70,6 +73,7 @@ class BudgetProvider with ChangeNotifier {
   double get futureAllocationRatio => _futureAllocationRatio;
   bool get isFutureMode => _isFutureMode;
   bool get useBiometric => _useBiometric;
+  bool get hasCompletedGrandReveal => _hasCompletedGrandReveal;
   
   double get variableDeficit => _variableDeficit;
 
@@ -79,7 +83,24 @@ class BudgetProvider with ChangeNotifier {
   double? get manualTargetIncome => _manualTargetIncome;
 
   double get autoTargetIncome => totalFixedExpenses + totalVariableExpenses + totalFutureExpenses;
-  double get targetPassiveIncome => _manualTargetIncome ?? autoTargetIncome;
+  
+  // סך ההכנסות מסווגות כ"פסיביות" אשר יקזזו את יעד המחייה
+  double get totalPassiveIncome {
+    double sum = 0;
+    for (var e in _expenses.where((ex) => ex.category == 'הכנסות' && ex.isBusiness)) {
+      if (e.isPassive) {
+        sum += e.getBusinessNetProfit();
+      }
+    }
+    return sum;
+  }
+
+  double get targetPassiveIncome {
+    double baseTarget = _manualTargetIncome ?? autoTargetIncome;
+    // הפחתת הכנסה פסיבית קיימת מעסקים מתוך היעד הנדרש מתיק ההשקעות
+    double reducedTarget = baseTarget - totalPassiveIncome;
+    return reducedTarget > 0 ? reducedTarget : 0;
+  }
 
   int getCategoryUnifiedMode(String cat) {
     if (_unifiedCategoryModes.containsKey(cat)) return _unifiedCategoryModes[cat]!;
@@ -172,6 +193,8 @@ class BudgetProvider with ChangeNotifier {
       _gender = genderVal == 1.0 ? 'male' : 'female';
       
       _useBiometric = (await DatabaseHelper.instance.getSetting('use_biometric') ?? 0.0) == 1.0;
+      
+      _hasCompletedGrandReveal = (await DatabaseHelper.instance.getSetting('has_completed_reveal') ?? 1.0) == 1.0;
 
       _customEntWarning = await DatabaseHelper.instance.getSetting('ent_warning');
       _customEntSuccess = await DatabaseHelper.instance.getSetting('ent_success');
@@ -280,6 +303,11 @@ class BudgetProvider with ChangeNotifier {
           bool useBio = val == 1.0;
           if (_useBiometric != useBio) { _useBiometric = useBio; changed = true; }
         }
+        
+        if (key == 'has_completed_reveal' && val != null) {
+          bool hasCompleted = val == 1.0;
+          if (_hasCompletedGrandReveal != hasCompleted) { _hasCompletedGrandReveal = hasCompleted; changed = true; }
+        }
 
         if (key == 'ent_warning' && _customEntWarning != val) { _customEntWarning = val; changed = true; }
         if (key == 'ent_success' && _customEntSuccess != val) { _customEntSuccess = val; changed = true; }
@@ -291,6 +319,12 @@ class BudgetProvider with ChangeNotifier {
         });
       }
     });
+  }
+  
+  Future<void> completeGrandReveal() async {
+    _hasCompletedGrandReveal = true;
+    await DatabaseHelper.instance.saveSetting('has_completed_reveal', 1.0);
+    notifyListeners();
   }
 
   Future<void> toggleBiometric(bool val) async {
@@ -462,6 +496,7 @@ class BudgetProvider with ChangeNotifier {
       lastUpdateDate: old.lastUpdateDate, isLocked: false, manualAmount: null, date: old.date,
       isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
       isCustom: old.isCustom,
+      isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
     );
 
     await DatabaseHelper.instance.updateExpense(updated);
@@ -562,6 +597,7 @@ class BudgetProvider with ChangeNotifier {
                       currentBalance: e.currentBalance, allocationRatio: e.allocationRatio,
                       lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
                       isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: e.isCustom,
+                      isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
                     );
                     await DatabaseHelper.instance.updateExpense(updated);
                     localExp[i] = updated; 
@@ -725,6 +761,7 @@ class BudgetProvider with ChangeNotifier {
               targetAmount: e.targetAmount, currentBalance: e.currentBalance, allocationRatio: newRatio,
               lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
               isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: newIsCustom,
+              isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
             );
             await DatabaseHelper.instance.updateExpense(updated);
             changed = true;
@@ -790,6 +827,7 @@ class BudgetProvider with ChangeNotifier {
     _unifiedCategoryModes.clear();
     _bucketWithdrawalDays.clear();
     _useBiometric = false;
+    _hasCompletedGrandReveal = false; 
     _expenses = [];
     _familyMembers = [];
     _salaryRecords = [];
@@ -818,6 +856,7 @@ class BudgetProvider with ChangeNotifier {
             isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
             isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
             isCustom: e.isCustom,
+            isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
           );
           await DatabaseHelper.instance.updateExpense(updatedExpense);
           _expenses[i] = updatedExpense;
@@ -862,6 +901,7 @@ class BudgetProvider with ChangeNotifier {
         lastUpdateDate: old.lastUpdateDate, isLocked: old.isLocked, manualAmount: old.manualAmount, date: old.date,
         isDynamicSalary: isDynamic, salaryStartDate: startDate ?? old.salaryStartDate,
         isCustom: old.isCustom,
+        isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
@@ -898,6 +938,7 @@ class BudgetProvider with ChangeNotifier {
         isLocked: true, manualAmount: amount, date: old.date,
         isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
         isCustom: old.isCustom,
+        isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
@@ -917,6 +958,7 @@ class BudgetProvider with ChangeNotifier {
         isLocked: false, manualAmount: null, date: old.date,
         isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
         isCustom: old.isCustom,
+        isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
@@ -934,6 +976,7 @@ class BudgetProvider with ChangeNotifier {
         isLocked: false, manualAmount: null, date: old.date,
         isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
         isCustom: old.isCustom,
+        isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
@@ -953,6 +996,7 @@ class BudgetProvider with ChangeNotifier {
         isLocked: isLocked ?? old.isLocked, manualAmount: manualAmount ?? old.manualAmount, date: old.date,
         isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
         isCustom: old.isCustom,
+        isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
@@ -1059,6 +1103,7 @@ class BudgetProvider with ChangeNotifier {
       lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
       isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
       isCustom: e.isCustom,
+      isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
     );
   }
 
@@ -1105,6 +1150,7 @@ class BudgetProvider with ChangeNotifier {
           lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
           isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
           isCustom: e.isCustom,
+          isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
         );
         await DatabaseHelper.instance.updateExpense(updated);
       }
@@ -1116,7 +1162,22 @@ class BudgetProvider with ChangeNotifier {
     if (future != null) await DatabaseHelper.instance.saveSetting('future_ratio', future);
   }
 
-  double get totalIncome => _expenses.where((e) => e.category == 'הכנסות').fold(0.0, (sum, e) => sum + e.monthlyAmount);
+  // שורת ההכנסות הראשית מתייחסת לעסקים בצורה חכמה (כולל הפסדים, לא כולל רווח פסיבי שכבר קוזז)
+  double get totalIncome {
+    double sum = 0;
+    for (var e in _expenses.where((ex) => ex.category == 'הכנסות')) {
+      if (e.isBusiness) {
+        double net = e.getBusinessNetProfit();
+        if (!e.isPassive) {
+          sum += net; // הוספת רווח אקטיבי, או קיזוז במקרה של הפסד (net < 0)
+        }
+      } else {
+        sum += e.monthlyAmount;
+      }
+    }
+    return sum;
+  }
+
   double get totalFixedExpenses => _expenses.where((e) => e.category == 'קבועות').fold(0.0, (sum, e) => sum + (e.monthlyAmount * (e.isPerChild ? childCount : 1)));
   double get totalReducingExpenses => _isFutureMode ? 0.0 : _externalDebtPayment;
   double get disposableIncome => totalIncome - totalFixedExpenses - totalReducingExpenses;
@@ -1184,6 +1245,7 @@ class BudgetProvider with ChangeNotifier {
       isLocked: expense.isLocked, manualAmount: expense.manualAmount, date: expense.date,
       isDynamicSalary: expense.isDynamicSalary, salaryStartDate: expense.salaryStartDate,
       isCustom: expense.isCustom,
+      isBusiness: expense.isBusiness, businessIncomes: expense.businessIncomes, businessExpenses: expense.businessExpenses, businessWorkingHours: expense.businessWorkingHours,
     );
     await DatabaseHelper.instance.updateExpense(updated);
   }
@@ -1205,7 +1267,6 @@ class BudgetProvider with ChangeNotifier {
   }
 
   Future<void> executePlannedWithdrawalsForBucket(String bucketName) async {
-    // 1. איתור כל המשיכות המתוכננות לקופה זו שנמצאות בסטטוס המתנה
     final pending = _plannedWithdrawals.where((pw) => 
         pw.bucketName == bucketName && pw.status == PlannedWithdrawalStatus.pending).toList();
     
@@ -1214,7 +1275,6 @@ class BudgetProvider with ChangeNotifier {
     double totalAmount = pending.fold(0.0, (sum, item) => sum + item.amount);
     String note = "משיכה מאוחדת: ${pending.map((p) => p.name).join(', ')}";
 
-    // 2. איתור ה-ID של ההוצאה (Expense) שאליה מקושרת הקופה כדי להוריד ממנה את היתרה בפועל
     int? targetExpenseId;
     
     for (var e in _expenses.where((ex) => ex.isSinking)) {
@@ -1231,24 +1291,22 @@ class BudgetProvider with ChangeNotifier {
       if (groupName.isNotEmpty) {
         if (groupName == bucketName) {
           targetExpenseId = e.id;
-          break; // מצאנו את ההוצאה הראשונה שמייצגת את הקופה המאוחדת הזו
+          break; 
         }
       } else {
         bool isFuture = e.category == 'עתידיות';
         String displayTitle = isFuture ? e.parentCategory : e.name;
         if (displayTitle == bucketName) {
           targetExpenseId = e.id;
-          break; // מצאנו את הקופה הייעודית הבודדת
+          break; 
         }
       }
     }
 
-    // 3. ביצוע המשיכה הממשית שמפחיתה את היתרה (אם נמצאה הקופה)
     if (targetExpenseId != null) {
       await addWithdrawal(targetExpenseId, totalAmount, note);
     }
 
-    // 4. שינוי סטטוס המשיכות המתוכננות ל-"בוצע" כדי שלא יופיעו יותר כפעולות ממתינות
     for (var pw in pending) {
       final updated = PlannedWithdrawal(
         id: pw.id,

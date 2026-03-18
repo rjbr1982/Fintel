@@ -1,5 +1,7 @@
-// 🔒 STATUS: EDITED (Added PlannedWithdrawal model for Smart Withdrawal Manager)
+// 🔒 STATUS: EDITED (Added Business Model, Dynamic Sub-Items, and Passive Income Logic)
 // ignore_for_file: constant_identifier_names
+
+import 'dart:convert';
 
 // הגדרת האפשרויות לתדירות התשלום
 enum Frequency { MONTHLY, BI_MONTHLY, YEARLY }
@@ -42,7 +44,26 @@ class FamilyMember {
   }
 }
 
-// --- מודל הוצאה / הכנסה ---
+// --- מודל תת-סעיף עסק (הכנסה/הוצאה פנימית) ---
+class BusinessSubItem {
+  String id;
+  String name;
+  double amount;
+
+  BusinessSubItem({required this.id, required this.name, required this.amount});
+
+  Map<String, dynamic> toMap() => {'id': id, 'name': name, 'amount': amount};
+  
+  factory BusinessSubItem.fromMap(Map<String, dynamic> map) {
+    return BusinessSubItem(
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
+// --- מודל הוצאה / הכנסה / עסק ---
 class Expense {
   final int? id;
   final String name;          
@@ -67,6 +88,12 @@ class Expense {
   final bool isDynamicSalary;
   final String? salaryStartDate;
 
+  // --- שדות לעסק והכנסה פסיבית (New) ---
+  final bool isBusiness;
+  final String businessIncomes; // JSON String
+  final String businessExpenses; // JSON String
+  final double businessWorkingHours; // Weekly Hours
+
   // --- שדה תשתית גמישה ---
   final bool isCustom; 
 
@@ -90,9 +117,42 @@ class Expense {
     this.manualAmount,
     this.isDynamicSalary = false,
     this.salaryStartDate,
+    this.isBusiness = false,
+    this.businessIncomes = '[]',
+    this.businessExpenses = '[]',
+    this.businessWorkingHours = 0.0,
     this.isCustom = false, 
     required this.date,
   }) : originalAmount = originalAmount ?? monthlyAmount;
+
+  // --- לוגיקת עסק (Business Logic) ---
+  List<BusinessSubItem> get parsedBusinessIncomes {
+    if (businessIncomes.isEmpty || businessIncomes == '[]') return [];
+    try {
+      final List decoded = jsonDecode(businessIncomes);
+      return decoded.map((e) => BusinessSubItem.fromMap(e)).toList();
+    } catch(e) { return []; }
+  }
+
+  List<BusinessSubItem> get parsedBusinessExpenses {
+    if (businessExpenses.isEmpty || businessExpenses == '[]') return [];
+    try {
+      final List decoded = jsonDecode(businessExpenses);
+      return decoded.map((e) => BusinessSubItem.fromMap(e)).toList();
+    } catch(e) { return []; }
+  }
+
+  double getBusinessNetProfit() {
+    if (!isBusiness) return 0.0;
+    double inc = parsedBusinessIncomes.fold(0.0, (sum, item) => sum + item.amount);
+    double exp = parsedBusinessExpenses.fold(0.0, (sum, item) => sum + item.amount);
+    return inc - exp; // יכול להיות שלילי (הפסד)
+  }
+
+  bool get isPassive {
+    // נכס פסיבי מוגדר: 1. קיים רווח תזרימי חיובי, 2. דורש 4 שעות שבועיות או פחות.
+    return isBusiness && getBusinessNetProfit() > 0 && businessWorkingHours <= 4.0;
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -113,6 +173,10 @@ class Expense {
       'manualAmount': manualAmount,
       'isDynamicSalary': isDynamicSalary ? 1 : 0,
       'salaryStartDate': salaryStartDate,
+      'isBusiness': isBusiness ? 1 : 0,
+      'businessIncomes': businessIncomes,
+      'businessExpenses': businessExpenses,
+      'businessWorkingHours': businessWorkingHours,
       'isCustom': isCustom ? 1 : 0,
       'date': date,
     };
@@ -137,6 +201,10 @@ class Expense {
       manualAmount: (map['manualAmount'] as num?)?.toDouble(),
       isDynamicSalary: (map['isDynamicSalary'] ?? 0) == 1,
       salaryStartDate: map['salaryStartDate'],
+      isBusiness: (map['isBusiness'] ?? 0) == 1,
+      businessIncomes: map['businessIncomes'] ?? '[]',
+      businessExpenses: map['businessExpenses'] ?? '[]',
+      businessWorkingHours: (map['businessWorkingHours'] as num?)?.toDouble() ?? 0.0,
       isCustom: (map['isCustom'] ?? 0) == 1,
       date: map['date'] ?? DateTime.now().toIso8601String(),
     );

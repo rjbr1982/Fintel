@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Cleaned up Settings logic, moved to GlobalHeader)
+// 🔒 STATUS: EDITED (Fixed Render Flash, Upgraded Reveal UI with Material & Glow, Zero Warnings)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -11,119 +11,49 @@ import 'shopping_screen.dart';
 import 'salary_engine_screen.dart';
 import 'sinking_funds_screen.dart';
 
-class MainScreen extends StatefulWidget {
-  final bool showWelcomeDialog; 
-  final bool showDebtTask; 
+enum RevealState { expectation, reveal, dashboard }
 
-  const MainScreen({super.key, this.showWelcomeDialog = false, this.showDebtTask = false});
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
-  
+class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
+  RevealState _currentState = RevealState.dashboard;
+  late AnimationController _pulseController;
+  bool _showPulse = false;
+  bool _isRevealCompleting = false;
+
   @override
   void initState() {
     super.initState();
+    
+    // קריאה סינכרונית כדי למנוע הבהוב של הדשבורד
+    final budget = Provider.of<BudgetProvider>(context, listen: false);
+    if (!budget.hasCompletedGrandReveal) {
+      _currentState = RevealState.expectation;
+      _showPulse = true;
+    }
+    
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await context.read<BudgetProvider>().loadData();
+      await budget.loadData();
       if (mounted) {
         await context.read<DebtProvider>().loadDebts();
-      }
-      
-      if (widget.showWelcomeDialog && mounted) {
-        _showSoftLandingDialog(context);
       }
     });
   }
 
-  void _showSoftLandingDialog(BuildContext context) {
-    final budget = context.read<BudgetProvider>();
-    final hasKids = budget.childCount > 0; 
-
-    String zeroAmountDesc = 'הסעיפים האישיים הבאים נוצרו עבורך עם סכום 0, והם ממתינים לעדכון שלך בקטגוריית ה"קבועות":\n'
-        '• קופת חולים וביטוחים\n'
-        '• מנויים דיגיטליים\n'
-        '• תספורת\n'
-        '• תרומות / מעשרות';
-        
-    if (hasKids) {
-      zeroAmountDesc += '\n• הוצאות ילדים: שכר לימוד, חוגים, קייטנות, ציוד ומתנות';
-    }
-    
-    zeroAmountDesc += '\n\n* הערה: אם סעיף מסוים אינו רלוונטי עבורך, פשוט השאר אותו על 0 או מחק אותו.';
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Column(
-          children: [
-            Icon(Icons.celebration, color: Colors.amber, size: 40),
-            SizedBox(height: 10),
-            Text('ברוכים הבאים לחירות הפיננסית!', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black87)),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('המערכת בנתה עבורך תקציב אוטומטי מלא המבוסס על מודל "דוחכם". כעת, מומלץ לבצע את משימות הכיול הבאות:', style: TextStyle(color: Colors.blueGrey, fontSize: 14)),
-              const SizedBox(height: 20),
-              
-              _buildTaskRow('1', 'כיול הוצאות דיור', 'כנס לקטגוריות קבועות -> דיור, ועדכן את שכר הדירה/משכנתא האמיתי שלך.'),
-              const SizedBox(height: 15),
-              
-              _buildTaskRow('2', 'השלמת הוצאות חסרות (סכום 0)', zeroAmountDesc),
-              const SizedBox(height: 15),
-
-              _buildTaskRow('3', 'בניית עוגן קניות', 'כנס לכפתור העגלה ובדוק את רשימת הקניות. המחיר הכולל יקבע את גובה כלל רמת החיים שלך.'),
-              
-              if (widget.showDebtTask) ...[
-                const SizedBox(height: 15),
-                _buildTaskRow('4', 'טעינת מנוע הצלף', 'הצהרת שיש לך חובות. כנס למסך תזרים -> מנמיכות, והזן את ההלוואות שלך כדי שהמערכת תחסל אותן עבורך.'),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00A3FF),
-              minimumSize: const Size(double.infinity, 45),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
-            ),
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('הבנתי, בוא נתחיל', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTaskRow(String num, String title, String desc) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CircleAvatar(radius: 12, backgroundColor: Colors.blue[50], child: Text(num, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue))),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
-              const SizedBox(height: 4),
-              Text(desc, style: const TextStyle(fontSize: 13, color: Colors.grey, height: 1.4)),
-            ],
-          ),
-        )
-      ],
-    );
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
   }
 
   void _showFreedomSettingsDialog(BuildContext context, BudgetProvider budget) {
@@ -330,6 +260,89 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  Widget _buildRevealOverlay(int? targetYear, BudgetProvider budget) {
+    if (_currentState == RevealState.expectation) {
+      return Material(
+        color: const Color(0xFF121212),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.verified_user, color: Color(0xFF00A3FF), size: 60),
+              const SizedBox(height: 20),
+              const Text('התקציב שלך מאוזן ויציב.', style: TextStyle(color: Colors.white70, fontSize: 18)),
+              const SizedBox(height: 10),
+              const Text(
+                'המערכת מוכנה לחשב\nאת העתיד שלך.', 
+                style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold), 
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 50),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00A3FF), 
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  elevation: 8,
+                ),
+                onPressed: () => setState(() => _currentState = RevealState.reveal),
+                child: const Text('חשב את שנת החירות שלי', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_currentState == RevealState.reveal) {
+      return Material(
+        color: const Color(0xFF121212),
+        child: Center(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: DateTime.now().year.toDouble(), end: (targetYear ?? DateTime.now().year + 10).toDouble()),
+            duration: const Duration(seconds: 3),
+            builder: (animContext, value, child) {
+              if (value.toInt() == targetYear && !_isRevealCompleting) {
+                _isRevealCompleting = true;
+                Future.delayed(const Duration(seconds: 2), () {
+                  if (mounted && _currentState == RevealState.reveal) {
+                    setState(() => _currentState = RevealState.dashboard);
+                    budget.completeGrandReveal();
+                  }
+                });
+              }
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('שנת החירות שלך היא:', style: TextStyle(color: Colors.white70, fontSize: 18)),
+                  const SizedBox(height: 10),
+                  Text(
+                    '${value.toInt()}', 
+                    style: TextStyle(
+                      color: const Color(0xFF00FF85), 
+                      fontSize: 90, 
+                      fontWeight: FontWeight.w900,
+                      shadows: [
+                        Shadow(color: const Color(0xFF00FF85).withValues(alpha: 0.5), blurRadius: 30),
+                      ]
+                    )
+                  ),
+                  const SizedBox(height: 30),
+                  AnimatedOpacity(
+                    opacity: _isRevealCompleting ? 1.0 : 0.0,
+                    duration: const Duration(seconds: 1),
+                    child: const Text('כעת, בוא ננהל את זה.', style: TextStyle(color: Colors.white54, fontSize: 18)),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
@@ -350,162 +363,182 @@ class _MainScreenState extends State<MainScreen> {
       }
     }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: const GlobalHeader(),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.blueGrey[900],
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const ShoppingScreen()));
-        },
-        child: const Icon(Icons.shopping_cart, color: Colors.white),
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 40.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                
-                // הליבה של מסך הבית: שנת החירות הפיננסית והכפתורים סביבה
-                Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.center,
+    return Stack(
+      children: [
+        // הדשבורד המקורי (יוצג תמיד מתחת לשכבת המעבר)
+        Scaffold(
+          backgroundColor: Colors.white,
+          appBar: const GlobalHeader(),
+          floatingActionButton: FloatingActionButton(
+            backgroundColor: Colors.blueGrey[900],
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const ShoppingScreen()));
+            },
+            child: const Icon(Icons.shopping_cart, color: Colors.white),
+          ),
+          body: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 40.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // הכרטיס המרכזי של שנת החירות
-                    Container(
-                      width: 280,
-                      padding: const EdgeInsets.symmetric(vertical: 40),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(40),
-                        boxShadow: [
-                          BoxShadow(color: const Color(0xFF00C853).withValues(alpha: 0.1), blurRadius: 25, spreadRadius: 5),
-                        ],
-                        border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.4), width: 2),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('שנת החירות הפיננסית', style: TextStyle(fontSize: 16, color: Colors.blueGrey, fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 10),
-                          Text(
-                            yearText,
-                            style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: Color(0xFF121212), height: 1.1),
+                    
+                    // הליבה של מסך הבית: שנת החירות הפיננסית והכפתורים סביבה
+                    Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
+                      children: [
+                        // הכרטיס המרכזי של שנת החירות
+                        Container(
+                          width: 280,
+                          padding: const EdgeInsets.symmetric(vertical: 40),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(40),
+                            boxShadow: [
+                              BoxShadow(color: const Color(0xFF00C853).withValues(alpha: 0.1), blurRadius: 25, spreadRadius: 5),
+                            ],
+                            border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.4), width: 2),
                           ),
-                        ],
-                      ),
-                    ),
-                    
-                    // כפתור המשפחה - ימין למעלה
-                    Positioned(
-                      top: -15,
-                      right: -15,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          shape: const CircleBorder(),
-                          padding: const EdgeInsets.all(14),
-                          backgroundColor: Colors.blueGrey[900],
-                          foregroundColor: Colors.white,
-                          elevation: 4,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('שנת החירות הפיננסית', style: TextStyle(fontSize: 16, color: Colors.blueGrey, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 10),
+                              Text(
+                                yearText,
+                                style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: Color(0xFF121212), height: 1.1),
+                              ),
+                            ],
+                          ),
                         ),
-                        onPressed: () {
-                          if (targetYear != null) _showFamilyDrilldown(context, budget, targetYear);
-                        },
-                        child: const Icon(Icons.family_restroom, size: 24),
-                      ),
-                    ),
-                    
-                    // כפתור יעד הכנסה פסיבית - שמאל למעלה
-                    Positioned(
-                      top: -15,
-                      left: -25,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          backgroundColor: Colors.amber[600],
-                          foregroundColor: Colors.black87,
-                          elevation: 4,
-                        ),
-                        onPressed: () => _showFreedomSettingsDialog(context, budget),
-                        icon: const Icon(Icons.track_changes, size: 18),
-                        label: Text(
-                          '${loc?.get('currency_symbol') ?? '₪'}${budget.targetPassiveIncome.toStringAsFixed(0)}', 
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 50),
-
-                // שורת כפתורי הניווט התחתונה
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildQuickAction(
-                      context, 
-                      'תזרים', 
-                      Icons.account_balance_wallet, 
-                      Colors.blue, 
-                      () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PnLScreen()))
-                    ),
-                    _buildQuickAction(
-                      context, 
-                      'ממוצע שכר', 
-                      Icons.insights, 
-                      Colors.orange, 
-                      () {
-                        PremiumService.requirePremium(context, () {
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => const SalaryEngineScreen()));
-                        });
-                      },
-                      isPremium: true,
-                    ),
-                    _buildQuickAction(
-                      context, 
-                      'מרכז חסכונות', 
-                      Icons.savings, 
-                      Colors.green, 
-                      () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SinkingFundsScreen()))
-                    ),
-                  ],
-                ),
-
-                if (budget.expectedYield <= 4.0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 40.0),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.orange.withValues(alpha: 0.5)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.info_outline, color: Colors.orange),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              "התחזית מבוססת על ריבית חסרת סיכון. מומלץ לבחון אפיקי השקעה עם תשואה גבוהה יותר.",
-                              style: TextStyle(color: Colors.orange[800], fontSize: 13, fontWeight: FontWeight.w600),
+                        
+                        // כפתור המשפחה - ימין למעלה (עטוף בפעימה)
+                        Positioned(
+                          top: -15,
+                          right: -15,
+                          child: ScaleTransition(
+                            scale: _showPulse 
+                              ? Tween(begin: 1.0, end: 1.15).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut))
+                              : const AlwaysStoppedAnimation(1.0),
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                shape: const CircleBorder(),
+                                padding: const EdgeInsets.all(14),
+                                backgroundColor: Colors.blueGrey[900],
+                                foregroundColor: Colors.white,
+                                elevation: 4,
+                              ),
+                              onPressed: () {
+                                if (_showPulse) {
+                                  setState(() => _showPulse = false);
+                                }
+                                if (targetYear != null) _showFamilyDrilldown(context, budget, targetYear);
+                              },
+                              child: const Icon(Icons.family_restroom, size: 24),
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                        
+                        // כפתור יעד הכנסה פסיבית - שמאל למעלה
+                        Positioned(
+                          top: -15,
+                          left: -25,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              backgroundColor: Colors.amber[600],
+                              foregroundColor: Colors.black87,
+                              elevation: 4,
+                            ),
+                            onPressed: () => _showFreedomSettingsDialog(context, budget),
+                            icon: const Icon(Icons.track_changes, size: 18),
+                            label: Text(
+                              '${loc?.get('currency_symbol') ?? '₪'}${budget.targetPassiveIncome.toStringAsFixed(0)}', 
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-              ],
+
+                    const SizedBox(height: 50),
+
+                    // שורת כפתורי הניווט התחתונה
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildQuickAction(
+                          context, 
+                          'תזרים', 
+                          Icons.account_balance_wallet, 
+                          Colors.blue, 
+                          () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PnLScreen()))
+                        ),
+                        _buildQuickAction(
+                          context, 
+                          'ממוצע שכר', 
+                          Icons.insights, 
+                          Colors.orange, 
+                          () {
+                            PremiumService.requirePremium(context, () {
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const SalaryEngineScreen()));
+                            });
+                          },
+                          isPremium: true,
+                        ),
+                        _buildQuickAction(
+                          context, 
+                          'מרכז חסכונות', 
+                          Icons.savings, 
+                          Colors.green, 
+                          () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SinkingFundsScreen()))
+                        ),
+                      ],
+                    ),
+
+                    if (budget.expectedYield <= 4.0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 40.0),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.orange.withValues(alpha: 0.5)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline, color: Colors.orange),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  "התחזית מבוססת על ריבית חסרת סיכון. מומלץ לבחון אפיקי השקעה עם תשואה גבוהה יותר.",
+                                  style: TextStyle(color: Colors.orange[800], fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
-      ),
+        
+        // שכבת החשיפה העליונה
+        if (_currentState != RevealState.dashboard) 
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 600),
+            child: _buildRevealOverlay(targetYear, budget),
+          ),
+      ],
     );
   }
 }

@@ -1,20 +1,17 @@
 # AI_CONTEXT.md - דוחכם (Dohaham)
-**Date:** March 17, 2026
-**Current Constitution Version:** 12.80
+**Date:** March 18, 2026
+**Current Constitution Version:** 12.81
 
 ## 1. Project Overview
-"Dohaham" is a smart family budget management application designed for Israeli users. It uses Flutter, Provider for state management, and local SQLite synced to Firebase. The architecture follows a strict "E-Myth" philosophy (Fintel - Financial Intelligence).
+"Dohaham" (Fintel) is a smart family budget management application designed for Israeli users. It uses Flutter, Provider for state management, and local SQLite synced to Firebase. The architecture follows a strict "E-Myth" philosophy (Financial Intelligence).
 
-## 2. Recent Major Updates (v12.80 - Sync, Terminology & Smart Withdrawals)
-* **Cloud Sync Fix:** Fixed a bug in `BudgetProvider` where `SalaryRecords` were not fetched during initial load, ensuring cross-device data continuity.
-* **Terminology Alignment:** Standardized names across UI: 'ממוצע שכר' (Salary Engine), 'מעקב עו"ש' (Checking History), and 'מנמיכות' (Reducing/Debts).
-* **Smart Withdrawal Manager (Complete Feature):**
-  - Added `PlannedWithdrawal` model and CRUD operations in `DatabaseHelper`.
-  - Implemented aggregation and execution logic (`executePlannedWithdrawalsForBucket`) in `BudgetProvider`.
-  - Created `smart_withdrawals_screen.dart` with chronologically sorted cards, interactive date picking, and execution dialogs.
-  - Fixed Material 3 TextField styling issues inside Dialogs (forced borders and background colors).
-  - Connected the feature to the entry banner in `sinking_funds_screen.dart`.
-* **Zero Warnings Compliance:** Fixed String interpolation and cleaned up Linter TODO warnings.
+## 2. Recent Major Updates (v12.81 - Freedom Gate Flow)
+* **The Freedom Gate (Progressive Disclosure):** Completely revamped the post-onboarding experience.
+  - Users are now routed to a "Calibration Mode" in `PnLScreen` featuring a pulsing instructional banner and a FAB to confirm readiness.
+  - Implemented a State Machine (`RevealState`) in `MainScreen` to manage the transition: Expectation Screen -> Grand Reveal Animation (Counting up to the Freedom Year with an Emerald glow) -> Dashboard.
+  - Added `hasCompletedGrandReveal` flag in `BudgetProvider` (synced to DB) to ensure the reveal only happens once per account/reset.
+  - Resolved all Render Flash issues by making the flag check synchronous before the first frame.
+* **Zero Warnings Compliance:** Fixed `use_build_context_synchronously` and redundant `const` warnings. Codebase is 100% clean.
 
 ## 3. UNRESOLVED ISSUES
 * None. The infrastructure is clean, stable, and Linter-warning-free.

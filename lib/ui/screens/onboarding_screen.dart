@@ -1,11 +1,11 @@
-// 🔒 STATUS: EDITED (Fixed SegmentedButton UI, Marital Status & Gender DB Saving, and Auto Parent/Child Logic)
+// 🔒 STATUS: EDITED (Fixed SegmentedButton UI, Marital Status & Gender DB Saving, and Auto Parent/Child Logic + Freedom Gate Routing)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../services/seed_service.dart';
 import '../../data/expense_model.dart';
 import '../../data/database_helper.dart';
-import 'main_screen.dart';
+import 'pnl_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -125,9 +125,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     await budget.loadData();
 
+    // אתחול דגל חשיפה למצב "לא הושלם" כדי להפעיל את שער החירות
+    await DatabaseHelper.instance.saveSetting('has_completed_reveal', 0.0);
+
     if (mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => MainScreen(showWelcomeDialog: true, showDebtTask: _hasDebts)),
+        MaterialPageRoute(builder: (_) => const PnLScreen(isCalibrationMode: true)),
       );
     }
   }
@@ -352,7 +355,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           items: const [
                             DropdownMenuItem(value: 'rent', child: Text('שכירות')),
                             DropdownMenuItem(value: 'mortgage', child: Text('בעלי נכס (משכנתא)')),
-                            DropdownMenuItem(value: 'none', child: Text('ללא עלות דיור')),
+                            DropdownMenuItem(value: 'none', child: Text('ללא עלויות דיור ומגורים')),
                           ],
                           onChanged: (val) => setState(() => _housingType = val!),
                         ),
