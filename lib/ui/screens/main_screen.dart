@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed unnecessary_const Linter Warning)
+// 🔒 STATUS: EDITED (Fixed unnecessary_const Linter Warnings)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -365,13 +365,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         Scaffold(
           backgroundColor: Colors.white,
           appBar: const GlobalHeader(),
-          floatingActionButton: FloatingActionButton(
-            backgroundColor: Colors.blueGrey[900],
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const ShoppingScreen()));
-            },
-            child: const Icon(Icons.shopping_cart, color: Colors.white),
-          ),
+          // ה-FloatingActionButton הוסר למניעת כפילות
           body: Center(
             child: SingleChildScrollView(
               child: Padding(
@@ -459,7 +453,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
                     const SizedBox(height: 50),
 
-                    // שורת הניווט התחתונה המעודכנת (חסכונות וקניות בלבד)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       crossAxisAlignment: CrossAxisAlignment.start,
