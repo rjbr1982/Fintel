@@ -1,9 +1,9 @@
-// 🔒 STATUS: EDITED (Added Bank Discrepancy Traffic Light and Editing)
+// 🔒 STATUS: EDITED (Fixed Light Theme Contrast and Disappearing Text)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
-import '../../data/database_helper.dart'; // הוספת הייבוא למסד הנתונים
+import '../../data/database_helper.dart'; 
 import '../widgets/global_header.dart';
 import 'smart_withdrawals_screen.dart'; 
 
@@ -435,9 +435,9 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
         const SizedBox(height: 20),
         Row(
           children: [
-            Expanded(flex: 2, child: TextField(controller: _amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום משיכה', suffixText: '₪', border: OutlineInputBorder(), isDense: true))),
+            Expanded(flex: 2, child: TextField(style: const TextStyle(color: Colors.black87), controller: _amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום משיכה', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', border: OutlineInputBorder(), isDense: true))),
             const SizedBox(width: 8),
-            Expanded(flex: 3, child: TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'פירוט (לאן יצא?)', border: OutlineInputBorder(), isDense: true))),
+            Expanded(flex: 3, child: TextField(style: const TextStyle(color: Colors.black87), controller: _noteController, decoration: const InputDecoration(labelText: 'פירוט (לאן יצא?)', labelStyle: TextStyle(color: Colors.black54), border: OutlineInputBorder(), isDense: true))),
             const SizedBox(width: 8),
             IconButton(style: IconButton.styleFrom(backgroundColor: Colors.blueGrey[900], foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.arrow_downward), onPressed: () => _handleWithdrawal(null)),
           ],
@@ -464,17 +464,21 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
       fundActual += (e.actualBankDeposit ?? expected);
     }
     
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
-            Text('קופה מאוחדת: ${widget.parentCategory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-            const SizedBox(height: 16),
-            _buildStandardUnifiedView(totalCurrentBalance, fundExpected, fundActual, currentExpenses),
-          ],
+    // עטיפת הבוטום שיט ב-Theme בהיר
+    return Theme(
+      data: ThemeData.light(),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+              Text('קופה מאוחדת: ${widget.parentCategory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+              const SizedBox(height: 16),
+              _buildStandardUnifiedView(totalCurrentBalance, fundExpected, fundActual, currentExpenses),
+            ],
+          ),
         ),
       ),
     );
@@ -542,111 +546,115 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
     double actualDeposit = currentExpense.actualBankDeposit ?? expectedDeposit;
     bool hasMismatch = (actualDeposit - expectedDeposit).abs() > 0.01;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
-            Text('קופה: ${currentExpense.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-            const SizedBox(height: 16),
-            
-            // בלוק יתרה צבורה
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                      Row(
-                        children: [
-                          Text('₪${(currentExpense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue)),
-                          const SizedBox(width: 8),
-                          InkWell(
-                            onTap: () => _showEditIndividualDialog(currentExpense),
-                            child: const Padding(
-                              padding: EdgeInsets.all(4.0),
-                              child: Icon(Icons.edit, color: Colors.blue, size: 20),
+    // עטיפת הבוטום שיט ב-Theme בהיר
+    return Theme(
+      data: ThemeData.light(),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+              Text('קופה: ${currentExpense.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+              const SizedBox(height: 16),
+              
+              // בלוק יתרה צבורה
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                        Row(
+                          children: [
+                            Text('₪${(currentExpense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue)),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: () => _showEditIndividualDialog(currentExpense),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4.0),
+                                child: Icon(Icons.edit, color: Colors.blue, size: 20),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            
-            // בלוק בקרה בנקאית
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: hasMismatch ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, fontWeight: FontWeight.bold)),
-                      Row(
-                        children: [
-                          Text('₪${actualDeposit.toStringAsFixed(0)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey)),
-                          const SizedBox(width: 8),
-                          InkWell(
-                            onTap: () => _showEditBankDepositDialog(currentExpense, actualDeposit),
-                            child: Padding(
-                              padding: const EdgeInsets.all(4.0),
-                              child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
+              
+              // בלוק בקרה בנקאית
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: hasMismatch ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, fontWeight: FontWeight.bold)),
+                        Row(
+                          children: [
+                            Text('₪${actualDeposit.toStringAsFixed(0)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey)),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: () => _showEditBankDepositDialog(currentExpense, actualDeposit),
+                              child: Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  if (hasMismatch)
-                    Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
-                ],
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (hasMismatch)
+                      Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(flex: 2, child: TextField(controller: _amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום משיכה', suffixText: '₪', border: OutlineInputBorder(), isDense: true))),
-                const SizedBox(width: 8),
-                Expanded(flex: 3, child: TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'פירוט (לאן יצא?)', border: OutlineInputBorder(), isDense: true))),
-                const SizedBox(width: 8),
-                IconButton(style: IconButton.styleFrom(backgroundColor: Colors.blueGrey[900], foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.arrow_downward), onPressed: _handleWithdrawal),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Align(alignment: Alignment.centerRight, child: Text('היסטוריה פעולות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey))),
-            const Divider(),
-            if (_isLoading) const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())
-            else if (_withdrawals.isEmpty) const Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות', style: TextStyle(color: Colors.grey)))
-            else ListView.builder(
-              shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: _withdrawals.length,
-              itemBuilder: (ctx, i) {
-                final w = _withdrawals[i];
-                final date = DateTime.parse(w.date);
-                bool isDeposit = w.amount < 0;
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.green : Colors.redAccent),
-                  title: Text('₪${w.amount.abs().toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.redAccent)),
-                  subtitle: Text('${w.note}\n${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.black87)),
-                  trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey), onPressed: () async { await provider.deleteWithdrawal(w); _loadWithdrawals(); }),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(flex: 2, child: TextField(style: const TextStyle(color: Colors.black87), controller: _amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום משיכה', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', border: OutlineInputBorder(), isDense: true))),
+                  const SizedBox(width: 8),
+                  Expanded(flex: 3, child: TextField(style: const TextStyle(color: Colors.black87), controller: _noteController, decoration: const InputDecoration(labelText: 'פירוט (לאן יצא?)', labelStyle: TextStyle(color: Colors.black54), border: OutlineInputBorder(), isDense: true))),
+                  const SizedBox(width: 8),
+                  IconButton(style: IconButton.styleFrom(backgroundColor: Colors.blueGrey[900], foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.arrow_downward), onPressed: _handleWithdrawal),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Align(alignment: Alignment.centerRight, child: Text('היסטוריה פעולות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey))),
+              const Divider(),
+              if (_isLoading) const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())
+              else if (_withdrawals.isEmpty) const Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות', style: TextStyle(color: Colors.grey)))
+              else ListView.builder(
+                shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: _withdrawals.length,
+                itemBuilder: (ctx, i) {
+                  final w = _withdrawals[i];
+                  final date = DateTime.parse(w.date);
+                  bool isDeposit = w.amount < 0;
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.green : Colors.redAccent),
+                    title: Text('₪${w.amount.abs().toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.redAccent)),
+                    subtitle: Text('${w.note}\n${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                    trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey), onPressed: () async { await provider.deleteWithdrawal(w); _loadWithdrawals(); }),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -682,28 +690,32 @@ class _EditIndividualBalanceDialogState extends State<_EditIndividualBalanceDial
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      title: const Text('עריכת יתרה צבורה', style: TextStyle(color: Colors.black87)),
-      content: TextField(
-        controller: _ctrl,
-        keyboardType: TextInputType.number,
-        decoration: const InputDecoration(labelText: 'סכום צבור חדש', suffixText: '₪'),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
-        ElevatedButton(
-          onPressed: () async {
-            final val = double.tryParse(_ctrl.text);
-            if (val != null) {
-              await Provider.of<BudgetProvider>(context, listen: false).setExpenseCurrentBalance(widget.expense.id!, val);
-              if (!context.mounted) return;
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('שמור'),
+    return Theme(
+      data: ThemeData.light(),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('עריכת יתרה צבורה', style: TextStyle(color: Colors.black87)),
+        content: TextField(
+          style: const TextStyle(color: Colors.black87),
+          controller: _ctrl,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'סכום צבור חדש', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪'),
         ),
-      ],
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+          ElevatedButton(
+            onPressed: () async {
+              final val = double.tryParse(_ctrl.text);
+              if (val != null) {
+                await Provider.of<BudgetProvider>(context, listen: false).setExpenseCurrentBalance(widget.expense.id!, val);
+                if (!context.mounted) return;
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('שמור'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -735,42 +747,46 @@ class _EditUnifiedBalancesDialogState extends State<_EditUnifiedBalancesDialog> 
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      title: Text('עריכת יתרה - ${widget.parentCategory}', style: const TextStyle(color: Colors.black87)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('הזן את הסכום הכולל שנצבר בקופה זו:', style: TextStyle(color: Colors.grey, fontSize: 14)),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _ctrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'סכום צבור כולל', suffixText: '₪', border: OutlineInputBorder()),
+    return Theme(
+      data: ThemeData.light(),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        title: Text('עריכת יתרה - ${widget.parentCategory}', style: const TextStyle(color: Colors.black87)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('הזן את הסכום הכולל שנצבר בקופה זו:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+            const SizedBox(height: 16),
+            TextField(
+              style: const TextStyle(color: Colors.black87),
+              controller: _ctrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'סכום צבור כולל', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+          ElevatedButton(
+            onPressed: () async {
+              final val = double.tryParse(_ctrl.text);
+              if (val != null) {
+                final provider = Provider.of<BudgetProvider>(context, listen: false);
+                for (int i = 0; i < widget.expenses.length; i++) {
+                  if (i == 0) {
+                    await provider.setExpenseCurrentBalance(widget.expenses[i].id!, val);
+                  } else {
+                    await provider.setExpenseCurrentBalance(widget.expenses[i].id!, 0);
+                  }
+                }
+                if (!context.mounted) return;
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('שמור'),
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
-        ElevatedButton(
-          onPressed: () async {
-            final val = double.tryParse(_ctrl.text);
-            if (val != null) {
-              final provider = Provider.of<BudgetProvider>(context, listen: false);
-              for (int i = 0; i < widget.expenses.length; i++) {
-                if (i == 0) {
-                  await provider.setExpenseCurrentBalance(widget.expenses[i].id!, val);
-                } else {
-                  await provider.setExpenseCurrentBalance(widget.expenses[i].id!, 0);
-                }
-              }
-              if (!context.mounted) return;
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('שמור'),
-        ),
-      ],
     );
   }
 }
@@ -801,37 +817,41 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      title: const Text('בקרת הפרשה לבנק', style: TextStyle(color: Colors.black87)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('הזן את סכום הוראת הקבע שמוגדר בפועל בבנק:', style: TextStyle(color: Colors.grey, fontSize: 14)),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _ctrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', suffixText: '₪'),
+    return Theme(
+      data: ThemeData.light(),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('בקרת הפרשה לבנק', style: TextStyle(color: Colors.black87)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('הזן את סכום הוראת הקבע שמוגדר בפועל בבנק:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+            const SizedBox(height: 16),
+            TextField(
+              style: const TextStyle(color: Colors.black87),
+              controller: _ctrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
+            onPressed: () async {
+              final val = double.tryParse(_ctrl.text);
+              if (val != null) {
+                final updatedExpense = widget.expense.copyWith(actualBankDeposit: val);
+                await DatabaseHelper.instance.updateExpense(updatedExpense);
+                if (!context.mounted) return;
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('שמור'),
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
-          onPressed: () async {
-            final val = double.tryParse(_ctrl.text);
-            if (val != null) {
-              final updatedExpense = widget.expense.copyWith(actualBankDeposit: val);
-              await DatabaseHelper.instance.updateExpense(updatedExpense);
-              if (!context.mounted) return;
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('שמור'),
-        ),
-      ],
     );
   }
 }
@@ -863,44 +883,46 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      title: Text('בקרה לבנק - ${widget.parentCategory}', style: const TextStyle(color: Colors.black87)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('הזן את סכום הוראת הקבע הכולל שמוגדר בפועל בבנק עבור כלל הקופה:', style: TextStyle(color: Colors.grey, fontSize: 14)),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _ctrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', suffixText: '₪', border: OutlineInputBorder()),
+    return Theme(
+      data: ThemeData.light(),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        title: Text('בקרה לבנק - ${widget.parentCategory}', style: const TextStyle(color: Colors.black87)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('הזן את סכום הוראת הקבע הכולל שמוגדר בפועל בבנק עבור כלל הקופה:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+            const SizedBox(height: 16),
+            TextField(
+              style: const TextStyle(color: Colors.black87),
+              controller: _ctrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
+            onPressed: () async {
+              final val = double.tryParse(_ctrl.text);
+              if (val != null && widget.expenses.isNotEmpty) {
+                for (int i = 0; i < widget.expenses.length; i++) {
+                  if (i == 0) {
+                    await DatabaseHelper.instance.updateExpense(widget.expenses[i].copyWith(actualBankDeposit: val));
+                  } else {
+                    await DatabaseHelper.instance.updateExpense(widget.expenses[i].copyWith(actualBankDeposit: 0));
+                  }
+                }
+                if (!context.mounted) return;
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('שמור'),
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
-          onPressed: () async {
-            final val = double.tryParse(_ctrl.text);
-            if (val != null && widget.expenses.isNotEmpty) {
-              for (int i = 0; i < widget.expenses.length; i++) {
-                if (i == 0) {
-                  // שומרים את כל הערך של הקופה המאוחדת על הפריט הראשון
-                  await DatabaseHelper.instance.updateExpense(widget.expenses[i].copyWith(actualBankDeposit: val));
-                } else {
-                  // מאפסים את השאר כדי שהסיכום הכולל יישאר מדויק
-                  await DatabaseHelper.instance.updateExpense(widget.expenses[i].copyWith(actualBankDeposit: 0));
-                }
-              }
-              if (!context.mounted) return;
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('שמור'),
-        ),
-      ],
     );
   }
 }

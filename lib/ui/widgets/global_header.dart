@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Typo: ElevatedButton in Reset Dialog)
+// 🔒 STATUS: EDITED (Reorganized Hamburger Menu for Logical Flow)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart'; 
@@ -15,6 +15,8 @@ import '../screens/onboarding_screen.dart';
 import '../screens/sinking_funds_screen.dart';
 import '../screens/checking_history_screen.dart';
 import '../screens/salary_engine_screen.dart';
+import '../screens/shopping_screen.dart';
+import '../screens/pnl_screen.dart';
 import '../../main.dart'; 
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -96,9 +98,6 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-// =========================================================================
-// מנוע כותרות אחיד לתחתיות (כולל ניווט 'חזור')
-// =========================================================================
 Widget _buildBottomSheetHeader(BuildContext context, String title, VoidCallback? onBack) {
   return Column(
     mainAxisSize: MainAxisSize.min,
@@ -129,9 +128,6 @@ Widget _buildBottomSheetHeader(BuildContext context, String title, VoidCallback?
   );
 }
 
-// =========================================================================
-// תפריט ראשי (רמה 0)
-// =========================================================================
 void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
   showModalBottomSheet(
     context: context,
@@ -144,9 +140,24 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
         children: [
           _buildBottomSheetHeader(ctx, 'תפריט ראשי', null),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Column(
               children: [
+                // --- קבוצה 1: פעולות שוטפות ---
+                _buildMenuTile(
+                  icon: Icons.shopping_cart_outlined, color: Colors.blueGrey[900]!, title: 'רשימת קניות',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ShoppingScreen()));
+                  },
+                ),
+                _buildMenuTile(
+                  icon: Icons.account_balance_wallet, color: Colors.blue, title: 'תזרים פיננסי (PnL)',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const PnLScreen()));
+                  },
+                ),
                 if (showSavings)
                   _buildMenuTile(
                     icon: Icons.savings_outlined, color: Colors.green, title: 'מרכז החסכונות',
@@ -156,6 +167,9 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     },
                   ),
                 
+                const Divider(), // מפריד קבוצות
+
+                // --- קבוצה 2: בקרה וניתוח ---
                 _buildMenuTile(
                   icon: Icons.account_balance_wallet_outlined, color: Colors.blueGrey, title: 'מעקב עו"ש',
                   onTap: () {
@@ -163,11 +177,8 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckingHistoryScreen()));
                   },
                 ),
-
-                const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(indent: 20, endIndent: 20)),
-
                 _buildMenuTile(
-                  icon: Icons.insights, color: Colors.blue, title: 'ממוצע שכר', isPremium: true,
+                  icon: Icons.insights, color: Colors.orange, title: 'ממוצע שכר', isPremium: true,
                   onTap: () {
                     Navigator.pop(ctx);
                     PremiumService.requirePremium(context, () {
@@ -175,7 +186,6 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     });
                   },
                 ),
-                
                 _buildMenuTile(
                   icon: Icons.psychology, color: Colors.deepPurple, title: 'ייצוא נתונים ל-AI', isPremium: true,
                   onTap: () {
@@ -191,8 +201,16 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                   },
                 ),
 
-                const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(indent: 20, endIndent: 20)),
+                const Divider(), // מפריד קבוצות
 
+                // --- קבוצה 3: הגדרות ושונות ---
+                _buildMenuTile(
+                  icon: Icons.settings, color: Colors.grey.shade700, title: 'הגדרות מערכת',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showMainSettingsBottomSheet(context, budget, showSavings);
+                  },
+                ),
                 _buildMenuTile(
                   icon: Icons.shield_outlined, color: Colors.teal, title: 'תמיכה ומשפטי',
                   onTap: () {
@@ -201,15 +219,7 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                   },
                 ),
 
-                _buildMenuTile(
-                  icon: Icons.settings, color: Colors.grey.shade700, title: 'הגדרות מערכת',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _showMainSettingsBottomSheet(context, budget, showSavings);
-                  },
-                ),
-
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 const Text('© 2026 Fintel - כל הזכויות שמורות\nv1.0.0', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: Colors.grey, height: 1.5)),
                 const SizedBox(height: 8),
               ],
@@ -238,9 +248,6 @@ Widget _buildMenuTile({required IconData icon, required Color color, required St
   );
 }
 
-// =========================================================================
-// תמיכה ומשפטי (רמה 1)
-// =========================================================================
 void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
   showModalBottomSheet(
     context: context, backgroundColor: Colors.white, isScrollControlled: true,
@@ -259,14 +266,11 @@ void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool s
                   title: const Text('פנו אלינו באימייל', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
                   onTap: () async {
                     Navigator.pop(ctx);
-                    // יצירת לינק Mailto תקני
                     final String emailUrl = 'mailto:fintel.app.info@gmail.com?subject=${Uri.encodeComponent("פידבק על אפליקציית דוחכם")}';
                     
                     try {
-                      // שימוש ב-LaunchMode.externalApplication כדי להכריח את אנדרואיד לפתוח את האפליקציה החיצונית
                       await launchUrl(Uri.parse(emailUrl), mode: LaunchMode.externalApplication);
                     } catch (e) {
-                      // גיבוי: העתקה ללוח
                       Clipboard.setData(const ClipboardData(text: 'fintel.app.info@gmail.com'));
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -316,9 +320,6 @@ void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool s
   );
 }
 
-// =========================================================================
-// מסכי טקסט משפטי (רמה 2)
-// =========================================================================
 void _showLegalBottomSheet({
   required BuildContext context, required BudgetProvider budget, required bool showSavings,
   required String title, required IconData icon, required Color iconColor, required String content
@@ -356,9 +357,6 @@ void _showLegalBottomSheet({
   );
 }
 
-// =========================================================================
-// הגדרות מערכת ראשי (רמה 1)
-// =========================================================================
 void _showMainSettingsBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
   final user = FirebaseAuth.instance.currentUser;
 
@@ -502,7 +500,7 @@ Widget _buildSettingsCard(BuildContext ctx, IconData icon, String text, VoidCall
 InputDecoration _customInputDecoration(String label) {
   return InputDecoration(
     labelText: label,
-    labelStyle: const TextStyle(color: Colors.black87), // תיקון: הגדרת צבע התווית בבירור
+    labelStyle: const TextStyle(color: Colors.black87),
     suffixText: '%',
     filled: true,
     fillColor: Colors.white,
@@ -511,10 +509,6 @@ InputDecoration _customInputDecoration(String label) {
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
   );
 }
-
-// =========================================================================
-// הגדרות פנימיות (רמה 2) - חלוקת יתרה, אחוזים, משפחה
-// =========================================================================
 
 void _showFutureVsFinancialBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
   final futureRatio = budget.futureAllocationRatio;
@@ -542,7 +536,7 @@ void _showFutureVsFinancialBottomSheet(BuildContext context, BudgetProvider budg
                       Expanded(
                         child: TextField(
                           controller: futureController, keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold), // תיקון: טקסט כהה
+                          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
                           decoration: _customInputDecoration('עתידיות'),
                           onChanged: (val) {
                             final num = double.tryParse(val) ?? 0;
@@ -554,7 +548,7 @@ void _showFutureVsFinancialBottomSheet(BuildContext context, BudgetProvider budg
                       Expanded(
                         child: TextField(
                           controller: financialController, keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold), // תיקון: טקסט כהה
+                          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
                           decoration: _customInputDecoration('פיננסיות'),
                           onChanged: (val) {
                             final num = double.tryParse(val) ?? 0;
@@ -611,7 +605,7 @@ void _showRatioSettingsBottomSheet(BuildContext context, BudgetProvider budget, 
                   const SizedBox(height: 20),
                   TextField(
                     controller: controller, 
-                    style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold), // תיקון: טקסט כהה
+                    style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true), 
                     decoration: _customInputDecoration('אחוז הקצאה'),
                   ),
@@ -655,7 +649,6 @@ void _showFamilySettingsBottomSheet(BuildContext context, BudgetProvider budget,
               padding: const EdgeInsets.all(20),
               child: Consumer<BudgetProvider>(
                 builder: (context, budgetProvider, child) {
-                  // תיקון: סינון הורים על פי כך שאינם תחת תפקיד ילד
                   final adults = budgetProvider.familyMembers.where((m) => m.role != FamilyRole.child).toList();
                   
                   return Column(
@@ -786,7 +779,6 @@ void _showEditMemberBottomSheet(BuildContext context, BudgetProvider budget, Fam
   final nameController = TextEditingController(text: member?.name ?? '');
   final yearController = TextEditingController(text: member?.birthYear.toString() ?? DateTime.now().year.toString());
   
-  // תיקון: זיהוי האם מדובר במבוגר לפי כך שאינו ילד
   final isAdult = member != null && member.role != FamilyRole.child;
   final titleText = member == null ? 'הוספת ילד/ה' : (isAdult ? 'עריכת פרטי הורה' : 'עריכת פרטי ילד');
   final nameLabel = member == null ? 'שם הילד/ה' : (isAdult ? 'שם ההורה' : 'שם הילד/ה');
@@ -808,13 +800,13 @@ void _showEditMemberBottomSheet(BuildContext context, BudgetProvider budget, Fam
                 children: [
                   TextField(
                     controller: nameController, 
-                    style: const TextStyle(color: Colors.black87), // תיקון: טקסט כהה
+                    style: const TextStyle(color: Colors.black87),
                     decoration: InputDecoration(labelText: nameLabel, labelStyle: const TextStyle(color: Colors.black87), border: const OutlineInputBorder())
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: yearController, 
-                    style: const TextStyle(color: Colors.black87), // תיקון: טקסט כהה
+                    style: const TextStyle(color: Colors.black87),
                     decoration: const InputDecoration(labelText: 'שנת לידה (למשל 1990)', labelStyle: TextStyle(color: Colors.black87), border: OutlineInputBorder()), 
                     keyboardType: TextInputType.number
                   ),

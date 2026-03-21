@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed AppBar Title to 'מעקב עו"ש')
+// 🔒 STATUS: EDITED (Fixed Light Theme Contrast and Disappearing Text)
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../data/database_helper.dart';
@@ -87,7 +87,6 @@ class CheckingHistoryScreen extends StatelessWidget {
     );
   }
 
-  // מסך ההדרכה למשתמש החדש (Empty State)
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
@@ -131,7 +130,6 @@ class CheckingHistoryScreen extends StatelessWidget {
   }
 
   Widget _buildGraph(List<CheckingEntry> entries) {
-    // הגרף דורש מיון כרונולוגי עולה (משמאל לימין)
     final sorted = List<CheckingEntry>.from(entries)
       ..sort((a, b) => DateTime.parse(a.date).compareTo(DateTime.parse(b.date)));
     
@@ -172,73 +170,77 @@ class CheckingHistoryScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setState) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            title: const Text('הזנת יתרת עו"ש', textAlign: TextAlign.center, style: TextStyle(color: Colors.black87)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('הזן את הסכום המדויק שיש כעת בחשבון העו"ש, לצורך בקרת צמיחת עודפים.', style: TextStyle(fontSize: 13, color: Colors.grey)),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: amountCtrl,
-                  style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18), 
-                  keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    labelText: 'סכום בעו"ש (₪)',
-                    labelStyle: TextStyle(color: Colors.black54, fontSize: 14),
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.account_balance),
+          // עטיפה ב-ThemeData.light() כדי למנוע התנגשות עם עיצוב כהה גלובלי
+          return Theme(
+            data: ThemeData.light(),
+            child: AlertDialog(
+              backgroundColor: Colors.white,
+              title: const Text('הזנת יתרת עו"ש', textAlign: TextAlign.center, style: TextStyle(color: Colors.black87)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('הזן את הסכום המדויק שיש כעת בחשבון העו"ש, לצורך בקרת צמיחת עודפים.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: amountCtrl,
+                    style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18), 
+                    keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'סכום בעו"ש (₪)',
+                      labelStyle: TextStyle(color: Colors.black54, fontSize: 14),
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.account_balance, color: Colors.black54),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.grey.shade300)),
-                  title: const Text('תאריך נכונות', style: TextStyle(color: Colors.black87)),
-                  subtitle: Text(DateFormat('dd/MM/yyyy').format(selectedDate), style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-                  trailing: const Icon(Icons.calendar_today, color: Color(0xFF00A3FF)),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: ctx,
-                      initialDate: selectedDate,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now(),
-                      builder: (context, child) {
-                        return Theme(
-                          data: Theme.of(context).copyWith(
-                            colorScheme: const ColorScheme.light(
-                              primary: Color(0xFF00A3FF),
-                              onPrimary: Colors.white,
-                              onSurface: Colors.black87,
+                  const SizedBox(height: 16),
+                  ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.grey.shade300)),
+                    title: const Text('תאריך נכונות', style: TextStyle(color: Colors.black87)),
+                    subtitle: Text(DateFormat('dd/MM/yyyy').format(selectedDate), style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                    trailing: const Icon(Icons.calendar_today, color: Color(0xFF00A3FF)),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                        builder: (context, child) {
+                          return Theme(
+                            data: Theme.of(context).copyWith(
+                              colorScheme: const ColorScheme.light(
+                                primary: Color(0xFF00A3FF),
+                                onPrimary: Colors.white,
+                                onSurface: Colors.black87,
+                              ),
                             ),
-                          ),
-                          child: child!,
-                        );
-                      },
-                    );
-                    if (picked != null) {
-                      setState(() => selectedDate = picked);
+                            child: child!,
+                          );
+                        },
+                      );
+                      if (picked != null) {
+                        setState(() => selectedDate = picked);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF)),
+                  onPressed: () async {
+                    final val = double.tryParse(amountCtrl.text);
+                    if (val != null) {
+                      final entry = CheckingEntry(amount: val, date: selectedDate.toIso8601String());
+                      await DatabaseHelper.instance.insertCheckingEntry(entry);
+                      if (ctx.mounted) Navigator.pop(ctx);
                     }
                   },
+                  child: const Text('שמור דגימה', style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF)),
-                onPressed: () async {
-                  final val = double.tryParse(amountCtrl.text);
-                  if (val != null) {
-                    final entry = CheckingEntry(amount: val, date: selectedDate.toIso8601String());
-                    await DatabaseHelper.instance.insertCheckingEntry(entry);
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  }
-                },
-                child: const Text('שמור דגימה', style: TextStyle(color: Colors.white)),
-              ),
-            ],
           );
         },
       ),
@@ -246,7 +248,6 @@ class CheckingHistoryScreen extends StatelessWidget {
   }
 }
 
-// מנוע הציור הגרפי של המגמה (Native Flutter Canvas)
 class _CheckingGraphPainter extends CustomPainter {
   final List<CheckingEntry> entries;
 
@@ -264,7 +265,6 @@ class _CheckingGraphPainter extends CustomPainter {
     double maxAmt = entries.map((e) => e.amount).reduce((a, b) => a > b ? a : b);
     double minAmt = entries.map((e) => e.amount).reduce((a, b) => a < b ? a : b);
 
-    // מניעת חלוקה באפס אם כל הסכומים זהים
     if (maxAmt == minAmt) {
       maxAmt += 1000;
       minAmt -= 1000;
@@ -290,7 +290,7 @@ class _CheckingGraphPainter extends CustomPainter {
       final entry = entries[i];
       final x = i * widthStep;
       final normalizedY = (entry.amount - minAmt) / heightRange;
-      final y = size.height - (normalizedY * size.height); // ציר Y הפוך בקנבס
+      final y = size.height - (normalizedY * size.height); 
       points.add(Offset(x, y));
       
       if (i == 0) {
@@ -298,7 +298,6 @@ class _CheckingGraphPainter extends CustomPainter {
       } else {
         final prevX = points[i - 1].dx;
         final prevY = points[i - 1].dy;
-        // מתיחת קו מעוקל ואלגנטי במקום קווים שבורים
         path.quadraticBezierTo(
           prevX + (x - prevX) / 2, prevY, 
           x, y

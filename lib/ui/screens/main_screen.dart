@@ -1,14 +1,12 @@
-// 🔒 STATUS: EDITED (Fixed Render Flash, Upgraded Reveal UI with Material & Glow, Zero Warnings)
+// 🔒 STATUS: EDITED (Fixed unnecessary_const Linter Warning)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../providers/debt_provider.dart';
 import '../../utils/app_localizations.dart';
-import '../../services/premium_service.dart';
 import '../widgets/global_header.dart'; 
 import 'pnl_screen.dart'; 
 import 'shopping_screen.dart';
-import 'salary_engine_screen.dart';
 import 'sinking_funds_screen.dart';
 
 enum RevealState { expectation, reveal, dashboard }
@@ -30,7 +28,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     
-    // קריאה סינכרונית כדי למנוע הבהוב של הדשבורד
     final budget = Provider.of<BudgetProvider>(context, listen: false);
     if (!budget.hasCompletedGrandReveal) {
       _currentState = RevealState.expectation;
@@ -365,7 +362,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
     return Stack(
       children: [
-        // הדשבורד המקורי (יוצג תמיד מתחת לשכבת המעבר)
         Scaffold(
           backgroundColor: Colors.white,
           appBar: const GlobalHeader(),
@@ -385,12 +381,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     
-                    // הליבה של מסך הבית: שנת החירות הפיננסית והכפתורים סביבה
                     Stack(
                       clipBehavior: Clip.none,
                       alignment: Alignment.center,
                       children: [
-                        // הכרטיס המרכזי של שנת החירות
                         Container(
                           width: 280,
                           padding: const EdgeInsets.symmetric(vertical: 40),
@@ -415,7 +409,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           ),
                         ),
                         
-                        // כפתור המשפחה - ימין למעלה (עטוף בפעימה)
                         Positioned(
                           top: -15,
                           right: -15,
@@ -442,7 +435,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           ),
                         ),
                         
-                        // כפתור יעד הכנסה פסיבית - שמאל למעלה
                         Positioned(
                           top: -15,
                           left: -25,
@@ -467,36 +459,24 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
                     const SizedBox(height: 50),
 
-                    // שורת כפתורי הניווט התחתונה
+                    // שורת הניווט התחתונה המעודכנת (חסכונות וקניות בלבד)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildQuickAction(
                           context, 
-                          'תזרים', 
-                          Icons.account_balance_wallet, 
-                          Colors.blue, 
-                          () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PnLScreen()))
-                        ),
-                        _buildQuickAction(
-                          context, 
-                          'ממוצע שכר', 
-                          Icons.insights, 
-                          Colors.orange, 
-                          () {
-                            PremiumService.requirePremium(context, () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const SalaryEngineScreen()));
-                            });
-                          },
-                          isPremium: true,
-                        ),
-                        _buildQuickAction(
-                          context, 
                           'מרכז חסכונות', 
                           Icons.savings, 
                           Colors.green, 
                           () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SinkingFundsScreen()))
+                        ),
+                        _buildQuickAction(
+                          context, 
+                          'רשימת קניות', 
+                          Icons.shopping_cart_outlined, 
+                          Colors.blueGrey[900]!, 
+                          () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ShoppingScreen()))
                         ),
                       ],
                     ),
@@ -532,7 +512,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ),
         ),
         
-        // שכבת החשיפה העליונה
         if (_currentState != RevealState.dashboard) 
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 600),
