@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Light Theme Contrast and Disappearing Text)
+// 🔒 STATUS: EDITED (Fixed Gap 0 Bug and Added Expected Deposit to BottomSheets)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -164,9 +164,11 @@ class SinkingFundsScreen extends StatelessWidget {
                           fundBalance += (e.currentBalance ?? 0);
                         }
                         
-                        double diff = fundActual - fundExpected;
-                        bool hasMismatch = diff.abs() > 0.01;
-                        String diffText = diff > 0 ? '+₪${diff.abs().toStringAsFixed(0)}' : '-₪${diff.abs().toStringAsFixed(0)}';
+                        int expectedInt = fundExpected.round();
+                        int actualInt = fundActual.round();
+                        int diffInt = actualInt - expectedInt;
+                        bool hasMismatch = diffInt != 0;
+                        String diffText = diffInt > 0 ? '+₪${diffInt.abs()}' : '-₪${diffInt.abs()}';
 
                         return Card(
                           color: Colors.white,
@@ -183,7 +185,7 @@ class SinkingFundsScreen extends StatelessWidget {
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('להפרשה: ₪${fundExpected.toStringAsFixed(0)}', style: const TextStyle(color: Colors.black54)),
+                                Text('להפרשה: ₪$expectedInt', style: const TextStyle(color: Colors.black54)),
                                 if (hasMismatch)
                                   Text('⚠️ נדרש עדכון בבנק (פער: $diffText)', style: TextStyle(color: Colors.orange[800], fontSize: 12, fontWeight: FontWeight.bold)),
                               ],
@@ -215,9 +217,11 @@ class SinkingFundsScreen extends StatelessWidget {
                         double actualDeposit = expense.actualBankDeposit ?? expectedDeposit;
                         double balance = expense.currentBalance ?? 0;
                         
-                        double diff = actualDeposit - expectedDeposit;
-                        bool hasMismatch = diff.abs() > 0.01;
-                        String diffText = diff > 0 ? '+₪${diff.abs().toStringAsFixed(0)}' : '-₪${diff.abs().toStringAsFixed(0)}';
+                        int expectedInt = expectedDeposit.round();
+                        int actualInt = actualDeposit.round();
+                        int diffInt = actualInt - expectedInt;
+                        bool hasMismatch = diffInt != 0;
+                        String diffText = diffInt > 0 ? '+₪${diffInt.abs()}' : '-₪${diffInt.abs()}';
 
                         bool isFuture = expense.category == 'עתידיות';
                         String displayTitle = isFuture ? expense.parentCategory : expense.name;
@@ -238,7 +242,7 @@ class SinkingFundsScreen extends StatelessWidget {
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('$specificNameInfoלהפרשה: ₪${expectedDeposit.toStringAsFixed(0)}', style: const TextStyle(color: Colors.black54)),
+                                Text('$specificNameInfoלהפרשה: ₪$expectedInt', style: const TextStyle(color: Colors.black54)),
                                 if (hasMismatch)
                                   Text('⚠️ נדרש עדכון בבנק (פער: $diffText)', style: TextStyle(color: Colors.orange[800], fontSize: 12, fontWeight: FontWeight.bold)),
                               ],
@@ -366,7 +370,10 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
   }
 
   Widget _buildStandardUnifiedView(double totalCurrentBalance, double fundExpected, double fundActual, List<Expense> currentExpenses) {
-    bool hasMismatch = (fundActual - fundExpected).abs() > 0.01;
+    int expectedInt = fundExpected.round();
+    int actualInt = fundActual.round();
+    int diffInt = actualInt - expectedInt;
+    bool hasMismatch = diffInt != 0;
     
     return Column(
       children: [
@@ -405,30 +412,49 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
           margin: const EdgeInsets.only(top: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(color: hasMismatch ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, fontWeight: FontWeight.bold)),
-                  Row(
+                  const Text('להפרשה מתוכננת', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+                  Text('₪$expectedInt', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                ],
+              ),
+              const Divider(height: 24, color: Colors.black12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('₪${fundActual.toStringAsFixed(0)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey)),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: () => _showEditBankDepositDialog(currentExpenses, fundActual),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
-                        ),
+                      Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, fontWeight: FontWeight.bold)),
+                      Row(
+                        children: [
+                          Text('₪$actualInt', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey)),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _showEditBankDepositDialog(currentExpenses, fundActual),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
+                  if (hasMismatch)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
+                        Text('פער: ₪${diffInt.abs()}', style: TextStyle(color: Colors.orange[800], fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
                 ],
               ),
-              if (hasMismatch)
-                Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
             ],
           ),
         ),
@@ -464,7 +490,6 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
       fundActual += (e.actualBankDeposit ?? expected);
     }
     
-    // עטיפת הבוטום שיט ב-Theme בהיר
     return Theme(
       data: ThemeData.light(),
       child: Padding(
@@ -544,9 +569,12 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
     int multiplier = currentExpense.isPerChild ? provider.childCount : 1;
     double expectedDeposit = currentExpense.monthlyAmount * multiplier;
     double actualDeposit = currentExpense.actualBankDeposit ?? expectedDeposit;
-    bool hasMismatch = (actualDeposit - expectedDeposit).abs() > 0.01;
+    
+    int expectedInt = expectedDeposit.round();
+    int actualInt = actualDeposit.round();
+    int diffInt = actualInt - expectedInt;
+    bool hasMismatch = diffInt != 0;
 
-    // עטיפת הבוטום שיט ב-Theme בהיר
     return Theme(
       data: ThemeData.light(),
       child: Padding(
@@ -594,30 +622,49 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
                 margin: const EdgeInsets.only(top: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(color: hasMismatch ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, fontWeight: FontWeight.bold)),
-                        Row(
+                        const Text('להפרשה מתוכננת', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+                        Text('₪$expectedInt', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                      ],
+                    ),
+                    const Divider(height: 24, color: Colors.black12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('₪${actualDeposit.toStringAsFixed(0)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey)),
-                            const SizedBox(width: 8),
-                            InkWell(
-                              onTap: () => _showEditBankDepositDialog(currentExpense, actualDeposit),
-                              child: Padding(
-                                padding: const EdgeInsets.all(4.0),
-                                child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
-                              ),
+                            Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, fontWeight: FontWeight.bold)),
+                            Row(
+                              children: [
+                                Text('₪$actualInt', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey)),
+                                const SizedBox(width: 8),
+                                InkWell(
+                                  onTap: () => _showEditBankDepositDialog(currentExpense, actualDeposit),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(4.0),
+                                    child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
+                        if (hasMismatch)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
+                              Text('פער: ₪${diffInt.abs()}', style: TextStyle(color: Colors.orange[800], fontSize: 12, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
                       ],
                     ),
-                    if (hasMismatch)
-                      Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
                   ],
                 ),
               ),
@@ -806,7 +853,7 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
   @override
   void initState() {
     super.initState();
-    _ctrl = TextEditingController(text: widget.currentActual.toStringAsFixed(0));
+    _ctrl = TextEditingController(text: widget.currentActual.round().toString());
   }
 
   @override
@@ -872,7 +919,7 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
   @override
   void initState() {
     super.initState();
-    _ctrl = TextEditingController(text: widget.currentActual.toStringAsFixed(0));
+    _ctrl = TextEditingController(text: widget.currentActual.round().toString());
   }
 
   @override
