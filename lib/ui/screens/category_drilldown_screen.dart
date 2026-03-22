@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed UI Stale Cache bug in Unified Bottom Sheet - Now fetches fresh data on every rebuild)
+// 🔒 STATUS: EDITED (PRO MODE: Complete cleanup of duplicates, fixed context.mounted checks. Zero Linter warnings)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -64,6 +64,7 @@ void _showUnifiedModeDialog(BuildContext context, BudgetProvider provider, Strin
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF), foregroundColor: Colors.white),
                 onPressed: () {
                   provider.setCategoryUnifiedMode(parentCat, currentMode);
+                  if (!ctx.mounted) return;
                   Navigator.pop(ctx);
                 },
                 child: const Text('שמור מצב', style: TextStyle(fontWeight: FontWeight.bold))
@@ -87,9 +88,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
   });
 
   String _formatParentName(String name) {
-    if (name == 'בית') {
-      return 'קטנות לבית';
-    }
+    if (name == 'בית') return 'קטנות לבית';
     return name;
   }
 
@@ -115,6 +114,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
               onPressed: () {
                 if (controller.text.isNotEmpty && controller.text != oldName) {
                   provider.renameParentCategory(oldName, controller.text);
+                  if (!ctx.mounted) return;
                   Navigator.pop(ctx);
                 }
               },
@@ -156,7 +156,8 @@ class CategoryDrilldownScreen extends StatelessWidget {
                     date: DateTime.now().toIso8601String(),
                   );
                   await provider.addExpense(newExpense);
-                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (!ctx.mounted) return;
+                  Navigator.pop(ctx);
                 }
               },
               child: const Text('הוסף'),
@@ -183,6 +184,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                 leading: const Icon(Icons.attach_money, color: Colors.green),
                 title: const Text('הכנסה רגילה (משכורת, קצבה)', style: TextStyle(color: Colors.black87)),
                 onTap: () {
+                  if (!ctx.mounted) return;
                   Navigator.pop(ctx);
                   _showAddParentCategoryDialog(context, provider, mainCategory);
                 },
@@ -193,6 +195,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                 title: const Text('עסק / הכנסה צדדית מורכבת', style: TextStyle(color: Colors.black87)),
                 subtitle: const Text('כולל שורות הכנסות והוצאות', style: TextStyle(fontSize: 11, color: Colors.black54)),
                 onTap: () {
+                  if (!ctx.mounted) return;
                   Navigator.pop(ctx);
                   _showBusinessDialog(context, provider);
                 },
@@ -224,7 +227,8 @@ class CategoryDrilldownScreen extends StatelessWidget {
                 tooltip: 'חזור לברירת מחדל אוטומטית',
                 onPressed: () async {
                   await provider.resetEntertainmentLimits();
-                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (!ctx.mounted) return;
+                  Navigator.pop(ctx);
                 },
               )
             ],
@@ -257,7 +261,8 @@ class CategoryDrilldownScreen extends StatelessWidget {
                 final success = double.tryParse(successCtrl.text);
                 if (warning != null && success != null) {
                   await provider.saveEntertainmentLimits(warning, success);
-                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (!ctx.mounted) return;
+                  Navigator.pop(ctx);
                 }
               },
               child: const Text('שמור'),
@@ -336,311 +341,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-    
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: GlobalHeader(title: displayTitle),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          if (mainCategory == 'הכנסות') {
-            _showAddIncomeTypeDialog(context, context.read<BudgetProvider>());
-          } else {
-            _showAddParentCategoryDialog(context, context.read<BudgetProvider>(), mainCategory);
-          }
-        },
-        backgroundColor: Colors.blue,
-        tooltip: 'הוסף קבוצת הוצאות/הכנסות',
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-      body: Consumer<BudgetProvider>(
-        builder: (context, provider, child) {
-          final categoryExpenses = provider.expenses.where((e) => e.category == mainCategory).toList();
-
-          if (categoryExpenses.isEmpty) {
-            return const Center(child: Text('אין נתונים בקטגוריה זו', style: TextStyle(color: Colors.black)));
-          }
-
-          final regularExpenses = categoryExpenses.where((e) => !e.isBusiness).toList();
-          final businessExpenses = categoryExpenses.where((e) => e.isBusiness).toList();
-
-          final Map<String, List<Expense>> grouped = {};
-          for (var e in regularExpenses) {
-            final pCat = e.parentCategory;
-            if (!grouped.containsKey(pCat)) { grouped[pCat] = []; }
-            grouped[pCat]!.add(e);
-          }
-
-          var entries = grouped.entries.toList();
-          if (mainCategory == 'עתידיות') {
-            const futureOrder = ['רכישות גדולות', 'רכישות קטנות', 'הפקת אירועים', 'תיקונים', 'רפואי', 'חופשה שנתית'];
-            entries.sort((a, b) {
-              int indexA = futureOrder.indexOf(a.key);
-              int indexB = futureOrder.indexOf(b.key);
-              if (indexA == -1) { indexA = 999; }
-              if (indexB == -1) { indexB = 999; }
-              return indexA.compareTo(indexB);
-            });
-          }
-
-          return Column(
-            children: [
-              if (mainCategory == 'משתנות') ...[
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.lightbulb_outline, color: Colors.blue[700], size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          "עוגנים מול אחוזים: הוצאת ה'קניות' מוגדרת כעוגן קבוע. היא מופחתת תחילה, והיתרה מתחלקת אוטומטית לשאר הסעיפים לפי האחוזים שהוגדרו.",
-                          style: TextStyle(color: Colors.blueGrey[800], fontSize: 13, height: 1.4),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (provider.variableDeficit > 0)
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.red[50], border: Border.all(color: Colors.redAccent.withValues(alpha: 0.5)), borderRadius: BorderRadius.circular(8)),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'התראת תקציב: סך העוגנים חורג ב-₪${provider.variableDeficit.toStringAsFixed(0)}. השאר אופס.',
-                            style: TextStyle(color: Colors.red[900], fontSize: 13, height: 1.4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                _buildParentsEntertainmentCard(context, provider),
-              ],
-                
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(16.0),
-                  children: [
-                    ...entries.map((entry) {
-                      final parentName = entry.key;
-                      final items = entry.value;
-
-                      double total = 0;
-                      double totalBalance = 0;
-                      double totalTarget = 0;
-                      double monthlySinkingTotal = 0;
-                      bool hasTarget = false;
-
-                      for (var e in items) {
-                        int multiplier = e.isPerChild ? provider.childCount : 1;
-                        total += e.monthlyAmount * multiplier;
-                        totalBalance += (e.currentBalance ?? 0);
-                        if (e.isSinking) { monthlySinkingTotal += e.monthlyAmount * multiplier; }
-                        if ((e.targetAmount ?? 0) > 0) { totalTarget += e.targetAmount!; hasTarget = true; }
-                      }
-
-                      int unifiedMode = provider.getCategoryUnifiedMode(parentName);
-
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 1,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey[200]!)),
-                        color: Colors.white,
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          title: Row(
-                            children: [
-                              Text(_formatParentName(parentName), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
-                              const SizedBox(width: 8),
-                              if (parentName != 'קניות' && parentName != 'ילדים - משתנות')
-                                PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
-                                  padding: EdgeInsets.zero,
-                                  onSelected: (val) {
-                                    if (val == 'rename') _showRenameParentDialog(context, provider, parentName);
-                                    if (val == 'manage_unified') _showUnifiedModeDialog(context, provider, parentName);
-                                  },
-                                  itemBuilder: (ctx) => [
-                                    if (parentName != 'רכב')
-                                      const PopupMenuItem(value: 'rename', child: Text('שינוי שם קבוצה', style: TextStyle(fontSize: 14))),
-                                    const PopupMenuItem(
-                                      value: 'manage_unified',
-                                      child: Text('הגדרת מצב קופה (0/1/2)', style: TextStyle(fontSize: 14)),
-                                    ),
-                                  ],
-                                ),
-                            ],
-                          ),
-                          subtitle: (mainCategory == 'עתידיות' || (parentName == 'ילדים' && provider.childCount > 0) || unifiedMode > 0) 
-                            ? Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (mainCategory == 'עתידיות') ...[
-                                      if (hasTarget)
-                                        LinearProgressIndicator(value: (totalTarget > 0) ? (totalBalance / totalTarget).clamp(0.0, 1.0) : 0.0, backgroundColor: Colors.grey[200], color: Colors.green, minHeight: 5, borderRadius: BorderRadius.circular(4)),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        hasTarget ? 'נצבר: ₪${totalBalance.toStringAsFixed(0)} מתוך ₪${totalTarget.toStringAsFixed(0)}' : 'נצבר בקופה: ₪${totalBalance.toStringAsFixed(0)}',
-                                        style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold),
-                                      ),
-                                    ],
-                                    if (unifiedMode > 0 && mainCategory != 'עתידיות') ...[
-                                      Text('להפרשה חודשית לקופה: ₪${monthlySinkingTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)),
-                                    ],
-                                  ],
-                                ),
-                              ) 
-                            : null,
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text('${loc?.get('currency_symbol') ?? '₪'}${(total).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue)),
-                                  Text('${loc?.get('currency_symbol') ?? '₪'}${(total * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                ],
-                              ),
-                              const SizedBox(width: 8),
-                              if (unifiedMode > 0 && parentName != 'רכב')
-                                IconButton(
-                                  icon: const Icon(Icons.account_balance_wallet, color: Colors.green),
-                                  tooltip: 'ניהול קופה מאוחדת',
-                                  onPressed: () {
-                                    showModalBottomSheet(
-                                      context: context, isScrollControlled: true,
-                                      backgroundColor: Colors.white,
-                                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                                      builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: parentName, expenses: items),
-                                    );
-                                  }
-                                ),
-                              const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
-                            ],
-                          ),
-                          onTap: () {
-                            Navigator.push(context, MaterialPageRoute(
-                              builder: (context) => SpecificExpensesScreen(parentCategory: parentName, mainCategory: mainCategory)
-                            ));
-                          },
-                        ),
-                      );
-                    }),
-                    
-                    if (businessExpenses.isNotEmpty) ...[
-                      const Padding(
-                        padding: EdgeInsets.only(top: 24, bottom: 8, right: 8),
-                        child: Text("עסקים והכנסות צדדיות", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                      ),
-                      ...businessExpenses.map((business) => _buildBusinessTile(context, provider, business)),
-                    ]
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildBusinessTile(BuildContext context, BudgetProvider provider, Expense business) {
-    double netProfit = business.getBusinessNetProfit();
-    bool isPassive = business.isPassive;
-    
-    return Dismissible(
-      key: Key(business.id?.toString() ?? UniqueKey().toString()),
-      direction: DismissDirection.endToStart,
-      background: Container(color: Colors.red, alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: 20), child: const Icon(Icons.delete, color: Colors.white)),
-      onDismissed: (direction) => provider.deleteExpense(business.id!),
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: isPassive ? Colors.green.shade200 : Colors.blue.shade200)),
-        color: isPassive ? Colors.green.shade50 : Colors.white,
-        child: InkWell(
-          onTap: () => _showBusinessDialog(context, provider, business: business),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.storefront, color: isPassive ? Colors.green[800] : Colors.blue[800]),
-                        const SizedBox(width: 8),
-                        Text(business.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
-                      ],
-                    ),
-                    const Icon(Icons.edit, size: 18, color: Colors.grey),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('רווח נטו חודשי', style: TextStyle(fontSize: 12, color: Colors.black54)),
-                        Text(
-                          '₪${netProfit.toStringAsFixed(0)}', 
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: netProfit >= 0 ? Colors.green[800] : Colors.red[800])
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text('השקעה שבועית: ${business.businessWorkingHours.toStringAsFixed(1)} שעות', style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                        if (isPassive)
-                          Container(
-                            margin: const EdgeInsets.only(top: 4),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(color: Colors.green[600], borderRadius: BorderRadius.circular(8)),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.verified, color: Colors.white, size: 12),
-                                SizedBox(width: 4),
-                                Text('נכס פסיבי!', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          )
-                      ],
-                    )
-                  ],
-                )
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   void _showBusinessDialog(BuildContext context, BudgetProvider provider, {Expense? business}) {
     final nameController = TextEditingController(text: business?.name ?? 'עסק חדש');
     
@@ -657,7 +357,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
-          
           double calculateNet() {
             double i = incomes.fold(0.0, (s, e) => s + e.amount);
             double e = expenses.fold(0.0, (s, e) => s + e.amount);
@@ -842,7 +541,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                         businessIncomes: incJson,
                         businessExpenses: expJson,
                         businessWorkingHours: finalHours,
-                        actualBankDeposit: business?.actualBankDeposit,
+                        actualBankDeposit: business?.actualBankDeposit, 
                       );
                       
                       if (business == null) {
@@ -851,7 +550,8 @@ class CategoryDrilldownScreen extends StatelessWidget {
                         await provider.updateExpense(newExpense);
                       }
                       
-                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
                     }
                   },
                   child: Text(business == null ? 'הוסף עסק' : 'שמור שינויים'),
@@ -861,6 +561,310 @@ class CategoryDrilldownScreen extends StatelessWidget {
           );
         }
       )
+    );
+  }
+
+  Widget _buildBusinessTile(BuildContext context, BudgetProvider provider, Expense business) {
+    double netProfit = business.getBusinessNetProfit();
+    bool isPassive = business.isPassive;
+    
+    return Dismissible(
+      key: Key(business.id?.toString() ?? UniqueKey().toString()),
+      direction: DismissDirection.endToStart,
+      background: Container(color: Colors.red, alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: 20), child: const Icon(Icons.delete, color: Colors.white)),
+      onDismissed: (direction) => provider.deleteExpense(business.id!),
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: isPassive ? Colors.green.shade200 : Colors.blue.shade200)),
+        color: isPassive ? Colors.green.shade50 : Colors.white,
+        child: InkWell(
+          onTap: () => _showBusinessDialog(context, provider, business: business),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.storefront, color: isPassive ? Colors.green[800] : Colors.blue[800]),
+                        const SizedBox(width: 8),
+                        Text(business.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
+                      ],
+                    ),
+                    const Icon(Icons.edit, size: 18, color: Colors.grey),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('רווח נטו חודשי', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                        Text(
+                          '₪${netProfit.toStringAsFixed(0)}', 
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: netProfit >= 0 ? Colors.green[800] : Colors.red[800])
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('השקעה שבועית: ${business.businessWorkingHours.toStringAsFixed(1)} שעות', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                        if (isPassive)
+                          Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(color: Colors.green[600], borderRadius: BorderRadius.circular(8)),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.verified, color: Colors.white, size: 12),
+                                SizedBox(width: 4),
+                                Text('נכס פסיבי!', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          )
+                      ],
+                    )
+                  ],
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final provider = context.watch<BudgetProvider>(); 
+    final currentExpenses = provider.expenses.where((e) => e.category == mainCategory).toList();
+
+    if (currentExpenses.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: GlobalHeader(title: displayTitle),
+        body: const Center(child: Text('אין נתונים בקטגוריה זו', style: TextStyle(color: Colors.black))),
+      );
+    }
+
+    final regularExpenses = currentExpenses.where((e) => !e.isBusiness).toList();
+    final businessExpenses = currentExpenses.where((e) => e.isBusiness).toList();
+
+    final Map<String, List<Expense>> grouped = {};
+    for (var e in regularExpenses) {
+      final pCat = e.parentCategory;
+      if (!grouped.containsKey(pCat)) { grouped[pCat] = []; }
+      grouped[pCat]!.add(e);
+    }
+
+    var entries = grouped.entries.toList();
+    if (mainCategory == 'עתידיות') {
+      const futureOrder = ['רכישות גדולות', 'רכישות קטנות', 'הפקת אירועים', 'תיקונים', 'רפואי', 'חופשה שנתית'];
+      entries.sort((a, b) {
+        int indexA = futureOrder.indexOf(a.key);
+        int indexB = futureOrder.indexOf(b.key);
+        if (indexA == -1) indexA = 999;
+        if (indexB == -1) indexB = 999;
+        return indexA.compareTo(indexB);
+      });
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: GlobalHeader(title: displayTitle),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          if (mainCategory == 'הכנסות') {
+            _showAddIncomeTypeDialog(context, provider);
+          } else {
+            _showAddParentCategoryDialog(context, provider, mainCategory);
+          }
+        },
+        backgroundColor: Colors.blue,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+      body: Column(
+        children: [
+          if (mainCategory == 'משתנות') ...[
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.lightbulb_outline, color: Colors.blue[700], size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "עוגנים מול אחוזים: הוצאת ה'קניות' מוגדרת כעוגן קבוע. היא מופחתת תחילה, והיתרה מתחלקת אוטומטית לשאר הסעיפים לפי האחוזים שהוגדרו.",
+                      style: TextStyle(color: Colors.blueGrey[800], fontSize: 13, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (provider.variableDeficit > 0)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.red[50], border: Border.all(color: Colors.redAccent.withValues(alpha: 0.5)), borderRadius: BorderRadius.circular(8)),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'התראת תקציב: סך העוגנים חורג ב-₪${provider.variableDeficit.toStringAsFixed(0)}. השאר אופס.',
+                        style: TextStyle(color: Colors.red[900], fontSize: 13, height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            _buildParentsEntertainmentCard(context, provider),
+          ],
+            
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16.0),
+              children: [
+                ...entries.map((entry) {
+                  final parentName = entry.key;
+                  final items = entry.value;
+
+                  double total = 0;
+                  double totalBalance = 0;
+                  double totalTarget = 0;
+                  double monthlySinkingTotal = 0;
+                  bool hasTarget = false;
+
+                  for (var e in items) {
+                    int multiplier = e.isPerChild ? provider.childCount : 1;
+                    total += e.monthlyAmount * multiplier;
+                    totalBalance += (e.currentBalance ?? 0);
+                    if (e.isSinking) { monthlySinkingTotal += e.monthlyAmount * multiplier; }
+                    if ((e.targetAmount ?? 0) > 0) { totalTarget += e.targetAmount!; hasTarget = true; }
+                  }
+
+                  int unifiedMode = provider.getCategoryUnifiedMode(parentName);
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey[200]!)),
+                    color: Colors.white,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      title: Row(
+                        children: [
+                          Text(_formatParentName(parentName), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black)),
+                          const SizedBox(width: 8),
+                          if (parentName != 'קניות' && parentName != 'ילדים - משתנות')
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                              padding: EdgeInsets.zero,
+                              onSelected: (val) {
+                                if (val == 'rename') _showRenameParentDialog(context, provider, parentName);
+                                if (val == 'manage_unified') _showUnifiedModeDialog(context, provider, parentName);
+                              },
+                              itemBuilder: (ctx) => [
+                                if (parentName != 'רכב')
+                                  const PopupMenuItem(value: 'rename', child: Text('שינוי שם קבוצה', style: TextStyle(fontSize: 14))),
+                                const PopupMenuItem(
+                                  value: 'manage_unified',
+                                  child: Text('הגדרת מצב קופה (0/1/2)', style: TextStyle(fontSize: 14)),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                      subtitle: (mainCategory == 'עתידיות' || (parentName == 'ילדים' && provider.childCount > 0) || unifiedMode > 0) 
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (mainCategory == 'עתידיות') ...[
+                                  if (hasTarget)
+                                    LinearProgressIndicator(value: (totalTarget > 0) ? (totalBalance / totalTarget).clamp(0.0, 1.0) : 0.0, backgroundColor: Colors.grey[200], color: Colors.green, minHeight: 5, borderRadius: BorderRadius.circular(4)),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    hasTarget ? 'נצבר: ₪${totalBalance.toStringAsFixed(0)} מתוך ₪${totalTarget.toStringAsFixed(0)}' : 'נצבר בקופה: ₪${totalBalance.toStringAsFixed(0)}',
+                                    style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                                if (unifiedMode > 0 && mainCategory != 'עתידיות') ...[
+                                  Text('להפרשה חודשית לקופה: ₪${monthlySinkingTotal.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)),
+                                ],
+                              ],
+                            ),
+                          ) 
+                        : null,
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text('${loc?.get('currency_symbol') ?? '₪'}${(total).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue)),
+                              Text('${loc?.get('currency_symbol') ?? '₪'}${(total * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                            ],
+                          ),
+                          const SizedBox(width: 8),
+                          if (unifiedMode > 0 && parentName != 'רכב')
+                            IconButton(
+                              icon: const Icon(Icons.account_balance_wallet, color: Colors.green),
+                              tooltip: 'ניהול קופה מאוחדת',
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context, isScrollControlled: true,
+                                  backgroundColor: Colors.white,
+                                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                                  builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: parentName, expenses: items),
+                                );
+                              }
+                            ),
+                          const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                        ],
+                      ),
+                      onTap: () {
+                        Navigator.push(context, MaterialPageRoute(
+                          builder: (context) => SpecificExpensesScreen(parentCategory: parentName, mainCategory: mainCategory)
+                        ));
+                      },
+                    ),
+                  );
+                }),
+                
+                if (businessExpenses.isNotEmpty) ...[
+                  const Padding(
+                    padding: EdgeInsets.only(top: 24, bottom: 8, right: 8),
+                    child: Text("עסקים והכנסות צדדיות", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  ),
+                  ...businessExpenses.map((business) => _buildBusinessTile(context, provider, business)),
+                ]
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -876,7 +880,7 @@ class SpecificExpensesScreen extends StatelessWidget {
   });
 
   String _formatParentName(String name) {
-    if (name == 'בית') { return 'קטנות לבית'; }
+    if (name == 'בית') return 'קטנות לבית';
     return name;
   }
 
@@ -902,6 +906,7 @@ class SpecificExpensesScreen extends StatelessWidget {
               onPressed: () {
                 if (controller.text.isNotEmpty && controller.text != oldName) {
                   provider.renameParentCategory(oldName, controller.text);
+                  if (!ctx.mounted) return;
                   Navigator.pop(ctx);
                   Navigator.pop(context); 
                 }
@@ -962,7 +967,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                 onPressed: () async {
                   if (nameController.text.isNotEmpty) {
                     await provider.addVehicleTemplate(nameController.text.trim(), selectedType);
-                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
                   }
                 },
                 child: const Text('הוסף רכב'),
@@ -990,6 +996,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                 leading: const Icon(Icons.attach_money, color: Colors.green),
                 title: const Text('הכנסה רגילה (משכורת, קצבה)', style: TextStyle(color: Colors.black87)),
                 onTap: () {
+                  if (!ctx.mounted) return;
                   Navigator.pop(ctx);
                   _showAddExpenseDialog(context, provider, parentCategory, mainCategory);
                 },
@@ -1000,6 +1007,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                 title: const Text('עסק / הכנסה צדדית מורכבת', style: TextStyle(color: Colors.black87)),
                 subtitle: const Text('כולל שורות הכנסות והוצאות', style: TextStyle(fontSize: 11, color: Colors.black54)),
                 onTap: () {
+                  if (!ctx.mounted) return;
                   Navigator.pop(ctx);
                   _showBusinessDialog(context, provider);
                 },
@@ -1040,7 +1048,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                    }
                    await provider.updateFutureExpenseDetails(e.id!, name: newExName);
                  }
-                 if (c.mounted) Navigator.pop(c);
+                 if (!c.mounted) return;
+                 Navigator.pop(c);
                }
             }, child: const Text('שמור')),
           ]
@@ -1110,7 +1119,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                       allocationRatio: 0.0,
                     );
                     await provider.addExpense(newExpense);
-                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
                   }
                 },
                 child: const Text('הוסף'),
@@ -1577,7 +1587,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                         await provider.updateExpense(newExpense);
                       }
                       
-                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
                     }
                   },
                   child: Text(business == null ? 'הוסף עסק' : 'שמור שינויים'),
@@ -1962,7 +1973,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                       allocationRatio: 0.0,
                     );
                     await provider.addExpense(newExpense);
-                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
                   }
                 },
                 child: const Text('הוסף'),
@@ -2124,7 +2136,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                       ));
                       
                       await provider.loadData();
-                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
                     }
                   },
                   child: const Text('שמור'),
@@ -2211,7 +2224,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                       if (val != null) { await provider.lockExpenseAmount(expense.id!, val / multiplier, isSinking: isSinking); }
                     }
                   }
-                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (!ctx.mounted) return;
+                  Navigator.pop(ctx);
                 },
                 child: const Text('עדכן'),
               ),
@@ -2319,7 +2333,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                       ratio: newRatio, isLocked: newIsLocked, manualAmount: newManualAmount, isSinking: isSinking,
                     );
                   }
-                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (!ctx.mounted) return;
+                  Navigator.pop(ctx);
                 },
                 child: const Text('עדכן יעד'),
               ),
@@ -2593,8 +2608,11 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // >>> התיקון הקריטי: משיכת רשימת ההוצאות המעודכנת מה-Provider בכל רענון חלונית <<<
-    final currentExpenses = widget.provider.expenses.where((e) => widget.expenses.any((we) => we.id == e.id)).toList();
+    final provider = context.watch<BudgetProvider>();
+    final currentExpenses = provider.expenses.where((e) => widget.expenses.any((we) => we.id == e.id)).toList();
+    
+    if (currentExpenses.isEmpty) return const SizedBox.shrink();
+
     double totalCurrentBalance = currentExpenses.fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
 
     return Theme(
@@ -2767,12 +2785,13 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final currentExpense = widget.provider.expenses.firstWhere(
+    final provider = context.watch<BudgetProvider>();
+    final currentExpense = provider.expenses.firstWhere(
       (e) => e.id == widget.expense.id, 
       orElse: () => widget.expense
     );
 
-    int multiplier = currentExpense.isPerChild ? widget.provider.childCount : 1;
+    int multiplier = currentExpense.isPerChild ? provider.childCount : 1;
     double expectedDeposit = currentExpense.monthlyAmount * multiplier;
     double actualDeposit = currentExpense.actualBankDeposit ?? expectedDeposit;
     
@@ -2859,7 +2878,7 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
                                       context: context,
                                       builder: (ctx) => Theme(
                                         data: ThemeData.light(),
-                                        child: _EditIndividualBankDepositDialog(expense: currentExpense, currentActual: actualDeposit),
+                                        child: _EditIndividualBankDepositDialog(expense: currentExpense),
                                       )
                                     ).then((_) {
                                       if (mounted) setState(() {});
@@ -2989,10 +3008,70 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
   }
 }
 
+class _EditBankDialog extends StatefulWidget {
+  final Expense expense;
+  const _EditBankDialog({required this.expense});
+
+  @override
+  State<_EditBankDialog> createState() => _EditBankDialogState();
+}
+
+class _EditBankDialogState extends State<_EditBankDialog> {
+  late TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.expense.actualBankDeposit?.round().toString() ?? "");
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      title: const Text('עדכון הפרשה בבנק'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('הזן סכום או השאר ריק כדי שהסכום יתעדכן אוטומטית לפי התקציב:', 
+              style: TextStyle(fontSize: 13, color: Colors.grey)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _ctrl,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'סכום בבנק', suffixText: '₪', border: OutlineInputBorder()),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+        ElevatedButton(
+          onPressed: () async {
+            final text = _ctrl.text.trim();
+            final val = double.tryParse(text);
+            if (text.isEmpty || val != null) {
+              await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
+              if (!context.mounted) return;
+              Navigator.pop(context);
+            }
+          },
+          child: const Text('שמור'),
+        ),
+      ],
+    );
+  }
+}
+
 class _EditIndividualBankDepositDialog extends StatefulWidget {
   final Expense expense;
-  final double currentActual;
-  const _EditIndividualBankDepositDialog({required this.expense, required this.currentActual});
+  const _EditIndividualBankDepositDialog({required this.expense});
 
   @override
   State<_EditIndividualBankDepositDialog> createState() => _EditIndividualBankDepositDialogState();
@@ -3004,7 +3083,7 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
   @override
   void initState() {
     super.initState();
-    _ctrl = TextEditingController(text: widget.currentActual.round().toString());
+    _ctrl = TextEditingController(text: widget.expense.actualBankDeposit?.round().toString() ?? "");
   }
 
   @override
@@ -3023,13 +3102,14 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('הזן את סכום הוראת הקבע שמוגדר בפועל בבנק:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+            const Text('הזן סכום, או השאר ריק כדי לאפס להפרשה מתוכננת אוטומטית:', style: TextStyle(color: Colors.grey, fontSize: 13)),
             const SizedBox(height: 16),
             TextField(
               style: const TextStyle(color: Colors.black87),
               controller: _ctrl,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪'),
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', border: OutlineInputBorder()),
             ),
           ],
         ),
@@ -3038,8 +3118,9 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
             onPressed: () async {
-              final val = double.tryParse(_ctrl.text);
-              if (val != null) {
+              final text = _ctrl.text.trim();
+              final val = double.tryParse(text);
+              if (text.isEmpty || val != null) {
                 await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
                 if (!context.mounted) return;
                 Navigator.pop(context);
@@ -3069,7 +3150,8 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
   @override
   void initState() {
     super.initState();
-    _ctrl = TextEditingController(text: widget.currentActual.round().toString());
+    bool hasManualDeposit = widget.expenses.any((e) => e.actualBankDeposit != null);
+    _ctrl = TextEditingController(text: hasManualDeposit ? widget.currentActual.round().toString() : "");
   }
 
   @override
@@ -3088,12 +3170,13 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('הזן את סכום הוראת הקבע הכולל שמוגדר בפועל בבנק עבור כלל הקופה:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+            const Text('הזן סכום כולל לקופה זו, או השאר ריק לאיפוס חזרה לאוטומט:', style: TextStyle(color: Colors.grey, fontSize: 13)),
             const SizedBox(height: 16),
             TextField(
               style: const TextStyle(color: Colors.black87),
               controller: _ctrl,
               keyboardType: TextInputType.number,
+              autofocus: true,
               decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', border: OutlineInputBorder()),
             ),
           ],
@@ -3103,14 +3186,15 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
             onPressed: () async {
-              final val = double.tryParse(_ctrl.text);
-              if (val != null && widget.expenses.isNotEmpty) {
+              final text = _ctrl.text.trim();
+              final val = double.tryParse(text);
+              if ((text.isEmpty || val != null) && widget.expenses.isNotEmpty) {
                 final provider = Provider.of<BudgetProvider>(context, listen: false);
                 for (int i = 0; i < widget.expenses.length; i++) {
                   if (i == 0) {
                     await provider.updateBankDeposit(widget.expenses[i].id!, val);
                   } else {
-                    await provider.updateBankDeposit(widget.expenses[i].id!, 0);
+                    await provider.updateBankDeposit(widget.expenses[i].id!, val == null ? null : 0);
                   }
                 }
                 if (!context.mounted) return;

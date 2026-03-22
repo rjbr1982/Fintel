@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added actualBankDeposit and copyWith for Sinking Funds Control)
+// 🔒 STATUS: EDITED (Added clearBankDeposit flag to copyWith for Nullification support)
 // ignore_for_file: constant_identifier_names
 
 import 'dart:convert';
@@ -155,6 +155,7 @@ class Expense {
     bool? isCustom,
     String? date,
     double? actualBankDeposit,
+    bool clearBankDeposit = false, // 🔒 תמיכה באיפוס הבנק לדינמי
   }) {
     return Expense(
       id: id ?? this.id,
@@ -180,7 +181,8 @@ class Expense {
       businessWorkingHours: businessWorkingHours ?? this.businessWorkingHours,
       isCustom: isCustom ?? this.isCustom,
       date: date ?? this.date,
-      actualBankDeposit: actualBankDeposit ?? this.actualBankDeposit,
+      // אם הדגל דלוק - מחזירים null (איפוס), אחרת לוקחים את הערך החדש או הקיים
+      actualBankDeposit: clearBankDeposit ? null : (actualBankDeposit ?? this.actualBankDeposit),
     );
   }
 

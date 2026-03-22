@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Implemented Bank Deposit freeze mechanism on all budget modifiers)
+// 🔒 STATUS: EDITED (Fixed Bank Deposit Nullification Logic)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -605,7 +605,7 @@ class BudgetProvider with ChangeNotifier {
                       lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
                       isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: e.isCustom,
                       isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
-                      actualBankDeposit: e.actualBankDeposit,
+                      actualBankDeposit: e.actualBankDeposit, // PRESERVE BANK DEPOSIT
                     );
                     await DatabaseHelper.instance.updateExpense(updated);
                     localExp[i] = updated; 
@@ -770,7 +770,7 @@ class BudgetProvider with ChangeNotifier {
               lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
               isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: newIsCustom,
               isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
-              actualBankDeposit: e.actualBankDeposit,
+              actualBankDeposit: e.actualBankDeposit, // PRESERVE BANK DEPOSIT
             );
             await DatabaseHelper.instance.updateExpense(updated);
             changed = true;
@@ -866,7 +866,7 @@ class BudgetProvider with ChangeNotifier {
             isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
             isCustom: e.isCustom,
             isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
-            actualBankDeposit: e.actualBankDeposit, 
+            actualBankDeposit: e.actualBankDeposit, // PRESERVE BANK DEPOSIT
           );
           await DatabaseHelper.instance.updateExpense(updatedExpense);
           _expenses[i] = updatedExpense;
@@ -1047,7 +1047,7 @@ class BudgetProvider with ChangeNotifier {
     }
   }
 
-  // >>> הפונקציה הכללית המשמשת לעדכונים חופשיים (Smart Edit Dialog) <<<
+  // >>> הפונקציה הכללית המשמשת לעדכונים חופשיים <<<
   Future<void> updateExpense(Expense expense) async {
     if (expense.id != null) {
       final index = _expenses.indexWhere((e) => e.id == expense.id);
@@ -1072,10 +1072,14 @@ class BudgetProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateBankDeposit(int expenseId, double actualBankDeposit) async {
+  // 🔒 פונקציית עדכון הבנק תומכת כעת בערך Null כדי לאפשר איפוס חזרה לדינמי
+  Future<void> updateBankDeposit(int expenseId, double? actualBankDeposit) async {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index != -1) {
-      final updated = _expenses[index].copyWith(actualBankDeposit: actualBankDeposit);
+      final updated = _expenses[index].copyWith(
+        actualBankDeposit: actualBankDeposit,
+        clearBankDeposit: actualBankDeposit == null // שימוש בדגל החדש ממודל הנתונים
+      );
       await DatabaseHelper.instance.updateExpense(updated);
       _expenses[index] = updated; 
       notifyListeners(); 
