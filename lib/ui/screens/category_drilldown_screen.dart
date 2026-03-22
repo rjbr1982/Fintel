@@ -1,10 +1,9 @@
-// 🔒 STATUS: EDITED (Fixed 0 Gap Precision, Light BottomSheets, Fixed Class Merging Bug)
+// 🔒 STATUS: EDITED (UI reads and writes via Provider for immediate Bank Deposit update)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
-import '../../data/database_helper.dart'; // הוסף עבור דיאלוגי הבנק
 import '../../utils/app_localizations.dart';
 import '../widgets/global_header.dart';
 import 'salary_engine_screen.dart';
@@ -1559,7 +1558,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                         id: business?.id,
                         name: nameController.text.trim(),
                         category: 'הכנסות',
-                        parentCategory: parentCategory, 
+                        parentCategory: mainCategory, 
                         monthlyAmount: 0, 
                         isLocked: false,
                         isCustom: true,
@@ -3036,8 +3035,8 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
             onPressed: () async {
               final val = double.tryParse(_ctrl.text);
               if (val != null) {
-                final updatedExpense = widget.expense.copyWith(actualBankDeposit: val);
-                await DatabaseHelper.instance.updateExpense(updatedExpense);
+                // >>> הקריאה תוקנה לשימוש ב-Provider במקום DatabaseHelper <<<
+                await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
                 if (!context.mounted) return;
                 Navigator.pop(context);
               }
@@ -3102,11 +3101,13 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
             onPressed: () async {
               final val = double.tryParse(_ctrl.text);
               if (val != null && widget.expenses.isNotEmpty) {
+                final provider = Provider.of<BudgetProvider>(context, listen: false);
                 for (int i = 0; i < widget.expenses.length; i++) {
                   if (i == 0) {
-                    await DatabaseHelper.instance.updateExpense(widget.expenses[i].copyWith(actualBankDeposit: val));
+                    // >>> הקריאה תוקנה לשימוש ב-Provider במקום DatabaseHelper <<<
+                    await provider.updateBankDeposit(widget.expenses[i].id!, val);
                   } else {
-                    await DatabaseHelper.instance.updateExpense(widget.expenses[i].copyWith(actualBankDeposit: 0));
+                    await provider.updateBankDeposit(widget.expenses[i].id!, 0);
                   }
                 }
                 if (!context.mounted) return;

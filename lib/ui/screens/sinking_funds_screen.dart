@@ -1,9 +1,8 @@
-// 🔒 STATUS: EDITED (Fixed Gap 0 Bug and Added Expected Deposit to BottomSheets)
+// 🔒 STATUS: EDITED (Removed unused DatabaseHelper import)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
-import '../../data/database_helper.dart'; 
 import '../widgets/global_header.dart';
 import 'smart_withdrawals_screen.dart'; 
 
@@ -889,8 +888,7 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
             onPressed: () async {
               final val = double.tryParse(_ctrl.text);
               if (val != null) {
-                final updatedExpense = widget.expense.copyWith(actualBankDeposit: val);
-                await DatabaseHelper.instance.updateExpense(updatedExpense);
+                await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
                 if (!context.mounted) return;
                 Navigator.pop(context);
               }
@@ -955,11 +953,12 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
             onPressed: () async {
               final val = double.tryParse(_ctrl.text);
               if (val != null && widget.expenses.isNotEmpty) {
+                final provider = Provider.of<BudgetProvider>(context, listen: false);
                 for (int i = 0; i < widget.expenses.length; i++) {
                   if (i == 0) {
-                    await DatabaseHelper.instance.updateExpense(widget.expenses[i].copyWith(actualBankDeposit: val));
+                    await provider.updateBankDeposit(widget.expenses[i].id!, val);
                   } else {
-                    await DatabaseHelper.instance.updateExpense(widget.expenses[i].copyWith(actualBankDeposit: 0));
+                    await provider.updateBankDeposit(widget.expenses[i].id!, 0);
                   }
                 }
                 if (!context.mounted) return;

@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Integrated Business Net Profit and Passive Income Target Reduction)
+// 🔒 STATUS: EDITED (Added updateBankDeposit to update UI state immediately)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -1002,6 +1002,17 @@ class BudgetProvider with ChangeNotifier {
     }
   }
 
+  // >>> הוספת הפונקציה החסרה לעדכון בנק ורענון מיידי של ה-UI <<<
+  Future<void> updateBankDeposit(int expenseId, double actualBankDeposit) async {
+    final index = _expenses.indexWhere((e) => e.id == expenseId);
+    if (index != -1) {
+      final updated = _expenses[index].copyWith(actualBankDeposit: actualBankDeposit);
+      await DatabaseHelper.instance.updateExpense(updated);
+      _expenses[index] = updated; // עדכון בזיכרון
+      notifyListeners(); // קריאה חיונית לעדכון הממשק מיידית
+    }
+  }
+
   void _recalculateVariableExpenses() {
     final totalPot = totalVariableExpenses; 
     final variableIndices = <int>[];
@@ -1104,6 +1115,7 @@ class BudgetProvider with ChangeNotifier {
       isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
       isCustom: e.isCustom,
       isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
+      actualBankDeposit: e.actualBankDeposit, // שומרים על הערך שקיים גם ברענון הכללי
     );
   }
 
@@ -1151,6 +1163,7 @@ class BudgetProvider with ChangeNotifier {
           isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
           isCustom: e.isCustom,
           isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
+          actualBankDeposit: e.actualBankDeposit,
         );
         await DatabaseHelper.instance.updateExpense(updated);
       }
@@ -1169,7 +1182,7 @@ class BudgetProvider with ChangeNotifier {
       if (e.isBusiness) {
         double net = e.getBusinessNetProfit();
         if (!e.isPassive) {
-          sum += net; // הוספת רווח אקטיבי, או קיזוז במקרה של הפסד (net < 0)
+          sum += net; 
         }
       } else {
         sum += e.monthlyAmount;
@@ -1246,6 +1259,7 @@ class BudgetProvider with ChangeNotifier {
       isDynamicSalary: expense.isDynamicSalary, salaryStartDate: expense.salaryStartDate,
       isCustom: expense.isCustom,
       isBusiness: expense.isBusiness, businessIncomes: expense.businessIncomes, businessExpenses: expense.businessExpenses, businessWorkingHours: expense.businessWorkingHours,
+      actualBankDeposit: expense.actualBankDeposit,
     );
     await DatabaseHelper.instance.updateExpense(updated);
   }
