@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added updateBankDeposit to update UI state immediately)
+// 🔒 STATUS: EDITED (Fixed Bank Deposit overwrite bug - Preserved actualBankDeposit in all updates)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -497,6 +497,7 @@ class BudgetProvider with ChangeNotifier {
       isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
       isCustom: old.isCustom,
       isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
+      actualBankDeposit: old.actualBankDeposit, // PRESERVE BANK DEPOSIT
     );
 
     await DatabaseHelper.instance.updateExpense(updated);
@@ -598,6 +599,7 @@ class BudgetProvider with ChangeNotifier {
                       lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
                       isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: e.isCustom,
                       isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
+                      actualBankDeposit: e.actualBankDeposit, // PRESERVE BANK DEPOSIT
                     );
                     await DatabaseHelper.instance.updateExpense(updated);
                     localExp[i] = updated; 
@@ -762,6 +764,7 @@ class BudgetProvider with ChangeNotifier {
               lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
               isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: newIsCustom,
               isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
+              actualBankDeposit: e.actualBankDeposit, // PRESERVE BANK DEPOSIT
             );
             await DatabaseHelper.instance.updateExpense(updated);
             changed = true;
@@ -857,6 +860,7 @@ class BudgetProvider with ChangeNotifier {
             isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
             isCustom: e.isCustom,
             isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
+            actualBankDeposit: e.actualBankDeposit, // PRESERVE BANK DEPOSIT
           );
           await DatabaseHelper.instance.updateExpense(updatedExpense);
           _expenses[i] = updatedExpense;
@@ -902,6 +906,7 @@ class BudgetProvider with ChangeNotifier {
         isDynamicSalary: isDynamic, salaryStartDate: startDate ?? old.salaryStartDate,
         isCustom: old.isCustom,
         isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
+        actualBankDeposit: old.actualBankDeposit, // PRESERVE BANK DEPOSIT
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
@@ -939,6 +944,7 @@ class BudgetProvider with ChangeNotifier {
         isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
         isCustom: old.isCustom,
         isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
+        actualBankDeposit: old.actualBankDeposit, // PRESERVE BANK DEPOSIT
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
@@ -959,6 +965,7 @@ class BudgetProvider with ChangeNotifier {
         isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
         isCustom: old.isCustom,
         isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
+        actualBankDeposit: old.actualBankDeposit, // PRESERVE BANK DEPOSIT
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
@@ -977,6 +984,7 @@ class BudgetProvider with ChangeNotifier {
         isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
         isCustom: old.isCustom,
         isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
+        actualBankDeposit: old.actualBankDeposit, // PRESERVE BANK DEPOSIT
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
@@ -997,6 +1005,7 @@ class BudgetProvider with ChangeNotifier {
         isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
         isCustom: old.isCustom,
         isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
+        actualBankDeposit: old.actualBankDeposit, // PRESERVE BANK DEPOSIT
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }

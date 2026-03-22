@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (UI reads and writes via Provider for immediate Bank Deposit update)
+// 🔒 STATUS: EDITED (Preserved actualBankDeposit when creating new Expense object in Edit and Business dialogs)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -842,6 +842,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                         businessIncomes: incJson,
                         businessExpenses: expJson,
                         businessWorkingHours: finalHours,
+                        actualBankDeposit: business?.actualBankDeposit, // PRESERVE BANK DEPOSIT
                       );
                       
                       if (business == null) {
@@ -1567,6 +1568,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                         businessIncomes: incJson,
                         businessExpenses: expJson,
                         businessWorkingHours: finalHours,
+                        actualBankDeposit: business?.actualBankDeposit, // PRESERVE BANK DEPOSIT
                       );
                       
                       if (business == null) {
@@ -2118,6 +2120,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                         isLocked: expense.isLocked, manualAmount: expense.manualAmount, date: expense.date,
                         isDynamicSalary: isDynamic, salaryStartDate: startDateStr, targetAmount: expense.targetAmount, currentBalance: expense.currentBalance, isCustom: expense.isCustom,
                         isBusiness: expense.isBusiness, businessIncomes: expense.businessIncomes, businessExpenses: expense.businessExpenses, businessWorkingHours: expense.businessWorkingHours,
+                        actualBankDeposit: expense.actualBankDeposit, // PRESERVE BANK DEPOSIT
                       ));
                       
                       await provider.loadData();
@@ -3035,7 +3038,6 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
             onPressed: () async {
               final val = double.tryParse(_ctrl.text);
               if (val != null) {
-                // >>> הקריאה תוקנה לשימוש ב-Provider במקום DatabaseHelper <<<
                 await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
                 if (!context.mounted) return;
                 Navigator.pop(context);
@@ -3104,7 +3106,6 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
                 final provider = Provider.of<BudgetProvider>(context, listen: false);
                 for (int i = 0; i < widget.expenses.length; i++) {
                   if (i == 0) {
-                    // >>> הקריאה תוקנה לשימוש ב-Provider במקום DatabaseHelper <<<
                     await provider.updateBankDeposit(widget.expenses[i].id!, val);
                   } else {
                     await provider.updateBankDeposit(widget.expenses[i].id!, 0);

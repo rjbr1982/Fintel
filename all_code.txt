@@ -1501,7 +1501,7 @@ class AssetProvider with ChangeNotifier {
 
 FILE: C:\Projects\dohaham\lib\providers\budget_provider.dart
 -----------------------
-// 🔒 STATUS: EDITED (Integrated Business Net Profit and Passive Income Target Reduction)
+// 🔒 STATUS: EDITED (Added updateBankDeposit to update UI state immediately)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -2505,6 +2505,17 @@ class BudgetProvider with ChangeNotifier {
     }
   }
 
+  // >>> הוספת הפונקציה החסרה לעדכון בנק ורענון מיידי של ה-UI <<<
+  Future<void> updateBankDeposit(int expenseId, double actualBankDeposit) async {
+    final index = _expenses.indexWhere((e) => e.id == expenseId);
+    if (index != -1) {
+      final updated = _expenses[index].copyWith(actualBankDeposit: actualBankDeposit);
+      await DatabaseHelper.instance.updateExpense(updated);
+      _expenses[index] = updated; // עדכון בזיכרון
+      notifyListeners(); // קריאה חיונית לעדכון הממשק מיידית
+    }
+  }
+
   void _recalculateVariableExpenses() {
     final totalPot = totalVariableExpenses; 
     final variableIndices = <int>[];
@@ -2607,6 +2618,7 @@ class BudgetProvider with ChangeNotifier {
       isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
       isCustom: e.isCustom,
       isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
+      actualBankDeposit: e.actualBankDeposit, // שומרים על הערך שקיים גם ברענון הכללי
     );
   }
 
@@ -2654,6 +2666,7 @@ class BudgetProvider with ChangeNotifier {
           isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
           isCustom: e.isCustom,
           isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
+          actualBankDeposit: e.actualBankDeposit,
         );
         await DatabaseHelper.instance.updateExpense(updated);
       }
@@ -2672,7 +2685,7 @@ class BudgetProvider with ChangeNotifier {
       if (e.isBusiness) {
         double net = e.getBusinessNetProfit();
         if (!e.isPassive) {
-          sum += net; // הוספת רווח אקטיבי, או קיזוז במקרה של הפסד (net < 0)
+          sum += net; 
         }
       } else {
         sum += e.monthlyAmount;
@@ -2749,6 +2762,7 @@ class BudgetProvider with ChangeNotifier {
       isDynamicSalary: expense.isDynamicSalary, salaryStartDate: expense.salaryStartDate,
       isCustom: expense.isCustom,
       isBusiness: expense.isBusiness, businessIncomes: expense.businessIncomes, businessExpenses: expense.businessExpenses, businessWorkingHours: expense.businessWorkingHours,
+      actualBankDeposit: expense.actualBankDeposit,
     );
     await DatabaseHelper.instance.updateExpense(updated);
   }
@@ -4025,7 +4039,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\category_drilldown_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed 4 Linter Warnings: Deprecated Dropdown, Null assertions, and missing Business methods in SpecificExpensesScreen)
+// 🔒 STATUS: EDITED (UI reads and writes via Provider for immediate Bank Deposit update)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -4054,8 +4068,9 @@ void _showUnifiedModeDialog(BuildContext context, BudgetProvider provider, Strin
         return Theme(
           data: ThemeData.light(),
           child: AlertDialog(
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Text('תצורת קופה: $parentCat', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+            title: Text('תצורת קופה: $parentCat', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87), textAlign: TextAlign.center),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -4126,9 +4141,15 @@ class CategoryDrilldownScreen extends StatelessWidget {
       builder: (ctx) => Theme(
         data: ThemeData.light(),
         child: AlertDialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text("שינוי שם: $oldName"),
-          content: TextField(controller: controller, decoration: const InputDecoration(labelText: 'שם קבוצה חדש'), autofocus: true),
+          title: Text("שינוי שם: $oldName", style: const TextStyle(color: Colors.black87)),
+          content: TextField(
+            controller: controller, 
+            style: const TextStyle(color: Colors.black87),
+            decoration: const InputDecoration(labelText: 'שם קבוצה חדש', labelStyle: TextStyle(color: Colors.black54)), 
+            autofocus: true
+          ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ביטול")),
             ElevatedButton(
@@ -4153,9 +4174,14 @@ class CategoryDrilldownScreen extends StatelessWidget {
       builder: (ctx) => Theme(
         data: ThemeData.light(),
         child: AlertDialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('הוספת קבוצה חדשה - $mainCat'),
-          content: TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הקבוצה החדשה')),
+          title: Text('הוספת קבוצה חדשה - $mainCat', style: const TextStyle(color: Colors.black87)),
+          content: TextField(
+            controller: nameController, 
+            style: const TextStyle(color: Colors.black87),
+            decoration: const InputDecoration(labelText: 'שם הקבוצה החדשה', labelStyle: TextStyle(color: Colors.black54))
+          ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
             ElevatedButton(
@@ -4188,14 +4214,15 @@ class CategoryDrilldownScreen extends StatelessWidget {
       builder: (ctx) => Theme(
         data: ThemeData.light(),
         child: AlertDialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('מה תרצה להוסיף?', textAlign: TextAlign.center),
+          title: const Text('מה תרצה להוסיף?', textAlign: TextAlign.center, style: TextStyle(color: Colors.black87)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 leading: const Icon(Icons.attach_money, color: Colors.green),
-                title: const Text('הכנסה רגילה (משכורת, קצבה)'),
+                title: const Text('הכנסה רגילה (משכורת, קצבה)', style: TextStyle(color: Colors.black87)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showAddParentCategoryDialog(context, provider, mainCategory);
@@ -4204,8 +4231,8 @@ class CategoryDrilldownScreen extends StatelessWidget {
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.storefront, color: Colors.blue),
-                title: const Text('עסק / הכנסה צדדית מורכבת'),
-                subtitle: const Text('כולל שורות הכנסות והוצאות', style: TextStyle(fontSize: 11)),
+                title: const Text('עסק / הכנסה צדדית מורכבת', style: TextStyle(color: Colors.black87)),
+                subtitle: const Text('כולל שורות הכנסות והוצאות', style: TextStyle(fontSize: 11, color: Colors.black54)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showBusinessDialog(context, provider);
@@ -4227,11 +4254,12 @@ class CategoryDrilldownScreen extends StatelessWidget {
       builder: (ctx) => Theme(
         data: ThemeData.light(),
         child: AlertDialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('כיול רמזור בילויים', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text('כיול רמזור בילויים', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
               IconButton(
                 icon: const Icon(Icons.refresh, color: Colors.blue),
                 tooltip: 'חזור לברירת מחדל אוטומטית',
@@ -4250,13 +4278,15 @@ class CategoryDrilldownScreen extends StatelessWidget {
               TextField(
                 controller: successCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'סכום להצגת שפע (ירוק)', border: OutlineInputBorder()),
+                style: const TextStyle(color: Colors.black87),
+                decoration: const InputDecoration(labelText: 'סכום להצגת שפע (ירוק)', labelStyle: TextStyle(color: Colors.black54), border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: warningCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'סכום לאזהרה (כתום)', border: OutlineInputBorder()),
+                style: const TextStyle(color: Colors.black87),
+                decoration: const InputDecoration(labelText: 'סכום לאזהרה (כתום)', labelStyle: TextStyle(color: Colors.black54), border: OutlineInputBorder()),
               ),
             ],
           ),
@@ -4374,7 +4404,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
             return const Center(child: Text('אין נתונים בקטגוריה זו', style: TextStyle(color: Colors.black)));
           }
 
-          // פיצול בין הכנסות רגילות לעסקים במידה ואנו במסך הכנסות
           final regularExpenses = categoryExpenses.where((e) => !e.isBusiness).toList();
           final businessExpenses = categoryExpenses.where((e) => e.isBusiness).toList();
 
@@ -4449,7 +4478,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
                 child: ListView(
                   padding: const EdgeInsets.all(16.0),
                   children: [
-                    // === רשימת הכנסות/הוצאות רגילות ===
                     ...entries.map((entry) {
                       final parentName = entry.key;
                       final items = entry.value;
@@ -4541,7 +4569,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                                   onPressed: () {
                                     showModalBottomSheet(
                                       context: context, isScrollControlled: true,
-                                      backgroundColor: const Color(0xFF121212),
+                                      backgroundColor: Colors.white,
                                       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
                                       builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: parentName, expenses: items),
                                     );
@@ -4559,7 +4587,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
                       );
                     }),
                     
-                    // === רשימת עסקים צדדיים (מופיע רק במסך הכנסות) ===
                     if (businessExpenses.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.only(top: 24, bottom: 8, right: 8),
@@ -4577,7 +4604,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
     );
   }
 
-  // === מודול ויזואלי לעסק בכרטיסיה ===
   Widget _buildBusinessTile(BuildContext context, BudgetProvider provider, Expense business) {
     double netProfit = business.getBusinessNetProfit();
     bool isPassive = business.isPassive;
@@ -4606,7 +4632,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                       children: [
                         Icon(Icons.storefront, color: isPassive ? Colors.green[800] : Colors.blue[800]),
                         const SizedBox(width: 8),
-                        Text(business.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        Text(business.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
                       ],
                     ),
                     const Icon(Icons.edit, size: 18, color: Colors.grey),
@@ -4656,11 +4682,9 @@ class CategoryDrilldownScreen extends StatelessWidget {
     );
   }
 
-  // === חלונית עריכת והוספת עסק ===
   void _showBusinessDialog(BuildContext context, BudgetProvider provider, {Expense? business}) {
     final nameController = TextEditingController(text: business?.name ?? 'עסק חדש');
     
-    // ניהול המצב הפנימי של התתי-סעיפים (Incomes/Expenses)
     List<BusinessSubItem> incomes = business?.parsedBusinessIncomes ?? [BusinessSubItem(id: UniqueKey().toString(), name: '', amount: 0.0)];
     if (incomes.isEmpty) incomes.add(BusinessSubItem(id: UniqueKey().toString(), name: '', amount: 0.0));
     
@@ -4683,7 +4707,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
           
           double net = calculateNet();
           double weeklyH = double.tryParse(hoursCtrl.text) ?? 0.0;
-          if (timeScale == 'day') weeklyH *= 5; // חישוב 5 ימי עסקים בשבוע
+          if (timeScale == 'day') weeklyH *= 5; 
           bool isPassiveNow = net > 0 && weeklyH <= 4.0;
 
           Widget buildSubItemList(String title, List<BusinessSubItem> list, Color iconColor) {
@@ -4693,7 +4717,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
                     IconButton(
                       icon: Icon(Icons.add_circle, color: iconColor),
                       padding: EdgeInsets.zero, constraints: const BoxConstraints(),
@@ -4712,7 +4736,8 @@ class CategoryDrilldownScreen extends StatelessWidget {
                           flex: 2,
                           child: TextFormField(
                             initialValue: item.name,
-                            decoration: const InputDecoration(labelText: 'שם סעיף', isDense: true, border: OutlineInputBorder()),
+                            style: const TextStyle(color: Colors.black87),
+                            decoration: const InputDecoration(labelText: 'שם סעיף', labelStyle: TextStyle(color: Colors.black54), isDense: true, border: OutlineInputBorder()),
                             onChanged: (val) => item.name = val,
                           ),
                         ),
@@ -4722,10 +4747,11 @@ class CategoryDrilldownScreen extends StatelessWidget {
                           child: TextFormField(
                             initialValue: item.amount == 0 ? '' : item.amount.toStringAsFixed(0),
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'סכום', suffixText: '₪', isDense: true, border: OutlineInputBorder()),
+                            style: const TextStyle(color: Colors.black87),
+                            decoration: const InputDecoration(labelText: 'סכום', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', isDense: true, border: OutlineInputBorder()),
                             onChanged: (val) {
                               item.amount = double.tryParse(val) ?? 0;
-                              setDialogState((){}); // עדכון רווח נטו דינמי בחלונית
+                              setDialogState((){}); 
                             },
                           ),
                         ),
@@ -4745,13 +4771,14 @@ class CategoryDrilldownScreen extends StatelessWidget {
           return Theme(
             data: ThemeData.light(),
             child: AlertDialog(
+              backgroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('הגדרת עסק / הכנסה צדדית', style: TextStyle(fontSize: 18)),
+              title: const Text('הגדרת עסק / הכנסה צדדית', style: TextStyle(fontSize: 18, color: Colors.black87)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם העסק / המיזם', border: OutlineInputBorder())),
+                    TextField(controller: nameController, style: const TextStyle(color: Colors.black87), decoration: const InputDecoration(labelText: 'שם העסק / המיזם', labelStyle: TextStyle(color: Colors.black54), border: OutlineInputBorder())),
                     const SizedBox(height: 16),
                     
                     Container(
@@ -4767,8 +4794,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     
-                    // --- מחשבון זמן / פסיביות ---
-                    const Align(alignment: Alignment.centerRight, child: Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold))),
+                    const Align(alignment: Alignment.centerRight, child: Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -4777,7 +4803,8 @@ class CategoryDrilldownScreen extends StatelessWidget {
                           child: TextField(
                             controller: hoursCtrl,
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(labelText: 'כמות שעות', border: OutlineInputBorder(), isDense: true),
+                            style: const TextStyle(color: Colors.black87),
+                            decoration: const InputDecoration(labelText: 'כמות שעות', labelStyle: TextStyle(color: Colors.black54), border: OutlineInputBorder(), isDense: true),
                             onChanged: (_) => setDialogState((){}),
                           ),
                         ),
@@ -4790,6 +4817,8 @@ class CategoryDrilldownScreen extends StatelessWidget {
                               child: DropdownButton<String>(
                                 value: timeScale,
                                 isExpanded: true,
+                                style: const TextStyle(color: Colors.black87),
+                                dropdownColor: Colors.white,
                                 items: const [
                                   DropdownMenuItem(value: 'day', child: Text('ביום')),
                                   DropdownMenuItem(value: 'week', child: Text('בשבוע')),
@@ -4803,7 +4832,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     
-                    // --- תצוגת חיווי נטו ופסיביות ---
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(color: isPassiveNow ? Colors.green.shade50 : Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
@@ -4813,7 +4841,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('רווח נטו מחושב:', style: TextStyle(fontSize: 12)),
+                              const Text('רווח נטו מחושב:', style: TextStyle(fontSize: 12, color: Colors.black87)),
                               Text('₪${net.toStringAsFixed(0)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: net >= 0 ? Colors.green[800] : Colors.red[800])),
                             ],
                           ),
@@ -4846,7 +4874,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                         id: business?.id,
                         name: nameController.text.trim(),
                         category: 'הכנסות',
-                        parentCategory: business?.parentCategory ?? 'עסקים',
+                        parentCategory: mainCategory, 
                         monthlyAmount: 0, 
                         isLocked: false,
                         isCustom: true,
@@ -4899,9 +4927,15 @@ class SpecificExpensesScreen extends StatelessWidget {
       builder: (ctx) => Theme(
         data: ThemeData.light(),
         child: AlertDialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text("שינוי שם: $oldName"),
-          content: TextField(controller: controller, decoration: const InputDecoration(labelText: 'שם קבוצה חדש'), autofocus: true),
+          title: Text("שינוי שם: $oldName", style: const TextStyle(color: Colors.black87)),
+          content: TextField(
+            controller: controller, 
+            style: const TextStyle(color: Colors.black87),
+            decoration: const InputDecoration(labelText: 'שם קבוצה חדש', labelStyle: TextStyle(color: Colors.black54)), 
+            autofocus: true
+          ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ביטול")),
             ElevatedButton(
@@ -4930,12 +4964,17 @@ class SpecificExpensesScreen extends StatelessWidget {
         builder: (context, setDialogState) => Theme(
           data: ThemeData.light(),
           child: AlertDialog(
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('הוספת רכב חדש'),
+            title: const Text('הוספת רכב חדש', style: TextStyle(color: Colors.black87)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'כינוי הרכב (למשל: מאזדה 3)')),
+                TextField(
+                  controller: nameController, 
+                  style: const TextStyle(color: Colors.black87),
+                  decoration: const InputDecoration(labelText: 'כינוי הרכב (למשל: מאזדה 3)', labelStyle: TextStyle(color: Colors.black54))
+                ),
                 const SizedBox(height: 16),
                 InputDecorator(
                   decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'סוג רכב', contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
@@ -4943,6 +4982,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                     child: DropdownButton<String>(
                       value: selectedType, 
                       isExpanded: true,
+                      style: const TextStyle(color: Colors.black87),
+                      dropdownColor: Colors.white,
                       items: const [
                         DropdownMenuItem(value: 'car', child: Text('מכונית פרטית')),
                         DropdownMenuItem(value: 'motorcycle', child: Text('קטנוע / אופנוע')),
@@ -4979,14 +5020,15 @@ class SpecificExpensesScreen extends StatelessWidget {
       builder: (ctx) => Theme(
         data: ThemeData.light(),
         child: AlertDialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('מה תרצה להוסיף?', textAlign: TextAlign.center),
+          title: const Text('מה תרצה להוסיף?', textAlign: TextAlign.center, style: TextStyle(color: Colors.black87)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 leading: const Icon(Icons.attach_money, color: Colors.green),
-                title: const Text('הכנסה רגילה (משכורת, קצבה)'),
+                title: const Text('הכנסה רגילה (משכורת, קצבה)', style: TextStyle(color: Colors.black87)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showAddExpenseDialog(context, provider, parentCategory, mainCategory);
@@ -4995,8 +5037,8 @@ class SpecificExpensesScreen extends StatelessWidget {
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.storefront, color: Colors.blue),
-                title: const Text('עסק / הכנסה צדדית מורכבת'),
-                subtitle: const Text('כולל שורות הכנסות והוצאות', style: TextStyle(fontSize: 11)),
+                title: const Text('עסק / הכנסה צדדית מורכבת', style: TextStyle(color: Colors.black87)),
+                subtitle: const Text('כולל שורות הכנסות והוצאות', style: TextStyle(fontSize: 11, color: Colors.black54)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _showBusinessDialog(context, provider);
@@ -5016,9 +5058,14 @@ class SpecificExpensesScreen extends StatelessWidget {
       builder: (c) => Theme(
         data: ThemeData.light(),
         child: AlertDialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('שינוי כינוי רכב'),
-          content: TextField(controller: ctrl, decoration: const InputDecoration(labelText: 'כינוי חדש (למשל: סובארו)')),
+          title: const Text('שינוי כינוי רכב', style: TextStyle(color: Colors.black87)),
+          content: TextField(
+            controller: ctrl, 
+            style: const TextStyle(color: Colors.black87),
+            decoration: const InputDecoration(labelText: 'כינוי חדש (למשל: סובארו)', labelStyle: TextStyle(color: Colors.black54))
+          ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(c), child: const Text('ביטול')),
             ElevatedButton(onPressed: () async {
@@ -5053,19 +5100,29 @@ class SpecificExpensesScreen extends StatelessWidget {
         builder: (context, setDialogState) => Theme(
           data: ThemeData.light(),
           child: AlertDialog(
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Text('הוספת סעיף ל-$vehicleName', style: const TextStyle(fontSize: 18)),
+            title: Text('הוספת סעיף ל-$vehicleName', style: const TextStyle(fontSize: 18, color: Colors.black87)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הסעיף (למשל: שטיפה)')),
+                TextField(
+                  controller: nameController, 
+                  style: const TextStyle(color: Colors.black87),
+                  decoration: const InputDecoration(labelText: 'שם הסעיף (למשל: שטיפה)', labelStyle: TextStyle(color: Colors.black54))
+                ),
                 const SizedBox(height: 10),
-                TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום חודשי משוער', suffixText: '₪')),
+                TextField(
+                  controller: amountController, 
+                  keyboardType: TextInputType.number, 
+                  style: const TextStyle(color: Colors.black87),
+                  decoration: const InputDecoration(labelText: 'סכום חודשי משוער', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪')
+                ),
                 const Divider(),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: const Text('דלק וליסינג סמנו כלא צובר', style: TextStyle(fontSize: 11)),
+                  title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
+                  subtitle: const Text('דלק וליסינג סמנו כלא צובר', style: TextStyle(fontSize: 11, color: Colors.black54)),
                   value: isSinking,
                   activeThumbColor: Colors.green,
                   onChanged: (val) { setDialogState(() { isSinking = val; }); },
@@ -5150,7 +5207,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                           onPressed: () {
                             showModalBottomSheet(
                               context: context, isScrollControlled: true,
-                              backgroundColor: const Color(0xFF121212),
+                              backgroundColor: Colors.white,
                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
                               builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: 'ילדים: $childName', expenses: items),
                             );
@@ -5227,7 +5284,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                             final sinkingItems = items.where((e) => e.isSinking).toList();
                             showModalBottomSheet(
                               context: context, isScrollControlled: true,
-                              backgroundColor: const Color(0xFF121212),
+                              backgroundColor: Colors.white,
                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
                               builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: 'רכב: $vehicleName', expenses: sinkingItems),
                             );
@@ -5244,8 +5301,9 @@ class SpecificExpensesScreen extends StatelessWidget {
                               builder: (c) => Theme(
                                 data: ThemeData.light(),
                                 child: AlertDialog(
-                                  title: const Text('מחיקת רכב'),
-                                  content: Text('האם למחוק את כל ההוצאות המשויכות לרכב "$vehicleName"?'),
+                                  backgroundColor: Colors.white,
+                                  title: const Text('מחיקת רכב', style: TextStyle(color: Colors.black87)),
+                                  content: Text('האם למחוק את כל ההוצאות המשויכות לרכב "$vehicleName"?', style: const TextStyle(color: Colors.black87)),
                                   actions: [
                                     TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('ביטול')),
                                     ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(c, true), child: const Text('מחק רכב', style: TextStyle(color: Colors.white))),
@@ -5271,7 +5329,6 @@ class SpecificExpensesScreen extends StatelessWidget {
     );
   }
 
-  // === מודול ויזואלי לעסק בכרטיסיה במסך הפירוט הפנימי ===
   Widget _buildBusinessTile(BuildContext context, BudgetProvider provider, Expense business) {
     double netProfit = business.getBusinessNetProfit();
     bool isPassive = business.isPassive;
@@ -5300,7 +5357,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                       children: [
                         Icon(Icons.storefront, color: isPassive ? Colors.green[800] : Colors.blue[800]),
                         const SizedBox(width: 8),
-                        Text(business.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        Text(business.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
                       ],
                     ),
                     const Icon(Icons.edit, size: 18, color: Colors.grey),
@@ -5350,7 +5407,6 @@ class SpecificExpensesScreen extends StatelessWidget {
     );
   }
 
-  // === חלונית עריכת והוספת עסק במסך הפירוט הפנימי ===
   void _showBusinessDialog(BuildContext context, BudgetProvider provider, {Expense? business}) {
     final nameController = TextEditingController(text: business?.name ?? 'עסק חדש');
     
@@ -5386,7 +5442,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
                     IconButton(
                       icon: Icon(Icons.add_circle, color: iconColor),
                       padding: EdgeInsets.zero, constraints: const BoxConstraints(),
@@ -5405,7 +5461,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                           flex: 2,
                           child: TextFormField(
                             initialValue: item.name,
-                            decoration: const InputDecoration(labelText: 'שם סעיף', isDense: true, border: OutlineInputBorder()),
+                            style: const TextStyle(color: Colors.black87),
+                            decoration: const InputDecoration(labelText: 'שם סעיף', labelStyle: TextStyle(color: Colors.black54), isDense: true, border: OutlineInputBorder()),
                             onChanged: (val) => item.name = val,
                           ),
                         ),
@@ -5415,7 +5472,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                           child: TextFormField(
                             initialValue: item.amount == 0 ? '' : item.amount.toStringAsFixed(0),
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'סכום', suffixText: '₪', isDense: true, border: OutlineInputBorder()),
+                            style: const TextStyle(color: Colors.black87),
+                            decoration: const InputDecoration(labelText: 'סכום', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', isDense: true, border: OutlineInputBorder()),
                             onChanged: (val) {
                               item.amount = double.tryParse(val) ?? 0;
                               setDialogState((){}); 
@@ -5438,13 +5496,14 @@ class SpecificExpensesScreen extends StatelessWidget {
           return Theme(
             data: ThemeData.light(),
             child: AlertDialog(
+              backgroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('הגדרת עסק / הכנסה צדדית', style: TextStyle(fontSize: 18)),
+              title: const Text('הגדרת עסק / הכנסה צדדית', style: TextStyle(fontSize: 18, color: Colors.black87)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם העסק / המיזם', border: OutlineInputBorder())),
+                    TextField(controller: nameController, style: const TextStyle(color: Colors.black87), decoration: const InputDecoration(labelText: 'שם העסק / המיזם', labelStyle: TextStyle(color: Colors.black54), border: OutlineInputBorder())),
                     const SizedBox(height: 16),
                     
                     Container(
@@ -5460,8 +5519,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     
-                    // --- מחשבון זמן / פסיביות ---
-                    const Align(alignment: Alignment.centerRight, child: Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold))),
+                    const Align(alignment: Alignment.centerRight, child: Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -5470,7 +5528,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                           child: TextField(
                             controller: hoursCtrl,
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(labelText: 'כמות שעות', border: OutlineInputBorder(), isDense: true),
+                            style: const TextStyle(color: Colors.black87),
+                            decoration: const InputDecoration(labelText: 'כמות שעות', labelStyle: TextStyle(color: Colors.black54), border: OutlineInputBorder(), isDense: true),
                             onChanged: (_) => setDialogState((){}),
                           ),
                         ),
@@ -5483,6 +5542,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                               child: DropdownButton<String>(
                                 value: timeScale,
                                 isExpanded: true,
+                                style: const TextStyle(color: Colors.black87),
+                                dropdownColor: Colors.white,
                                 items: const [
                                   DropdownMenuItem(value: 'day', child: Text('ביום')),
                                   DropdownMenuItem(value: 'week', child: Text('בשבוע')),
@@ -5496,7 +5557,6 @@ class SpecificExpensesScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     
-                    // --- תצוגת חיווי נטו ופסיביות ---
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(color: isPassiveNow ? Colors.green.shade50 : Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
@@ -5506,7 +5566,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('רווח נטו מחושב:', style: TextStyle(fontSize: 12)),
+                              const Text('רווח נטו מחושב:', style: TextStyle(fontSize: 12, color: Colors.black87)),
                               Text('₪${net.toStringAsFixed(0)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: net >= 0 ? Colors.green[800] : Colors.red[800])),
                             ],
                           ),
@@ -5539,7 +5599,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                         id: business?.id,
                         name: nameController.text.trim(),
                         category: 'הכנסות',
-                        parentCategory: parentCategory, 
+                        parentCategory: mainCategory, 
                         monthlyAmount: 0, 
                         isLocked: false,
                         isCustom: true,
@@ -5670,7 +5730,7 @@ class SpecificExpensesScreen extends StatelessWidget {
               onPressed: () {
                 showModalBottomSheet(
                   context: context, isScrollControlled: true,
-                  backgroundColor: const Color(0xFF121212),
+                  backgroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   builder: (ctx) => _SinkingFundBottomSheet(provider: provider, expense: expense)
                 );
@@ -5731,7 +5791,6 @@ class SpecificExpensesScreen extends StatelessWidget {
 
     int unifiedMode = provider.getCategoryUnifiedMode(parentCategory);
 
-    // חילוץ עסקים מהכנסות רגילות במידה ומדובר במסך הכנסות הפנימי (נדיר שיהיה מופרד, אבל ליתר ביטחון)
     final regularExpenses = currentExpenses.where((e) => !e.isBusiness).toList();
     final businessExpenses = currentExpenses.where((e) => e.isBusiness).toList();
 
@@ -5839,7 +5898,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                       label: const Text('ניהול משיכות (קופה מאוחדת)', style: TextStyle(fontWeight: FontWeight.bold)),
                       onPressed: () => showModalBottomSheet(
                         context: context, isScrollControlled: true,
-                        backgroundColor: const Color(0xFF121212),
+                        backgroundColor: Colors.white,
                         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
                         builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: parentCategory, expenses: currentExpenses),
                       ),
@@ -5890,19 +5949,20 @@ class SpecificExpensesScreen extends StatelessWidget {
         builder: (context, setDialogState) => Theme(
           data: ThemeData.light(),
           child: AlertDialog(
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Text('הוספת סעיף ($parentCat)'),
+            title: Text('הוספת סעיף ($parentCat)', style: const TextStyle(color: Colors.black87)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הסעיף')),
+                TextField(controller: nameController, style: const TextStyle(color: Colors.black87), decoration: const InputDecoration(labelText: 'שם הסעיף', labelStyle: TextStyle(color: Colors.black54))),
                 const SizedBox(height: 10),
-                TextField(controller: amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום חודשי כולל', suffixText: '₪')),
+                TextField(controller: amountController, style: const TextStyle(color: Colors.black87), keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום חודשי כולל', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪')),
                 const Divider(),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: const Text('תוצג במסגרת הירוקה כחיסכון בצד', style: TextStyle(fontSize: 11)),
+                  title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
+                  subtitle: const Text('תוצג במסגרת הירוקה כחיסכון בצד', style: TextStyle(fontSize: 11, color: Colors.black54)),
                   value: isSinking,
                   activeThumbColor: Colors.green,
                   onChanged: (val) {
@@ -5991,20 +6051,21 @@ class SpecificExpensesScreen extends StatelessWidget {
           return Theme(
             data: ThemeData.light(),
             child: AlertDialog(
+              backgroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('עריכת סעיף'),
+              title: const Text('עריכת סעיף', style: TextStyle(color: Colors.black87)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם הסעיף')),
+                    TextField(controller: nameController, style: const TextStyle(color: Colors.black87), decoration: const InputDecoration(labelText: 'שם הסעיף', labelStyle: TextStyle(color: Colors.black54))),
                     const SizedBox(height: 10),
                     
                     if (isIncome) ...[
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('משכורת דינמית', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        subtitle: const Text('שאיבה ממוצעת מהיסטוריית עבודה', style: TextStyle(fontSize: 11)),
+                        title: const Text('משכורת דינמית', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
+                        subtitle: const Text('שאיבה ממוצעת מהיסטוריית עבודה', style: TextStyle(fontSize: 11, color: Colors.black54)),
                         value: isDynamic, activeThumbColor: Colors.blue,
                         onChanged: (val) {
                           setDialogState(() {
@@ -6016,8 +6077,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                       if (isDynamic) ...[
                          ListTile(
                            contentPadding: EdgeInsets.zero,
-                           title: const Text('חודש תחילת עבודה:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                           subtitle: Text(startDateStr != null ? _formatMonthYear(startDateStr!) : 'מתחילת השנה'),
+                           title: const Text('חודש תחילת עבודה:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
+                           subtitle: Text(startDateStr != null ? _formatMonthYear(startDateStr!) : 'מתחילת השנה', style: const TextStyle(color: Colors.black54)),
                            trailing: const Icon(Icons.edit_calendar, size: 20, color: Colors.blue),
                            onTap: () async {
                              DateTime initial = startDateStr != null ? DateTime.parse(startDateStr!) : DateTime.now();
@@ -6037,11 +6098,12 @@ class SpecificExpensesScreen extends StatelessWidget {
                       keyboardType: TextInputType.number, 
                       readOnly: (isIncome && isDynamic),
                       style: TextStyle(
-                        color: (isIncome && isDynamic) ? Colors.blueGrey[900] : Colors.black,
+                        color: (isIncome && isDynamic) ? Colors.blueGrey[900] : Colors.black87,
                         fontWeight: (isIncome && isDynamic) ? FontWeight.bold : FontWeight.normal,
                       ),
                       decoration: InputDecoration(
                         labelText: expense.isPerChild ? 'סכום לתשלום (עבור כל הילדים)' : (isIncome ? 'סכום חודשי' : 'סכום לתשלום'), 
+                        labelStyle: const TextStyle(color: Colors.black54),
                         suffixText: '₪',
                         filled: (isIncome && isDynamic), 
                         fillColor: Colors.grey[100],
@@ -6055,6 +6117,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<Frequency>(
                           value: selectedFreq, isExpanded: true,
+                          dropdownColor: Colors.white,
+                          style: const TextStyle(color: Colors.black87),
                           items: const [DropdownMenuItem(value: Frequency.MONTHLY, child: Text('חודשי')), DropdownMenuItem(value: Frequency.BI_MONTHLY, child: Text('דו-חודשי')), DropdownMenuItem(value: Frequency.YEARLY, child: Text('שנתי'))],
                           onChanged: (isIncome && isDynamic) ? null : (val) { if (val != null) { setDialogState(() => selectedFreq = val); } },
                         )
@@ -6065,8 +6129,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                       const Divider(),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11)),
+                        title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
+                        subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11, color: Colors.black54)),
                         value: isSinking, activeThumbColor: Colors.green,
                         onChanged: (val) { setDialogState(() => isSinking = val); },
                       ),
@@ -6128,11 +6192,12 @@ class SpecificExpensesScreen extends StatelessWidget {
         builder: (context, setState) => Theme(
           data: ThemeData.light(),
           child: AlertDialog(
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Flexible(child: Text('כיול ${expense.name}', style: const TextStyle(fontSize: 18))),
+                Flexible(child: Text('כיול ${expense.name}', style: const TextStyle(fontSize: 18, color: Colors.black87))),
                 IconButton(
                   icon: const Icon(Icons.refresh, color: Colors.blue),
                   tooltip: 'חזרה לברירת מחדל',
@@ -6156,13 +6221,13 @@ class SpecificExpensesScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                 ],
                 isRatioMode 
-                  ? TextField(controller: ratioController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'אחוז מהיתרה', suffixText: '%', border: OutlineInputBorder()))
-                  : TextField(controller: amountController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום קבוע (כולל)' : 'סכום קבוע', suffixText: '₪', border: const OutlineInputBorder())),
+                  ? TextField(controller: ratioController, style: const TextStyle(color: Colors.black87), keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'אחוז מהיתרה', labelStyle: TextStyle(color: Colors.black54), suffixText: '%', border: OutlineInputBorder()))
+                  : TextField(controller: amountController, style: const TextStyle(color: Colors.black87), keyboardType: TextInputType.number, decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום קבוע (כולל)' : 'סכום קבוע', labelStyle: const TextStyle(color: Colors.black54), suffixText: '₪', border: const OutlineInputBorder())),
                 const Divider(height: 30),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11)),
+                  title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
+                  subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11, color: Colors.black54)),
                   value: isSinking, activeThumbColor: Colors.green,
                   onChanged: (val) { setState(() => isSinking = val); },
                 ),
@@ -6215,11 +6280,12 @@ class SpecificExpensesScreen extends StatelessWidget {
         builder: (context, setState) => Theme(
           data: ThemeData.light(),
           child: AlertDialog(
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Flexible(child: Text('הגדרת יעד', style: TextStyle(fontSize: 18))),
+                const Flexible(child: Text('הגדרת יעד', style: TextStyle(fontSize: 18, color: Colors.black87))),
                 IconButton(
                   icon: const Icon(Icons.refresh, color: Colors.blue), tooltip: 'חזרה לברירת מחדל',
                   onPressed: () { provider.resetExpenseToDefault(expense.id!, isSinking: isSinking); Navigator.pop(ctx); },
@@ -6230,11 +6296,11 @@ class SpecificExpensesScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'שם היעד')),
+                  TextField(controller: nameController, style: const TextStyle(color: Colors.black87), decoration: const InputDecoration(labelText: 'שם היעד', labelStyle: TextStyle(color: Colors.black54))),
                   const SizedBox(height: 10),
-                  TextField(controller: targetController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום היעד הסופי', suffixText: '₪')),
+                  TextField(controller: targetController, style: const TextStyle(color: Colors.black87), keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום היעד הסופי', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪')),
                   const SizedBox(height: 10),
-                  TextField(controller: balanceController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'נצבר כיום', suffixText: '₪')),
+                  TextField(controller: balanceController, style: const TextStyle(color: Colors.black87), keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'נצבר כיום', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪')),
                   const Divider(height: 30),
                   ToggleButtons(
                     isSelected: [selectedMode == 0, selectedMode == 1, selectedMode == 2],
@@ -6247,13 +6313,13 @@ class SpecificExpensesScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 15),
-                  if (selectedMode == 0) TextField(controller: ratioController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'אחוז מהחיסכון', suffixText: '%', border: OutlineInputBorder()))
-                  else if (selectedMode == 1) TextField(controller: amountController, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום קבוע כולל' : 'סכום קבוע חודשי', suffixText: '₪', border: const OutlineInputBorder()))
-                  else if (selectedMode == 2) TextField(controller: monthsController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'חודשים נותרים ליעד', suffixText: 'חודשים', border: OutlineInputBorder(), helperText: 'המערכת תחשב ותנעל את הסכום החודשי')),
+                  if (selectedMode == 0) TextField(controller: ratioController, style: const TextStyle(color: Colors.black87), keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'אחוז מהחיסכון', labelStyle: TextStyle(color: Colors.black54), suffixText: '%', border: OutlineInputBorder()))
+                  else if (selectedMode == 1) TextField(controller: amountController, style: const TextStyle(color: Colors.black87), keyboardType: TextInputType.number, decoration: InputDecoration(labelText: expense.isPerChild ? 'סכום קבוע כולל' : 'סכום קבוע חודשי', labelStyle: const TextStyle(color: Colors.black54), suffixText: '₪', border: const OutlineInputBorder()))
+                  else if (selectedMode == 2) TextField(controller: monthsController, style: const TextStyle(color: Colors.black87), keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'חודשים נותרים ליעד', labelStyle: TextStyle(color: Colors.black54), suffixText: 'חודשים', border: OutlineInputBorder(), helperText: 'המערכת תחשב ותנעל את הסכום החודשי')),
                   const Divider(height: 30),
                   SwitchListTile(
-                    contentPadding: EdgeInsets.zero, title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11)),
+                    contentPadding: EdgeInsets.zero, title: const Text('הוצאה צוברת (קופה)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
+                    subtitle: const Text('הצגה במסגרת הירוקה כחיסכון שוטף', style: TextStyle(fontSize: 11, color: Colors.black54)),
                     value: isSinking, activeThumbColor: Colors.green,
                     onChanged: (val) { setState(() => isSinking = val); },
                   ),
@@ -6344,12 +6410,12 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('היסטוריית משיכות והפקדות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        const Divider(color: Colors.white24),
+        const Text('היסטוריית משיכות והפקדות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+        Divider(color: Colors.grey[300]),
         if (_isLoading) 
-          const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: Colors.white)))
+          const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: Colors.green)))
         else if (_withdrawals.isEmpty) 
-          const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות בקופה זו', style: TextStyle(color: Colors.white54))))
+          const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות בקופה זו', style: TextStyle(color: Colors.grey))))
         else ListView.builder(
           shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: _withdrawals.length,
           itemBuilder: (ctx, i) {
@@ -6359,20 +6425,20 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
             final displayAmount = w.amount.abs();
             return ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.greenAccent : Colors.redAccent),
-              title: Text('₪${displayAmount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.greenAccent : Colors.redAccent)),
+              leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.green : Colors.redAccent),
+              title: Text('₪${displayAmount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.redAccent)),
               subtitle: Padding(
                 padding: const EdgeInsets.only(top: 4.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (w.note.isNotEmpty) Text(w.note, style: const TextStyle(color: Colors.white), softWrap: true),
+                    if (w.note.isNotEmpty) Text(w.note, style: const TextStyle(color: Colors.black87), softWrap: true),
                     const SizedBox(height: 2),
-                    Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.white54)),
+                    Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
                   ],
                 ),
               ),
-              trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.white54), tooltip: 'מחק פעולה והחזר יתרה', onPressed: () async { await widget.provider.deleteWithdrawal(w); _loadWithdrawals(); }),
+              trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey), tooltip: 'מחק פעולה והחזר יתרה', onPressed: () async { await widget.provider.deleteWithdrawal(w); _loadWithdrawals(); }),
             );
           },
         ),
@@ -6381,23 +6447,37 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
   }
 
   Widget _buildStandardUnifiedView(BuildContext context, double totalCurrentBalance) {
+    double fundExpected = 0;
+    double fundActual = 0;
+    for (var e in widget.expenses) {
+      int multiplier = e.isPerChild ? widget.provider.childCount : 1;
+      double expected = e.monthlyAmount * multiplier;
+      fundExpected += expected;
+      fundActual += (e.actualBankDeposit ?? expected);
+    }
+    
+    int expectedInt = fundExpected.round();
+    int actualInt = fundActual.round();
+    int diffInt = actualInt - expectedInt;
+    bool hasMismatch = diffInt != 0;
+
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.greenAccent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
-                  Text('₪${totalCurrentBalance.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.greenAccent)),
+                  const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                  Text('₪${totalCurrentBalance.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.edit, color: Colors.greenAccent), tooltip: 'עדכון יתרה משותפת',
+                icon: const Icon(Icons.edit, color: Colors.green), tooltip: 'עדכון יתרה משותפת',
                 onPressed: () {
                   showDialog(
                     context: context,
@@ -6413,10 +6493,73 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
             ],
           ),
         ),
+
+        // בלוק בקרה בנקאית מורחב לחלונית מאוחדת
+        Container(
+          margin: const EdgeInsets.only(top: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: hasMismatch ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('להפרשה מתוכננת', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+                  Text('₪$expectedInt', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                ],
+              ),
+              const Divider(height: 24, color: Colors.black12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.black87, fontWeight: FontWeight.bold)),
+                      Row(
+                        children: [
+                          Text('₪$actualInt', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.black87)),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (ctx) => Theme(
+                                  data: ThemeData.light(),
+                                  child: _EditUnifiedBankDepositDialog(expenses: widget.expenses, parentCategory: widget.parentCategory, currentActual: fundActual),
+                                )
+                              ).then((_) {
+                                if (mounted) setState(() {});
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  if (hasMismatch)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
+                        Text('פער: ₪${diffInt.abs()}', style: TextStyle(color: Colors.orange[800], fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
         const SizedBox(height: 20),
-        const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+        const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
         const SizedBox(height: 4),
-        const Align(alignment: Alignment.centerRight, child: Text("הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף.", style: TextStyle(fontSize: 12, color: Colors.white54))),
+        const Align(alignment: Alignment.centerRight, child: Text("הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף.", style: TextStyle(fontSize: 12, color: Colors.black54))),
         const SizedBox(height: 12),
         Row(
           children: [
@@ -6425,15 +6568,15 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
               child: TextField(
                 controller: _amountController, 
                 keyboardType: TextInputType.number, 
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
+                style: const TextStyle(color: Colors.black87),
+                decoration: InputDecoration(
                   labelText: 'סכום', 
-                  labelStyle: TextStyle(color: Colors.white70),
+                  labelStyle: const TextStyle(color: Colors.black54),
                   suffixText: '₪', 
-                  suffixStyle: TextStyle(color: Colors.white70),
-                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+                  suffixStyle: const TextStyle(color: Colors.black54),
+                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey[300]!)),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey[300]!)),
+                  focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
                   isDense: true
                 )
               )
@@ -6443,13 +6586,13 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
               flex: 3, 
               child: TextField(
                 controller: _noteController, 
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
+                style: const TextStyle(color: Colors.black87),
+                decoration: InputDecoration(
                   labelText: 'לאן יצא הכסף?', 
-                  labelStyle: TextStyle(color: Colors.white70),
-                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+                  labelStyle: const TextStyle(color: Colors.black54),
+                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey[300]!)),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey[300]!)),
+                  focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
                   isDense: true
                 )
               )
@@ -6490,16 +6633,19 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
   Widget build(BuildContext context) {
     double totalCurrentBalance = widget.expenses.fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('קופה: ${widget.parentCategory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 16),
-            _buildStandardUnifiedView(context, totalCurrentBalance),
-          ],
+    return Theme(
+      data: ThemeData.light(),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('קופה מאוחדת: ${widget.parentCategory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+              const SizedBox(height: 16),
+              _buildStandardUnifiedView(context, totalCurrentBalance),
+            ],
+          ),
         ),
       ),
     );
@@ -6534,7 +6680,8 @@ class _EditUnifiedBalancesDialogState extends State<_EditUnifiedBalancesDialog> 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('עריכת יתרה - ${widget.parentCategory}'),
+      backgroundColor: Colors.white,
+      title: Text('עריכת יתרה - ${widget.parentCategory}', style: const TextStyle(color: Colors.black87)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -6543,7 +6690,8 @@ class _EditUnifiedBalancesDialogState extends State<_EditUnifiedBalancesDialog> 
           TextField(
             controller: _ctrl,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'סכום צבור כולל', suffixText: '₪', border: OutlineInputBorder()),
+            style: const TextStyle(color: Colors.black87),
+            decoration: const InputDecoration(labelText: 'סכום צבור כולל', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', border: OutlineInputBorder()),
           ),
         ],
       ),
@@ -6598,11 +6746,13 @@ class _EditIndividualBalanceDialogState extends State<_EditIndividualBalanceDial
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('עריכת יתרה צבורה'),
+      backgroundColor: Colors.white,
+      title: const Text('עריכת יתרה צבורה', style: TextStyle(color: Colors.black87)),
       content: TextField(
         controller: _ctrl,
         keyboardType: TextInputType.number,
-        decoration: const InputDecoration(labelText: 'סכום צבור חדש', suffixText: '₪'),
+        style: const TextStyle(color: Colors.black87),
+        decoration: const InputDecoration(labelText: 'סכום צבור חדש', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪'),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
@@ -6657,145 +6807,358 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
       (e) => e.id == widget.expense.id, 
       orElse: () => widget.expense
     );
+
+    int multiplier = currentExpense.isPerChild ? widget.provider.childCount : 1;
+    double expectedDeposit = currentExpense.monthlyAmount * multiplier;
+    double actualDeposit = currentExpense.actualBankDeposit ?? expectedDeposit;
     
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 16, right: 16, top: 24,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('ניהול קופה: ${currentExpense.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 16),
-            
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.greenAccent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
-                      Text('₪${(currentExpense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.greenAccent)),
-                    ],
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.greenAccent), tooltip: 'עדכון יתרה',
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => Theme(
-                          data: ThemeData.light(),
-                          child: _EditIndividualBalanceDialog(expense: currentExpense)
-                        )
-                      ).then((_) {
-                        if (mounted) _loadWithdrawals();
-                      });
-                    }
-                  )
-                ]
-              )
-            ),
-            const SizedBox(height: 20),
-            
-            const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-            const SizedBox(height: 4),
-            const Align(alignment: Alignment.centerRight, child: Text("הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף.", style: TextStyle(fontSize: 12, color: Colors.white54))),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2, 
-                  child: TextField(
-                    controller: _amountController, 
-                    keyboardType: TextInputType.number, 
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'סכום', 
-                      labelStyle: TextStyle(color: Colors.white70),
-                      suffixText: '₪', 
-                      suffixStyle: TextStyle(color: Colors.white70),
-                      border: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                      enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
-                      isDense: true
-                    )
-                  )
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 3, 
-                  child: TextField(
-                    controller: _noteController, 
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'לאן יצא הכסף?', 
-                      labelStyle: TextStyle(color: Colors.white70),
-                      border: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                      enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                      focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
-                      isDense: true
-                    )
-                  )
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  style: IconButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                  icon: const Icon(Icons.arrow_downward),
-                  onPressed: () async {
-                    final amt = double.tryParse(_amountController.text);
-                    if (amt != null && amt > 0) {
-                      await widget.provider.addWithdrawal(currentExpense.id!, amt, _noteController.text);
-                      if (!mounted) return;
-                      _amountController.clear(); _noteController.clear(); _loadWithdrawals();
-                    }
-                  },
-                )
-              ]
-            ),
-            
-            const SizedBox(height: 24),
-            const Align(alignment: Alignment.centerRight, child: Text('היסטוריית משיכות והפקדות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
-            const Divider(color: Colors.white24),
-            
-            if (_isLoading) 
-              const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: Colors.white))
-            else if (_withdrawals.isEmpty) 
-              const Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות בקופה זו', style: TextStyle(color: Colors.white54)))
-            else ListView.builder(
-              shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: _withdrawals.length,
-              itemBuilder: (ctx, i) {
-                final w = _withdrawals[i];
-                final date = DateTime.parse(w.date);
-                bool isDeposit = w.amount < 0;
-                final displayAmount = w.amount.abs();
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.greenAccent : Colors.redAccent),
-                  title: Text('₪${displayAmount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.greenAccent : Colors.redAccent)),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
-                    child: Column(
+    int expectedInt = expectedDeposit.round();
+    int actualInt = actualDeposit.round();
+    int diffInt = actualInt - expectedInt;
+    bool hasMismatch = diffInt != 0;
+    
+    return Theme(
+      data: ThemeData.light(),
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 16, right: 16, top: 24,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('ניהול קופה: ${currentExpense.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+              const SizedBox(height: 16),
+              
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (w.note.isNotEmpty) Text(w.note, style: const TextStyle(color: Colors.white), softWrap: true),
-                        const SizedBox(height: 2),
-                        Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.white54)),
+                        const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                        Text('₪${(currentExpense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue)),
                       ],
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blue), tooltip: 'עדכון יתרה',
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => Theme(
+                            data: ThemeData.light(),
+                            child: _EditIndividualBalanceDialog(expense: currentExpense)
+                          )
+                        ).then((_) {
+                          if (mounted) _loadWithdrawals();
+                        });
+                      }
+                    )
+                  ]
+                )
+              ),
+
+              // בלוק בקרה בנקאית
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: hasMismatch ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('להפרשה מתוכננת', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+                        Text('₪$expectedInt', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                      ],
+                    ),
+                    const Divider(height: 24, color: Colors.black12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, fontWeight: FontWeight.bold)),
+                            Row(
+                              children: [
+                                Text('₪$actualInt', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey)),
+                                const SizedBox(width: 8),
+                                InkWell(
+                                  onTap: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) => Theme(
+                                        data: ThemeData.light(),
+                                        child: _EditIndividualBankDepositDialog(expense: currentExpense, currentActual: actualDeposit),
+                                      )
+                                    ).then((_) {
+                                      if (mounted) setState(() {});
+                                    });
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(4.0),
+                                    child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        if (hasMismatch)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
+                              Text('פער: ₪${diffInt.abs()}', style: TextStyle(color: Colors.orange[800], fontSize: 12, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+              
+              const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
+              const SizedBox(height: 4),
+              const Align(alignment: Alignment.centerRight, child: Text("הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף.", style: TextStyle(fontSize: 12, color: Colors.black54))),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2, 
+                    child: TextField(
+                      controller: _amountController, 
+                      keyboardType: TextInputType.number, 
+                      style: const TextStyle(color: Colors.black87),
+                      decoration: InputDecoration(
+                        labelText: 'סכום', 
+                        labelStyle: const TextStyle(color: Colors.black54),
+                        suffixText: '₪', 
+                        suffixStyle: const TextStyle(color: Colors.black54),
+                        border: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey[300]!)),
+                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey[300]!)),
+                        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+                        isDense: true
+                      )
+                    )
                   ),
-                  trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.white54), tooltip: 'מחק פעולה והחזר יתרה', onPressed: () async { await widget.provider.deleteWithdrawal(w); _loadWithdrawals(); }),
-                );
-              }
-            ),
-            const SizedBox(height: 20),
-          ]
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3, 
+                    child: TextField(
+                      controller: _noteController, 
+                      style: const TextStyle(color: Colors.black87),
+                      decoration: InputDecoration(
+                        labelText: 'לאן יצא הכסף?', 
+                        labelStyle: const TextStyle(color: Colors.black54),
+                        border: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey[300]!)),
+                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey[300]!)),
+                        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+                        isDense: true
+                      )
+                    )
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    style: IconButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                    icon: const Icon(Icons.arrow_downward),
+                    onPressed: () async {
+                      final amt = double.tryParse(_amountController.text);
+                      if (amt != null && amt > 0) {
+                        await widget.provider.addWithdrawal(currentExpense.id!, amt, _noteController.text);
+                        if (!mounted) return;
+                        _amountController.clear(); _noteController.clear(); _loadWithdrawals();
+                      }
+                    },
+                  )
+                ]
+              ),
+              
+              const SizedBox(height: 24),
+              const Align(alignment: Alignment.centerRight, child: Text('היסטוריית משיכות והפקדות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey))),
+              Divider(color: Colors.grey[300]),
+              
+              if (_isLoading) 
+                const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: Colors.blue))
+              else if (_withdrawals.isEmpty) 
+                const Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות בקופה זו', style: TextStyle(color: Colors.grey)))
+              else ListView.builder(
+                shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: _withdrawals.length,
+                itemBuilder: (ctx, i) {
+                  final w = _withdrawals[i];
+                  final date = DateTime.parse(w.date);
+                  bool isDeposit = w.amount < 0;
+                  final displayAmount = w.amount.abs();
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.green : Colors.redAccent),
+                    title: Text('₪${displayAmount.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.redAccent)),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (w.note.isNotEmpty) Text(w.note, style: const TextStyle(color: Colors.black87), softWrap: true),
+                          const SizedBox(height: 2),
+                          Text('${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                        ],
+                      ),
+                    ),
+                    trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey), tooltip: 'מחק פעולה והחזר יתרה', onPressed: () async { await widget.provider.deleteWithdrawal(w); _loadWithdrawals(); }),
+                  );
+                }
+              ),
+              const SizedBox(height: 20),
+            ]
+          )
         )
-      )
+      ),
+    );
+  }
+}
+
+class _EditIndividualBankDepositDialog extends StatefulWidget {
+  final Expense expense;
+  final double currentActual;
+  const _EditIndividualBankDepositDialog({required this.expense, required this.currentActual});
+
+  @override
+  State<_EditIndividualBankDepositDialog> createState() => _EditIndividualBankDepositDialogState();
+}
+
+class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDepositDialog> {
+  late TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.currentActual.round().toString());
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: ThemeData.light(),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('בקרת הפרשה לבנק', style: TextStyle(color: Colors.black87)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('הזן את סכום הוראת הקבע שמוגדר בפועל בבנק:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+            const SizedBox(height: 16),
+            TextField(
+              style: const TextStyle(color: Colors.black87),
+              controller: _ctrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
+            onPressed: () async {
+              final val = double.tryParse(_ctrl.text);
+              if (val != null) {
+                // >>> הקריאה תוקנה לשימוש ב-Provider במקום DatabaseHelper <<<
+                await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
+                if (!context.mounted) return;
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('שמור'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EditUnifiedBankDepositDialog extends StatefulWidget {
+  final List<Expense> expenses;
+  final String parentCategory;
+  final double currentActual;
+  const _EditUnifiedBankDepositDialog({required this.expenses, required this.parentCategory, required this.currentActual});
+
+  @override
+  State<_EditUnifiedBankDepositDialog> createState() => _EditUnifiedBankDepositDialogState();
+}
+
+class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDialog> {
+  late TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.currentActual.round().toString());
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: ThemeData.light(),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        title: Text('בקרה לבנק - ${widget.parentCategory}', style: const TextStyle(color: Colors.black87)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('הזן את סכום הוראת הקבע הכולל שמוגדר בפועל בבנק עבור כלל הקופה:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+            const SizedBox(height: 16),
+            TextField(
+              style: const TextStyle(color: Colors.black87),
+              controller: _ctrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
+            onPressed: () async {
+              final val = double.tryParse(_ctrl.text);
+              if (val != null && widget.expenses.isNotEmpty) {
+                final provider = Provider.of<BudgetProvider>(context, listen: false);
+                for (int i = 0; i < widget.expenses.length; i++) {
+                  if (i == 0) {
+                    // >>> הקריאה תוקנה לשימוש ב-Provider במקום DatabaseHelper <<<
+                    await provider.updateBankDeposit(widget.expenses[i].id!, val);
+                  } else {
+                    await provider.updateBankDeposit(widget.expenses[i].id!, 0);
+                  }
+                }
+                if (!context.mounted) return;
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('שמור'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -6803,7 +7166,7 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\checking_history_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed AppBar Title to 'מעקב עו"ש')
+// 🔒 STATUS: EDITED (Fixed Light Theme Contrast and Disappearing Text)
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../data/database_helper.dart';
@@ -6892,7 +7255,6 @@ class CheckingHistoryScreen extends StatelessWidget {
     );
   }
 
-  // מסך ההדרכה למשתמש החדש (Empty State)
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
@@ -6936,7 +7298,6 @@ class CheckingHistoryScreen extends StatelessWidget {
   }
 
   Widget _buildGraph(List<CheckingEntry> entries) {
-    // הגרף דורש מיון כרונולוגי עולה (משמאל לימין)
     final sorted = List<CheckingEntry>.from(entries)
       ..sort((a, b) => DateTime.parse(a.date).compareTo(DateTime.parse(b.date)));
     
@@ -6977,73 +7338,77 @@ class CheckingHistoryScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setState) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            title: const Text('הזנת יתרת עו"ש', textAlign: TextAlign.center, style: TextStyle(color: Colors.black87)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('הזן את הסכום המדויק שיש כעת בחשבון העו"ש, לצורך בקרת צמיחת עודפים.', style: TextStyle(fontSize: 13, color: Colors.grey)),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: amountCtrl,
-                  style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18), 
-                  keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    labelText: 'סכום בעו"ש (₪)',
-                    labelStyle: TextStyle(color: Colors.black54, fontSize: 14),
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.account_balance),
+          // עטיפה ב-ThemeData.light() כדי למנוע התנגשות עם עיצוב כהה גלובלי
+          return Theme(
+            data: ThemeData.light(),
+            child: AlertDialog(
+              backgroundColor: Colors.white,
+              title: const Text('הזנת יתרת עו"ש', textAlign: TextAlign.center, style: TextStyle(color: Colors.black87)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('הזן את הסכום המדויק שיש כעת בחשבון העו"ש, לצורך בקרת צמיחת עודפים.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: amountCtrl,
+                    style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18), 
+                    keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'סכום בעו"ש (₪)',
+                      labelStyle: TextStyle(color: Colors.black54, fontSize: 14),
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.account_balance, color: Colors.black54),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.grey.shade300)),
-                  title: const Text('תאריך נכונות', style: TextStyle(color: Colors.black87)),
-                  subtitle: Text(DateFormat('dd/MM/yyyy').format(selectedDate), style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-                  trailing: const Icon(Icons.calendar_today, color: Color(0xFF00A3FF)),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: ctx,
-                      initialDate: selectedDate,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now(),
-                      builder: (context, child) {
-                        return Theme(
-                          data: Theme.of(context).copyWith(
-                            colorScheme: const ColorScheme.light(
-                              primary: Color(0xFF00A3FF),
-                              onPrimary: Colors.white,
-                              onSurface: Colors.black87,
+                  const SizedBox(height: 16),
+                  ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.grey.shade300)),
+                    title: const Text('תאריך נכונות', style: TextStyle(color: Colors.black87)),
+                    subtitle: Text(DateFormat('dd/MM/yyyy').format(selectedDate), style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                    trailing: const Icon(Icons.calendar_today, color: Color(0xFF00A3FF)),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                        builder: (context, child) {
+                          return Theme(
+                            data: Theme.of(context).copyWith(
+                              colorScheme: const ColorScheme.light(
+                                primary: Color(0xFF00A3FF),
+                                onPrimary: Colors.white,
+                                onSurface: Colors.black87,
+                              ),
                             ),
-                          ),
-                          child: child!,
-                        );
-                      },
-                    );
-                    if (picked != null) {
-                      setState(() => selectedDate = picked);
+                            child: child!,
+                          );
+                        },
+                      );
+                      if (picked != null) {
+                        setState(() => selectedDate = picked);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF)),
+                  onPressed: () async {
+                    final val = double.tryParse(amountCtrl.text);
+                    if (val != null) {
+                      final entry = CheckingEntry(amount: val, date: selectedDate.toIso8601String());
+                      await DatabaseHelper.instance.insertCheckingEntry(entry);
+                      if (ctx.mounted) Navigator.pop(ctx);
                     }
                   },
+                  child: const Text('שמור דגימה', style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF)),
-                onPressed: () async {
-                  final val = double.tryParse(amountCtrl.text);
-                  if (val != null) {
-                    final entry = CheckingEntry(amount: val, date: selectedDate.toIso8601String());
-                    await DatabaseHelper.instance.insertCheckingEntry(entry);
-                    if (ctx.mounted) Navigator.pop(ctx);
-                  }
-                },
-                child: const Text('שמור דגימה', style: TextStyle(color: Colors.white)),
-              ),
-            ],
           );
         },
       ),
@@ -7051,7 +7416,6 @@ class CheckingHistoryScreen extends StatelessWidget {
   }
 }
 
-// מנוע הציור הגרפי של המגמה (Native Flutter Canvas)
 class _CheckingGraphPainter extends CustomPainter {
   final List<CheckingEntry> entries;
 
@@ -7069,7 +7433,6 @@ class _CheckingGraphPainter extends CustomPainter {
     double maxAmt = entries.map((e) => e.amount).reduce((a, b) => a > b ? a : b);
     double minAmt = entries.map((e) => e.amount).reduce((a, b) => a < b ? a : b);
 
-    // מניעת חלוקה באפס אם כל הסכומים זהים
     if (maxAmt == minAmt) {
       maxAmt += 1000;
       minAmt -= 1000;
@@ -7095,7 +7458,7 @@ class _CheckingGraphPainter extends CustomPainter {
       final entry = entries[i];
       final x = i * widthStep;
       final normalizedY = (entry.amount - minAmt) / heightRange;
-      final y = size.height - (normalizedY * size.height); // ציר Y הפוך בקנבס
+      final y = size.height - (normalizedY * size.height); 
       points.add(Offset(x, y));
       
       if (i == 0) {
@@ -7103,7 +7466,6 @@ class _CheckingGraphPainter extends CustomPainter {
       } else {
         final prevX = points[i - 1].dx;
         final prevY = points[i - 1].dy;
-        // מתיחת קו מעוקל ואלגנטי במקום קווים שבורים
         path.quadraticBezierTo(
           prevX + (x - prevX) / 2, prevY, 
           x, y
@@ -7526,17 +7888,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\main_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed Render Flash, Upgraded Reveal UI with Material & Glow, Zero Warnings)
+// 🔒 STATUS: EDITED (Fixed unnecessary_const Linter Warnings)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../providers/debt_provider.dart';
 import '../../utils/app_localizations.dart';
-import '../../services/premium_service.dart';
 import '../widgets/global_header.dart'; 
 import 'pnl_screen.dart'; 
 import 'shopping_screen.dart';
-import 'salary_engine_screen.dart';
 import 'sinking_funds_screen.dart';
 
 enum RevealState { expectation, reveal, dashboard }
@@ -7558,7 +7918,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     
-    // קריאה סינכרונית כדי למנוע הבהוב של הדשבורד
     final budget = Provider.of<BudgetProvider>(context, listen: false);
     if (!budget.hasCompletedGrandReveal) {
       _currentState = RevealState.expectation;
@@ -7893,17 +8252,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
     return Stack(
       children: [
-        // הדשבורד המקורי (יוצג תמיד מתחת לשכבת המעבר)
         Scaffold(
           backgroundColor: Colors.white,
           appBar: const GlobalHeader(),
-          floatingActionButton: FloatingActionButton(
-            backgroundColor: Colors.blueGrey[900],
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const ShoppingScreen()));
-            },
-            child: const Icon(Icons.shopping_cart, color: Colors.white),
-          ),
+          // ה-FloatingActionButton הוסר למניעת כפילות
           body: Center(
             child: SingleChildScrollView(
               child: Padding(
@@ -7913,12 +8265,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     
-                    // הליבה של מסך הבית: שנת החירות הפיננסית והכפתורים סביבה
                     Stack(
                       clipBehavior: Clip.none,
                       alignment: Alignment.center,
                       children: [
-                        // הכרטיס המרכזי של שנת החירות
                         Container(
                           width: 280,
                           padding: const EdgeInsets.symmetric(vertical: 40),
@@ -7943,7 +8293,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           ),
                         ),
                         
-                        // כפתור המשפחה - ימין למעלה (עטוף בפעימה)
                         Positioned(
                           top: -15,
                           right: -15,
@@ -7970,7 +8319,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           ),
                         ),
                         
-                        // כפתור יעד הכנסה פסיבית - שמאל למעלה
                         Positioned(
                           top: -15,
                           left: -25,
@@ -7995,36 +8343,23 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
                     const SizedBox(height: 50),
 
-                    // שורת כפתורי הניווט התחתונה
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildQuickAction(
                           context, 
-                          'תזרים', 
-                          Icons.account_balance_wallet, 
-                          Colors.blue, 
-                          () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PnLScreen()))
-                        ),
-                        _buildQuickAction(
-                          context, 
-                          'ממוצע שכר', 
-                          Icons.insights, 
-                          Colors.orange, 
-                          () {
-                            PremiumService.requirePremium(context, () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const SalaryEngineScreen()));
-                            });
-                          },
-                          isPremium: true,
-                        ),
-                        _buildQuickAction(
-                          context, 
                           'מרכז חסכונות', 
                           Icons.savings, 
                           Colors.green, 
                           () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SinkingFundsScreen()))
+                        ),
+                        _buildQuickAction(
+                          context, 
+                          'רשימת קניות', 
+                          Icons.shopping_cart_outlined, 
+                          Colors.blueGrey[900]!, 
+                          () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ShoppingScreen()))
                         ),
                       ],
                     ),
@@ -8060,7 +8395,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ),
         ),
         
-        // שכבת החשיפה העליונה
         if (_currentState != RevealState.dashboard) 
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 600),
@@ -11317,12 +11651,11 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\sinking_funds_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Added Bank Discrepancy Traffic Light and Editing)
+// 🔒 STATUS: EDITED (Removed unused DatabaseHelper import)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
-import '../../data/database_helper.dart'; // הוספת הייבוא למסד הנתונים
 import '../widgets/global_header.dart';
 import 'smart_withdrawals_screen.dart'; 
 
@@ -11483,9 +11816,11 @@ class SinkingFundsScreen extends StatelessWidget {
                           fundBalance += (e.currentBalance ?? 0);
                         }
                         
-                        double diff = fundActual - fundExpected;
-                        bool hasMismatch = diff.abs() > 0.01;
-                        String diffText = diff > 0 ? '+₪${diff.abs().toStringAsFixed(0)}' : '-₪${diff.abs().toStringAsFixed(0)}';
+                        int expectedInt = fundExpected.round();
+                        int actualInt = fundActual.round();
+                        int diffInt = actualInt - expectedInt;
+                        bool hasMismatch = diffInt != 0;
+                        String diffText = diffInt > 0 ? '+₪${diffInt.abs()}' : '-₪${diffInt.abs()}';
 
                         return Card(
                           color: Colors.white,
@@ -11502,7 +11837,7 @@ class SinkingFundsScreen extends StatelessWidget {
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('להפרשה: ₪${fundExpected.toStringAsFixed(0)}', style: const TextStyle(color: Colors.black54)),
+                                Text('להפרשה: ₪$expectedInt', style: const TextStyle(color: Colors.black54)),
                                 if (hasMismatch)
                                   Text('⚠️ נדרש עדכון בבנק (פער: $diffText)', style: TextStyle(color: Colors.orange[800], fontSize: 12, fontWeight: FontWeight.bold)),
                               ],
@@ -11534,9 +11869,11 @@ class SinkingFundsScreen extends StatelessWidget {
                         double actualDeposit = expense.actualBankDeposit ?? expectedDeposit;
                         double balance = expense.currentBalance ?? 0;
                         
-                        double diff = actualDeposit - expectedDeposit;
-                        bool hasMismatch = diff.abs() > 0.01;
-                        String diffText = diff > 0 ? '+₪${diff.abs().toStringAsFixed(0)}' : '-₪${diff.abs().toStringAsFixed(0)}';
+                        int expectedInt = expectedDeposit.round();
+                        int actualInt = actualDeposit.round();
+                        int diffInt = actualInt - expectedInt;
+                        bool hasMismatch = diffInt != 0;
+                        String diffText = diffInt > 0 ? '+₪${diffInt.abs()}' : '-₪${diffInt.abs()}';
 
                         bool isFuture = expense.category == 'עתידיות';
                         String displayTitle = isFuture ? expense.parentCategory : expense.name;
@@ -11557,7 +11894,7 @@ class SinkingFundsScreen extends StatelessWidget {
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('$specificNameInfoלהפרשה: ₪${expectedDeposit.toStringAsFixed(0)}', style: const TextStyle(color: Colors.black54)),
+                                Text('$specificNameInfoלהפרשה: ₪$expectedInt', style: const TextStyle(color: Colors.black54)),
                                 if (hasMismatch)
                                   Text('⚠️ נדרש עדכון בבנק (פער: $diffText)', style: TextStyle(color: Colors.orange[800], fontSize: 12, fontWeight: FontWeight.bold)),
                               ],
@@ -11685,7 +12022,10 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
   }
 
   Widget _buildStandardUnifiedView(double totalCurrentBalance, double fundExpected, double fundActual, List<Expense> currentExpenses) {
-    bool hasMismatch = (fundActual - fundExpected).abs() > 0.01;
+    int expectedInt = fundExpected.round();
+    int actualInt = fundActual.round();
+    int diffInt = actualInt - expectedInt;
+    bool hasMismatch = diffInt != 0;
     
     return Column(
       children: [
@@ -11724,39 +12064,58 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
           margin: const EdgeInsets.only(top: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(color: hasMismatch ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, fontWeight: FontWeight.bold)),
-                  Row(
+                  const Text('להפרשה מתוכננת', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+                  Text('₪$expectedInt', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                ],
+              ),
+              const Divider(height: 24, color: Colors.black12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('₪${fundActual.toStringAsFixed(0)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey)),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: () => _showEditBankDepositDialog(currentExpenses, fundActual),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
-                        ),
+                      Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, fontWeight: FontWeight.bold)),
+                      Row(
+                        children: [
+                          Text('₪$actualInt', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey)),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _showEditBankDepositDialog(currentExpenses, fundActual),
+                            child: Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
+                  if (hasMismatch)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
+                        Text('פער: ₪${diffInt.abs()}', style: TextStyle(color: Colors.orange[800], fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
                 ],
               ),
-              if (hasMismatch)
-                Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
             ],
           ),
         ),
         const SizedBox(height: 20),
         Row(
           children: [
-            Expanded(flex: 2, child: TextField(controller: _amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום משיכה', suffixText: '₪', border: OutlineInputBorder(), isDense: true))),
+            Expanded(flex: 2, child: TextField(style: const TextStyle(color: Colors.black87), controller: _amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום משיכה', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', border: OutlineInputBorder(), isDense: true))),
             const SizedBox(width: 8),
-            Expanded(flex: 3, child: TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'פירוט (לאן יצא?)', border: OutlineInputBorder(), isDense: true))),
+            Expanded(flex: 3, child: TextField(style: const TextStyle(color: Colors.black87), controller: _noteController, decoration: const InputDecoration(labelText: 'פירוט (לאן יצא?)', labelStyle: TextStyle(color: Colors.black54), border: OutlineInputBorder(), isDense: true))),
             const SizedBox(width: 8),
             IconButton(style: IconButton.styleFrom(backgroundColor: Colors.blueGrey[900], foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.arrow_downward), onPressed: () => _handleWithdrawal(null)),
           ],
@@ -11783,17 +12142,20 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
       fundActual += (e.actualBankDeposit ?? expected);
     }
     
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
-            Text('קופה מאוחדת: ${widget.parentCategory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-            const SizedBox(height: 16),
-            _buildStandardUnifiedView(totalCurrentBalance, fundExpected, fundActual, currentExpenses),
-          ],
+    return Theme(
+      data: ThemeData.light(),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+              Text('קופה מאוחדת: ${widget.parentCategory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+              const SizedBox(height: 16),
+              _buildStandardUnifiedView(totalCurrentBalance, fundExpected, fundActual, currentExpenses),
+            ],
+          ),
         ),
       ),
     );
@@ -11859,113 +12221,139 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
     int multiplier = currentExpense.isPerChild ? provider.childCount : 1;
     double expectedDeposit = currentExpense.monthlyAmount * multiplier;
     double actualDeposit = currentExpense.actualBankDeposit ?? expectedDeposit;
-    bool hasMismatch = (actualDeposit - expectedDeposit).abs() > 0.01;
+    
+    int expectedInt = expectedDeposit.round();
+    int actualInt = actualDeposit.round();
+    int diffInt = actualInt - expectedInt;
+    bool hasMismatch = diffInt != 0;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
-            Text('קופה: ${currentExpense.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-            const SizedBox(height: 16),
-            
-            // בלוק יתרה צבורה
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                      Row(
-                        children: [
-                          Text('₪${(currentExpense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue)),
-                          const SizedBox(width: 8),
-                          InkWell(
-                            onTap: () => _showEditIndividualDialog(currentExpense),
-                            child: const Padding(
-                              padding: EdgeInsets.all(4.0),
-                              child: Icon(Icons.edit, color: Colors.blue, size: 20),
+    return Theme(
+      data: ThemeData.light(),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
+              Text('קופה: ${currentExpense.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+              const SizedBox(height: 16),
+              
+              // בלוק יתרה צבורה
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('יתרה צבורה כיום', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                        Row(
+                          children: [
+                            Text('₪${(currentExpense.currentBalance ?? 0).toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue)),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: () => _showEditIndividualDialog(currentExpense),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4.0),
+                                child: Icon(Icons.edit, color: Colors.blue, size: 20),
+                              ),
                             ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              
+              // בלוק בקרה בנקאית
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: hasMismatch ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('להפרשה מתוכננת', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+                        Text('₪$expectedInt', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                      ],
+                    ),
+                    const Divider(height: 24, color: Colors.black12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, fontWeight: FontWeight.bold)),
+                            Row(
+                              children: [
+                                Text('₪$actualInt', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey)),
+                                const SizedBox(width: 8),
+                                InkWell(
+                                  onTap: () => _showEditBankDepositDialog(currentExpense, actualDeposit),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(4.0),
+                                    child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        if (hasMismatch)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
+                              Text('פער: ₪${diffInt.abs()}', style: TextStyle(color: Colors.orange[800], fontSize: 12, fontWeight: FontWeight.bold)),
+                            ],
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(flex: 2, child: TextField(style: const TextStyle(color: Colors.black87), controller: _amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום משיכה', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', border: OutlineInputBorder(), isDense: true))),
+                  const SizedBox(width: 8),
+                  Expanded(flex: 3, child: TextField(style: const TextStyle(color: Colors.black87), controller: _noteController, decoration: const InputDecoration(labelText: 'פירוט (לאן יצא?)', labelStyle: TextStyle(color: Colors.black54), border: OutlineInputBorder(), isDense: true))),
+                  const SizedBox(width: 8),
+                  IconButton(style: IconButton.styleFrom(backgroundColor: Colors.blueGrey[900], foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.arrow_downward), onPressed: _handleWithdrawal),
                 ],
               ),
-            ),
-            
-            // בלוק בקרה בנקאית
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: hasMismatch ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('הפרשה בפועל בבנק', style: TextStyle(color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, fontWeight: FontWeight.bold)),
-                      Row(
-                        children: [
-                          Text('₪${actualDeposit.toStringAsFixed(0)}', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey)),
-                          const SizedBox(width: 8),
-                          InkWell(
-                            onTap: () => _showEditBankDepositDialog(currentExpense, actualDeposit),
-                            child: Padding(
-                              padding: const EdgeInsets.all(4.0),
-                              child: Icon(Icons.edit, color: hasMismatch ? Colors.orange[800] : Colors.blueGrey, size: 20),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  if (hasMismatch)
-                    Icon(Icons.warning_amber_rounded, color: Colors.orange[800], size: 28),
-                ],
+              const SizedBox(height: 24),
+              const Align(alignment: Alignment.centerRight, child: Text('היסטוריה פעולות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey))),
+              const Divider(),
+              if (_isLoading) const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())
+              else if (_withdrawals.isEmpty) const Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות', style: TextStyle(color: Colors.grey)))
+              else ListView.builder(
+                shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: _withdrawals.length,
+                itemBuilder: (ctx, i) {
+                  final w = _withdrawals[i];
+                  final date = DateTime.parse(w.date);
+                  bool isDeposit = w.amount < 0;
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.green : Colors.redAccent),
+                    title: Text('₪${w.amount.abs().toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.redAccent)),
+                    subtitle: Text('${w.note}\n${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                    trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey), onPressed: () async { await provider.deleteWithdrawal(w); _loadWithdrawals(); }),
+                  );
+                },
               ),
-            ),
-
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(flex: 2, child: TextField(controller: _amountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'סכום משיכה', suffixText: '₪', border: OutlineInputBorder(), isDense: true))),
-                const SizedBox(width: 8),
-                Expanded(flex: 3, child: TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'פירוט (לאן יצא?)', border: OutlineInputBorder(), isDense: true))),
-                const SizedBox(width: 8),
-                IconButton(style: IconButton.styleFrom(backgroundColor: Colors.blueGrey[900], foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), icon: const Icon(Icons.arrow_downward), onPressed: _handleWithdrawal),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Align(alignment: Alignment.centerRight, child: Text('היסטוריה פעולות', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey))),
-            const Divider(),
-            if (_isLoading) const Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())
-            else if (_withdrawals.isEmpty) const Padding(padding: EdgeInsets.all(20), child: Text('לא בוצעו פעולות', style: TextStyle(color: Colors.grey)))
-            else ListView.builder(
-              shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: _withdrawals.length,
-              itemBuilder: (ctx, i) {
-                final w = _withdrawals[i];
-                final date = DateTime.parse(w.date);
-                bool isDeposit = w.amount < 0;
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(isDeposit ? Icons.add_circle_outline : Icons.money_off, color: isDeposit ? Colors.green : Colors.redAccent),
-                  title: Text('₪${w.amount.abs().toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDeposit ? Colors.green : Colors.redAccent)),
-                  subtitle: Text('${w.note}\n${date.day}/${date.month}/${date.year}', style: const TextStyle(fontSize: 12, color: Colors.black87)),
-                  trailing: IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey), onPressed: () async { await provider.deleteWithdrawal(w); _loadWithdrawals(); }),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -12001,28 +12389,32 @@ class _EditIndividualBalanceDialogState extends State<_EditIndividualBalanceDial
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      title: const Text('עריכת יתרה צבורה', style: TextStyle(color: Colors.black87)),
-      content: TextField(
-        controller: _ctrl,
-        keyboardType: TextInputType.number,
-        decoration: const InputDecoration(labelText: 'סכום צבור חדש', suffixText: '₪'),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
-        ElevatedButton(
-          onPressed: () async {
-            final val = double.tryParse(_ctrl.text);
-            if (val != null) {
-              await Provider.of<BudgetProvider>(context, listen: false).setExpenseCurrentBalance(widget.expense.id!, val);
-              if (!context.mounted) return;
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('שמור'),
+    return Theme(
+      data: ThemeData.light(),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('עריכת יתרה צבורה', style: TextStyle(color: Colors.black87)),
+        content: TextField(
+          style: const TextStyle(color: Colors.black87),
+          controller: _ctrl,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'סכום צבור חדש', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪'),
         ),
-      ],
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+          ElevatedButton(
+            onPressed: () async {
+              final val = double.tryParse(_ctrl.text);
+              if (val != null) {
+                await Provider.of<BudgetProvider>(context, listen: false).setExpenseCurrentBalance(widget.expense.id!, val);
+                if (!context.mounted) return;
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('שמור'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -12054,42 +12446,46 @@ class _EditUnifiedBalancesDialogState extends State<_EditUnifiedBalancesDialog> 
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      title: Text('עריכת יתרה - ${widget.parentCategory}', style: const TextStyle(color: Colors.black87)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('הזן את הסכום הכולל שנצבר בקופה זו:', style: TextStyle(color: Colors.grey, fontSize: 14)),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _ctrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'סכום צבור כולל', suffixText: '₪', border: OutlineInputBorder()),
+    return Theme(
+      data: ThemeData.light(),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        title: Text('עריכת יתרה - ${widget.parentCategory}', style: const TextStyle(color: Colors.black87)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('הזן את הסכום הכולל שנצבר בקופה זו:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+            const SizedBox(height: 16),
+            TextField(
+              style: const TextStyle(color: Colors.black87),
+              controller: _ctrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'סכום צבור כולל', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+          ElevatedButton(
+            onPressed: () async {
+              final val = double.tryParse(_ctrl.text);
+              if (val != null) {
+                final provider = Provider.of<BudgetProvider>(context, listen: false);
+                for (int i = 0; i < widget.expenses.length; i++) {
+                  if (i == 0) {
+                    await provider.setExpenseCurrentBalance(widget.expenses[i].id!, val);
+                  } else {
+                    await provider.setExpenseCurrentBalance(widget.expenses[i].id!, 0);
+                  }
+                }
+                if (!context.mounted) return;
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('שמור'),
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
-        ElevatedButton(
-          onPressed: () async {
-            final val = double.tryParse(_ctrl.text);
-            if (val != null) {
-              final provider = Provider.of<BudgetProvider>(context, listen: false);
-              for (int i = 0; i < widget.expenses.length; i++) {
-                if (i == 0) {
-                  await provider.setExpenseCurrentBalance(widget.expenses[i].id!, val);
-                } else {
-                  await provider.setExpenseCurrentBalance(widget.expenses[i].id!, 0);
-                }
-              }
-              if (!context.mounted) return;
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('שמור'),
-        ),
-      ],
     );
   }
 }
@@ -12109,7 +12505,7 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
   @override
   void initState() {
     super.initState();
-    _ctrl = TextEditingController(text: widget.currentActual.toStringAsFixed(0));
+    _ctrl = TextEditingController(text: widget.currentActual.round().toString());
   }
 
   @override
@@ -12120,37 +12516,40 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      title: const Text('בקרת הפרשה לבנק', style: TextStyle(color: Colors.black87)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('הזן את סכום הוראת הקבע שמוגדר בפועל בבנק:', style: TextStyle(color: Colors.grey, fontSize: 14)),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _ctrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', suffixText: '₪'),
+    return Theme(
+      data: ThemeData.light(),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('בקרת הפרשה לבנק', style: TextStyle(color: Colors.black87)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('הזן את סכום הוראת הקבע שמוגדר בפועל בבנק:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+            const SizedBox(height: 16),
+            TextField(
+              style: const TextStyle(color: Colors.black87),
+              controller: _ctrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
+            onPressed: () async {
+              final val = double.tryParse(_ctrl.text);
+              if (val != null) {
+                await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
+                if (!context.mounted) return;
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('שמור'),
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
-          onPressed: () async {
-            final val = double.tryParse(_ctrl.text);
-            if (val != null) {
-              final updatedExpense = widget.expense.copyWith(actualBankDeposit: val);
-              await DatabaseHelper.instance.updateExpense(updatedExpense);
-              if (!context.mounted) return;
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('שמור'),
-        ),
-      ],
     );
   }
 }
@@ -12171,7 +12570,7 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
   @override
   void initState() {
     super.initState();
-    _ctrl = TextEditingController(text: widget.currentActual.toStringAsFixed(0));
+    _ctrl = TextEditingController(text: widget.currentActual.round().toString());
   }
 
   @override
@@ -12182,44 +12581,47 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      title: Text('בקרה לבנק - ${widget.parentCategory}', style: const TextStyle(color: Colors.black87)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('הזן את סכום הוראת הקבע הכולל שמוגדר בפועל בבנק עבור כלל הקופה:', style: TextStyle(color: Colors.grey, fontSize: 14)),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _ctrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', suffixText: '₪', border: OutlineInputBorder()),
+    return Theme(
+      data: ThemeData.light(),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        title: Text('בקרה לבנק - ${widget.parentCategory}', style: const TextStyle(color: Colors.black87)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('הזן את סכום הוראת הקבע הכולל שמוגדר בפועל בבנק עבור כלל הקופה:', style: TextStyle(color: Colors.grey, fontSize: 14)),
+            const SizedBox(height: 16),
+            TextField(
+              style: const TextStyle(color: Colors.black87),
+              controller: _ctrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
+            onPressed: () async {
+              final val = double.tryParse(_ctrl.text);
+              if (val != null && widget.expenses.isNotEmpty) {
+                final provider = Provider.of<BudgetProvider>(context, listen: false);
+                for (int i = 0; i < widget.expenses.length; i++) {
+                  if (i == 0) {
+                    await provider.updateBankDeposit(widget.expenses[i].id!, val);
+                  } else {
+                    await provider.updateBankDeposit(widget.expenses[i].id!, 0);
+                  }
+                }
+                if (!context.mounted) return;
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('שמור'),
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('ביטול')),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
-          onPressed: () async {
-            final val = double.tryParse(_ctrl.text);
-            if (val != null && widget.expenses.isNotEmpty) {
-              for (int i = 0; i < widget.expenses.length; i++) {
-                if (i == 0) {
-                  // שומרים את כל הערך של הקופה המאוחדת על הפריט הראשון
-                  await DatabaseHelper.instance.updateExpense(widget.expenses[i].copyWith(actualBankDeposit: val));
-                } else {
-                  // מאפסים את השאר כדי שהסיכום הכולל יישאר מדויק
-                  await DatabaseHelper.instance.updateExpense(widget.expenses[i].copyWith(actualBankDeposit: 0));
-                }
-              }
-              if (!context.mounted) return;
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('שמור'),
-        ),
-      ],
     );
   }
 }
@@ -12639,7 +13041,7 @@ class SmartWithdrawalsScreen extends StatelessWidget {
 
 FILE: C:\Projects\dohaham\lib\ui\widgets\global_header.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed Typo: ElevatedButton in Reset Dialog)
+// 🔒 STATUS: EDITED (Reorganized Hamburger Menu for Logical Flow)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart'; 
@@ -12656,6 +13058,8 @@ import '../screens/onboarding_screen.dart';
 import '../screens/sinking_funds_screen.dart';
 import '../screens/checking_history_screen.dart';
 import '../screens/salary_engine_screen.dart';
+import '../screens/shopping_screen.dart';
+import '../screens/pnl_screen.dart';
 import '../../main.dart'; 
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -12737,9 +13141,6 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-// =========================================================================
-// מנוע כותרות אחיד לתחתיות (כולל ניווט 'חזור')
-// =========================================================================
 Widget _buildBottomSheetHeader(BuildContext context, String title, VoidCallback? onBack) {
   return Column(
     mainAxisSize: MainAxisSize.min,
@@ -12770,9 +13171,6 @@ Widget _buildBottomSheetHeader(BuildContext context, String title, VoidCallback?
   );
 }
 
-// =========================================================================
-// תפריט ראשי (רמה 0)
-// =========================================================================
 void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
   showModalBottomSheet(
     context: context,
@@ -12785,9 +13183,24 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
         children: [
           _buildBottomSheetHeader(ctx, 'תפריט ראשי', null),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Column(
               children: [
+                // --- קבוצה 1: פעולות שוטפות ---
+                _buildMenuTile(
+                  icon: Icons.shopping_cart_outlined, color: Colors.blueGrey[900]!, title: 'רשימת קניות',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ShoppingScreen()));
+                  },
+                ),
+                _buildMenuTile(
+                  icon: Icons.account_balance_wallet, color: Colors.blue, title: 'תזרים פיננסי (PnL)',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const PnLScreen()));
+                  },
+                ),
                 if (showSavings)
                   _buildMenuTile(
                     icon: Icons.savings_outlined, color: Colors.green, title: 'מרכז החסכונות',
@@ -12797,6 +13210,9 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     },
                   ),
                 
+                const Divider(), // מפריד קבוצות
+
+                // --- קבוצה 2: בקרה וניתוח ---
                 _buildMenuTile(
                   icon: Icons.account_balance_wallet_outlined, color: Colors.blueGrey, title: 'מעקב עו"ש',
                   onTap: () {
@@ -12804,11 +13220,8 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckingHistoryScreen()));
                   },
                 ),
-
-                const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(indent: 20, endIndent: 20)),
-
                 _buildMenuTile(
-                  icon: Icons.insights, color: Colors.blue, title: 'ממוצע שכר', isPremium: true,
+                  icon: Icons.insights, color: Colors.orange, title: 'ממוצע שכר', isPremium: true,
                   onTap: () {
                     Navigator.pop(ctx);
                     PremiumService.requirePremium(context, () {
@@ -12816,7 +13229,6 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     });
                   },
                 ),
-                
                 _buildMenuTile(
                   icon: Icons.psychology, color: Colors.deepPurple, title: 'ייצוא נתונים ל-AI', isPremium: true,
                   onTap: () {
@@ -12832,8 +13244,16 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                   },
                 ),
 
-                const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(indent: 20, endIndent: 20)),
+                const Divider(), // מפריד קבוצות
 
+                // --- קבוצה 3: הגדרות ושונות ---
+                _buildMenuTile(
+                  icon: Icons.settings, color: Colors.grey.shade700, title: 'הגדרות מערכת',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showMainSettingsBottomSheet(context, budget, showSavings);
+                  },
+                ),
                 _buildMenuTile(
                   icon: Icons.shield_outlined, color: Colors.teal, title: 'תמיכה ומשפטי',
                   onTap: () {
@@ -12842,15 +13262,7 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                   },
                 ),
 
-                _buildMenuTile(
-                  icon: Icons.settings, color: Colors.grey.shade700, title: 'הגדרות מערכת',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _showMainSettingsBottomSheet(context, budget, showSavings);
-                  },
-                ),
-
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 const Text('© 2026 Fintel - כל הזכויות שמורות\nv1.0.0', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: Colors.grey, height: 1.5)),
                 const SizedBox(height: 8),
               ],
@@ -12879,9 +13291,6 @@ Widget _buildMenuTile({required IconData icon, required Color color, required St
   );
 }
 
-// =========================================================================
-// תמיכה ומשפטי (רמה 1)
-// =========================================================================
 void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
   showModalBottomSheet(
     context: context, backgroundColor: Colors.white, isScrollControlled: true,
@@ -12900,14 +13309,11 @@ void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool s
                   title: const Text('פנו אלינו באימייל', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
                   onTap: () async {
                     Navigator.pop(ctx);
-                    // יצירת לינק Mailto תקני
                     final String emailUrl = 'mailto:fintel.app.info@gmail.com?subject=${Uri.encodeComponent("פידבק על אפליקציית דוחכם")}';
                     
                     try {
-                      // שימוש ב-LaunchMode.externalApplication כדי להכריח את אנדרואיד לפתוח את האפליקציה החיצונית
                       await launchUrl(Uri.parse(emailUrl), mode: LaunchMode.externalApplication);
                     } catch (e) {
-                      // גיבוי: העתקה ללוח
                       Clipboard.setData(const ClipboardData(text: 'fintel.app.info@gmail.com'));
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -12957,9 +13363,6 @@ void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool s
   );
 }
 
-// =========================================================================
-// מסכי טקסט משפטי (רמה 2)
-// =========================================================================
 void _showLegalBottomSheet({
   required BuildContext context, required BudgetProvider budget, required bool showSavings,
   required String title, required IconData icon, required Color iconColor, required String content
@@ -12997,9 +13400,6 @@ void _showLegalBottomSheet({
   );
 }
 
-// =========================================================================
-// הגדרות מערכת ראשי (רמה 1)
-// =========================================================================
 void _showMainSettingsBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
   final user = FirebaseAuth.instance.currentUser;
 
@@ -13143,7 +13543,7 @@ Widget _buildSettingsCard(BuildContext ctx, IconData icon, String text, VoidCall
 InputDecoration _customInputDecoration(String label) {
   return InputDecoration(
     labelText: label,
-    labelStyle: const TextStyle(color: Colors.black87), // תיקון: הגדרת צבע התווית בבירור
+    labelStyle: const TextStyle(color: Colors.black87),
     suffixText: '%',
     filled: true,
     fillColor: Colors.white,
@@ -13152,10 +13552,6 @@ InputDecoration _customInputDecoration(String label) {
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
   );
 }
-
-// =========================================================================
-// הגדרות פנימיות (רמה 2) - חלוקת יתרה, אחוזים, משפחה
-// =========================================================================
 
 void _showFutureVsFinancialBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
   final futureRatio = budget.futureAllocationRatio;
@@ -13183,7 +13579,7 @@ void _showFutureVsFinancialBottomSheet(BuildContext context, BudgetProvider budg
                       Expanded(
                         child: TextField(
                           controller: futureController, keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold), // תיקון: טקסט כהה
+                          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
                           decoration: _customInputDecoration('עתידיות'),
                           onChanged: (val) {
                             final num = double.tryParse(val) ?? 0;
@@ -13195,7 +13591,7 @@ void _showFutureVsFinancialBottomSheet(BuildContext context, BudgetProvider budg
                       Expanded(
                         child: TextField(
                           controller: financialController, keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold), // תיקון: טקסט כהה
+                          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
                           decoration: _customInputDecoration('פיננסיות'),
                           onChanged: (val) {
                             final num = double.tryParse(val) ?? 0;
@@ -13252,7 +13648,7 @@ void _showRatioSettingsBottomSheet(BuildContext context, BudgetProvider budget, 
                   const SizedBox(height: 20),
                   TextField(
                     controller: controller, 
-                    style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold), // תיקון: טקסט כהה
+                    style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true), 
                     decoration: _customInputDecoration('אחוז הקצאה'),
                   ),
@@ -13296,7 +13692,6 @@ void _showFamilySettingsBottomSheet(BuildContext context, BudgetProvider budget,
               padding: const EdgeInsets.all(20),
               child: Consumer<BudgetProvider>(
                 builder: (context, budgetProvider, child) {
-                  // תיקון: סינון הורים על פי כך שאינם תחת תפקיד ילד
                   final adults = budgetProvider.familyMembers.where((m) => m.role != FamilyRole.child).toList();
                   
                   return Column(
@@ -13427,7 +13822,6 @@ void _showEditMemberBottomSheet(BuildContext context, BudgetProvider budget, Fam
   final nameController = TextEditingController(text: member?.name ?? '');
   final yearController = TextEditingController(text: member?.birthYear.toString() ?? DateTime.now().year.toString());
   
-  // תיקון: זיהוי האם מדובר במבוגר לפי כך שאינו ילד
   final isAdult = member != null && member.role != FamilyRole.child;
   final titleText = member == null ? 'הוספת ילד/ה' : (isAdult ? 'עריכת פרטי הורה' : 'עריכת פרטי ילד');
   final nameLabel = member == null ? 'שם הילד/ה' : (isAdult ? 'שם ההורה' : 'שם הילד/ה');
@@ -13449,13 +13843,13 @@ void _showEditMemberBottomSheet(BuildContext context, BudgetProvider budget, Fam
                 children: [
                   TextField(
                     controller: nameController, 
-                    style: const TextStyle(color: Colors.black87), // תיקון: טקסט כהה
+                    style: const TextStyle(color: Colors.black87),
                     decoration: InputDecoration(labelText: nameLabel, labelStyle: const TextStyle(color: Colors.black87), border: const OutlineInputBorder())
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: yearController, 
-                    style: const TextStyle(color: Colors.black87), // תיקון: טקסט כהה
+                    style: const TextStyle(color: Colors.black87),
                     decoration: const InputDecoration(labelText: 'שנת לידה (למשל 1990)', labelStyle: TextStyle(color: Colors.black87), border: OutlineInputBorder()), 
                     keyboardType: TextInputType.number
                   ),
