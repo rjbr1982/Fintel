@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Bank Deposit overwrite bug - Preserved actualBankDeposit in all updates)
+// 🔒 STATUS: EDITED (Implemented Bank Deposit freeze mechanism on all budget modifiers)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -488,6 +488,12 @@ class BudgetProvider with ChangeNotifier {
     }
 
     final old = _expenses[index];
+    int multiplier = old.isPerChild ? childCount : 1;
+    if (multiplier < 1) multiplier = 1;
+    
+    // 🔒 הקפאת ערך הבנק הקודם רגע לפני איפוס היעד
+    double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+
     final updated = Expense(
       id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
       monthlyAmount: 0, originalAmount: old.originalAmount, frequency: old.frequency,
@@ -497,7 +503,7 @@ class BudgetProvider with ChangeNotifier {
       isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
       isCustom: old.isCustom,
       isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
-      actualBankDeposit: old.actualBankDeposit, // PRESERVE BANK DEPOSIT
+      actualBankDeposit: capturedBankDeposit, 
     );
 
     await DatabaseHelper.instance.updateExpense(updated);
@@ -599,7 +605,7 @@ class BudgetProvider with ChangeNotifier {
                       lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
                       isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: e.isCustom,
                       isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
-                      actualBankDeposit: e.actualBankDeposit, // PRESERVE BANK DEPOSIT
+                      actualBankDeposit: e.actualBankDeposit,
                     );
                     await DatabaseHelper.instance.updateExpense(updated);
                     localExp[i] = updated; 
@@ -764,7 +770,7 @@ class BudgetProvider with ChangeNotifier {
               lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
               isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: newIsCustom,
               isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
-              actualBankDeposit: e.actualBankDeposit, // PRESERVE BANK DEPOSIT
+              actualBankDeposit: e.actualBankDeposit,
             );
             await DatabaseHelper.instance.updateExpense(updated);
             changed = true;
@@ -860,7 +866,7 @@ class BudgetProvider with ChangeNotifier {
             isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
             isCustom: e.isCustom,
             isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
-            actualBankDeposit: e.actualBankDeposit, // PRESERVE BANK DEPOSIT
+            actualBankDeposit: e.actualBankDeposit, 
           );
           await DatabaseHelper.instance.updateExpense(updatedExpense);
           _expenses[i] = updatedExpense;
@@ -897,6 +903,12 @@ class BudgetProvider with ChangeNotifier {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index != -1) {
       final old = _expenses[index];
+      
+      // 🔒 הקפאת ערך הבנק
+      int multiplier = old.isPerChild ? childCount : 1;
+      if (multiplier < 1) multiplier = 1;
+      double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+
       final updated = Expense(
         id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
         monthlyAmount: old.monthlyAmount, originalAmount: old.originalAmount, frequency: old.frequency,
@@ -906,7 +918,7 @@ class BudgetProvider with ChangeNotifier {
         isDynamicSalary: isDynamic, salaryStartDate: startDate ?? old.salaryStartDate,
         isCustom: old.isCustom,
         isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
-        actualBankDeposit: old.actualBankDeposit, // PRESERVE BANK DEPOSIT
+        actualBankDeposit: capturedBankDeposit, 
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
@@ -934,6 +946,12 @@ class BudgetProvider with ChangeNotifier {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index != -1) {
       final old = _expenses[index];
+      
+      // 🔒 הקפאת ערך הבנק
+      int multiplier = old.isPerChild ? childCount : 1;
+      if (multiplier < 1) multiplier = 1;
+      double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+
       final updated = Expense(
         id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
         monthlyAmount: amount, originalAmount: old.originalAmount, frequency: old.frequency, 
@@ -944,7 +962,7 @@ class BudgetProvider with ChangeNotifier {
         isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
         isCustom: old.isCustom,
         isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
-        actualBankDeposit: old.actualBankDeposit, // PRESERVE BANK DEPOSIT
+        actualBankDeposit: capturedBankDeposit, 
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
@@ -954,6 +972,12 @@ class BudgetProvider with ChangeNotifier {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index != -1) {
       final old = _expenses[index];
+      
+      // 🔒 הקפאת ערך הבנק
+      int multiplier = old.isPerChild ? childCount : 1;
+      if (multiplier < 1) multiplier = 1;
+      double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+
       final updated = Expense(
         id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
         monthlyAmount: 0, originalAmount: old.originalAmount, frequency: old.frequency, 
@@ -965,7 +989,7 @@ class BudgetProvider with ChangeNotifier {
         isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
         isCustom: old.isCustom,
         isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
-        actualBankDeposit: old.actualBankDeposit, // PRESERVE BANK DEPOSIT
+        actualBankDeposit: capturedBankDeposit, 
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
@@ -975,6 +999,12 @@ class BudgetProvider with ChangeNotifier {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index != -1) {
       final old = _expenses[index];
+      
+      // 🔒 הקפאת ערך הבנק
+      int multiplier = old.isPerChild ? childCount : 1;
+      if (multiplier < 1) multiplier = 1;
+      double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+
       final updated = Expense(
         id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
         monthlyAmount: 0, originalAmount: old.originalAmount, frequency: old.frequency, isSinking: old.isSinking, isPerChild: old.isPerChild,
@@ -984,7 +1014,7 @@ class BudgetProvider with ChangeNotifier {
         isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
         isCustom: old.isCustom,
         isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
-        actualBankDeposit: old.actualBankDeposit, // PRESERVE BANK DEPOSIT
+        actualBankDeposit: capturedBankDeposit, 
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
@@ -994,6 +1024,12 @@ class BudgetProvider with ChangeNotifier {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index != -1) {
       final old = _expenses[index];
+      
+      // 🔒 הקפאת ערך הבנק רגע לפני עריכת היעד כדי לייצר את פער הבקרה
+      int multiplier = old.isPerChild ? childCount : 1;
+      if (multiplier < 1) multiplier = 1;
+      double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+
       final updated = Expense(
         id: old.id, name: name ?? old.name, category: old.category, parentCategory: old.parentCategory,
         monthlyAmount: (isLocked == true && manualAmount != null) ? manualAmount : 0, 
@@ -1005,20 +1041,44 @@ class BudgetProvider with ChangeNotifier {
         isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
         isCustom: old.isCustom,
         isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
-        actualBankDeposit: old.actualBankDeposit, // PRESERVE BANK DEPOSIT
+        actualBankDeposit: capturedBankDeposit, 
       );
       await DatabaseHelper.instance.updateExpense(updated);
     }
   }
 
-  // >>> הוספת הפונקציה החסרה לעדכון בנק ורענון מיידי של ה-UI <<<
+  // >>> הפונקציה הכללית המשמשת לעדכונים חופשיים (Smart Edit Dialog) <<<
+  Future<void> updateExpense(Expense expense) async {
+    if (expense.id != null) {
+      final index = _expenses.indexWhere((e) => e.id == expense.id);
+      if (index != -1) {
+        final old = _expenses[index];
+        
+        // 🔒 הקפאת ערך הבנק
+        int multiplier = old.isPerChild ? childCount : 1;
+        if (multiplier < 1) multiplier = 1;
+        double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+        
+        Expense updatedExpense = expense;
+        // אם הפעולה ב-UI לא שלחה ערך בנקאי, נשמור את המוקפא במקום לתת לו להתאפס ל-Null ולהפעיל את פער הבקרה
+        if (expense.actualBankDeposit == null) {
+          updatedExpense = expense.copyWith(actualBankDeposit: capturedBankDeposit);
+        }
+        
+        await DatabaseHelper.instance.updateExpense(updatedExpense);
+      } else {
+        await DatabaseHelper.instance.updateExpense(expense);
+      }
+    }
+  }
+
   Future<void> updateBankDeposit(int expenseId, double actualBankDeposit) async {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index != -1) {
       final updated = _expenses[index].copyWith(actualBankDeposit: actualBankDeposit);
       await DatabaseHelper.instance.updateExpense(updated);
-      _expenses[index] = updated; // עדכון בזיכרון
-      notifyListeners(); // קריאה חיונית לעדכון הממשק מיידית
+      _expenses[index] = updated; 
+      notifyListeners(); 
     }
   }
 
@@ -1124,7 +1184,7 @@ class BudgetProvider with ChangeNotifier {
       isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
       isCustom: e.isCustom,
       isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
-      actualBankDeposit: e.actualBankDeposit, // שומרים על הערך שקיים גם ברענון הכללי
+      actualBankDeposit: e.actualBankDeposit, // שומרים על הערך המוקפא כדי לא למחוק אותו ברענון הדינמי
     );
   }
 
@@ -1148,10 +1208,6 @@ class BudgetProvider with ChangeNotifier {
 
   Future<void> addExpense(Expense expense) async {
     await DatabaseHelper.instance.insertExpense(expense);
-  }
-
-  Future<void> updateExpense(Expense expense) async {
-    if (expense.id != null) await DatabaseHelper.instance.updateExpense(expense);
   }
 
   Future<void> deleteExpense(int id) async {
