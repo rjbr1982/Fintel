@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Preserved actualBankDeposit when creating new Expense object in Edit and Business dialogs)
+// 🔒 STATUS: EDITED (Fixed UI Stale Cache bug in Unified Bottom Sheet - Now fetches fresh data on every rebuild)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -842,7 +842,7 @@ class CategoryDrilldownScreen extends StatelessWidget {
                         businessIncomes: incJson,
                         businessExpenses: expJson,
                         businessWorkingHours: finalHours,
-                        actualBankDeposit: business?.actualBankDeposit, // PRESERVE BANK DEPOSIT
+                        actualBankDeposit: business?.actualBankDeposit,
                       );
                       
                       if (business == null) {
@@ -1568,7 +1568,7 @@ class SpecificExpensesScreen extends StatelessWidget {
                         businessIncomes: incJson,
                         businessExpenses: expJson,
                         businessWorkingHours: finalHours,
-                        actualBankDeposit: business?.actualBankDeposit, // PRESERVE BANK DEPOSIT
+                        actualBankDeposit: business?.actualBankDeposit, 
                       );
                       
                       if (business == null) {
@@ -2408,10 +2408,10 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
     );
   }
 
-  Widget _buildStandardUnifiedView(BuildContext context, double totalCurrentBalance) {
+  Widget _buildStandardUnifiedView(BuildContext context, double totalCurrentBalance, List<Expense> currentExpenses) {
     double fundExpected = 0;
     double fundActual = 0;
-    for (var e in widget.expenses) {
+    for (var e in currentExpenses) {
       int multiplier = e.isPerChild ? widget.provider.childCount : 1;
       double expected = e.monthlyAmount * multiplier;
       fundExpected += expected;
@@ -2445,7 +2445,7 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
                     context: context,
                     builder: (ctx) => Theme(
                       data: ThemeData.light(),
-                      child: _EditUnifiedBalancesDialog(expenses: widget.expenses, parentCategory: widget.parentCategory)
+                      child: _EditUnifiedBalancesDialog(expenses: currentExpenses, parentCategory: widget.parentCategory)
                     )
                   ).then((_) {
                     if (mounted) _loadWithdrawals();
@@ -2489,7 +2489,7 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
                                 context: context,
                                 builder: (ctx) => Theme(
                                   data: ThemeData.light(),
-                                  child: _EditUnifiedBankDepositDialog(expenses: widget.expenses, parentCategory: widget.parentCategory, currentActual: fundActual),
+                                  child: _EditUnifiedBankDepositDialog(expenses: currentExpenses, parentCategory: widget.parentCategory, currentActual: fundActual),
                                 )
                               ).then((_) {
                                 if (mounted) setState(() {});
@@ -2593,7 +2593,9 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    double totalCurrentBalance = widget.expenses.fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
+    // >>> התיקון הקריטי: משיכת רשימת ההוצאות המעודכנת מה-Provider בכל רענון חלונית <<<
+    final currentExpenses = widget.provider.expenses.where((e) => widget.expenses.any((we) => we.id == e.id)).toList();
+    double totalCurrentBalance = currentExpenses.fold(0.0, (sum, e) => sum + (e.currentBalance ?? 0));
 
     return Theme(
       data: ThemeData.light(),
@@ -2605,7 +2607,7 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
             children: [
               Text('קופה מאוחדת: ${widget.parentCategory}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
               const SizedBox(height: 16),
-              _buildStandardUnifiedView(context, totalCurrentBalance),
+              _buildStandardUnifiedView(context, totalCurrentBalance, currentExpenses),
             ],
           ),
         ),
