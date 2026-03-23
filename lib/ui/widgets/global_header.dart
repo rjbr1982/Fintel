@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Academy Premium Button to Hamburger Menu)
+// 🔒 STATUS: EDITED (Fixed Linter Warnings: const & activeThumbColor)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart'; 
@@ -17,7 +17,7 @@ import '../screens/checking_history_screen.dart';
 import '../screens/salary_engine_screen.dart';
 import '../screens/shopping_screen.dart';
 import '../screens/pnl_screen.dart';
-import '../screens/academy_screen.dart'; // Added Import for Academy
+import '../screens/academy_screen.dart'; 
 import '../../main.dart'; 
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -241,7 +241,7 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
   );
 }
 
-Widget _buildMenuTile({required IconData icon, required Color color, required String title, required VoidCallback onTap, bool isPremium = false}) {
+Widget _buildMenuTile({required IconData icon, required Color color, required String title, required VoidCallback onTap, bool isPremium = false, Widget? trailing}) {
   return ListTile(
     contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
     leading: CircleAvatar(backgroundColor: color.withValues(alpha: 0.1), child: Icon(icon, color: color, size: 22)),
@@ -254,6 +254,7 @@ Widget _buildMenuTile({required IconData icon, required Color color, required St
         ]
       ],
     ),
+    trailing: trailing,
     onTap: onTap,
   );
 }
@@ -271,6 +272,29 @@ void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool s
             padding: const EdgeInsets.symmetric(vertical: 20),
             child: Column(
               children: [
+                ListTile(
+                  leading: const CircleAvatar(backgroundColor: Color(0xFFE8F5E9), child: Icon(Icons.chat_bubble_outline, color: Colors.green)),
+                  title: const Text('פנו אלינו ב-WhatsApp', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    const String waUrl = 'https://wa.me/972559323615';
+                    try {
+                      await launchUrl(Uri.parse(waUrl), mode: LaunchMode.externalApplication);
+                    } catch (e) {
+                      Clipboard.setData(const ClipboardData(text: '+972-55-932-3615'));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('לא הצלחנו לפתוח את WhatsApp, המספר הועתק ללוח!'),
+                            backgroundColor: Colors.blueGrey, duration: Duration(seconds: 4),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                ),
+                const Divider(height: 1, indent: 70),
+
                 ListTile(
                   leading: const CircleAvatar(backgroundColor: Color(0xFFE3F2FD), child: Icon(Icons.mail_outline, color: Colors.blue)),
                   title: const Text('פנו אלינו באימייל', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
@@ -380,50 +404,64 @@ void _showMainSettingsBottomSheet(BuildContext context, BudgetProvider budget, b
           _buildBottomSheetHeader(ctx, 'הגדרות מערכת', () => _showMainMenuBottomSheet(context, budget, showSavings)),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.symmetric(vertical: 20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (user != null) _buildUserProfileCard(context, user),
+                  if (user != null) 
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _buildUserProfileCard(context, user),
+                    ),
 
                   if (!kIsWeb)
                     Consumer<BudgetProvider>(
                       builder: (context, budgetProv, child) {
-                        return Card(
-                          elevation: 0, color: Colors.teal.withValues(alpha: 0.05), margin: const EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.teal.withValues(alpha: 0.1))),
-                          child: SwitchListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                            title: Text('כניסה ביומטרית', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey[900])),
-                            secondary: CircleAvatar(backgroundColor: Colors.teal.withValues(alpha: 0.15), radius: 18, child: const Icon(Icons.fingerprint, color: Colors.teal, size: 20)),
-                            value: budgetProv.useBiometric, activeThumbColor: Colors.teal, 
+                        return _buildMenuTile(
+                          icon: Icons.fingerprint, color: Colors.teal, title: 'כניסה ביומטרית',
+                          trailing: Switch(
+                            value: budgetProv.useBiometric,
+                            activeThumbColor: Colors.teal,
                             onChanged: (val) { budgetProv.toggleBiometric(val); },
                           ),
+                          onTap: () { budgetProv.toggleBiometric(!budgetProv.useBiometric); }
                         );
                       }
                     ),
 
-                  _buildSettingsCard(ctx, Icons.family_restroom_rounded, 'הגדרות משפחה וסטטוס', () {
+                  _buildMenuTile(
+                    icon: Icons.family_restroom_rounded, color: Colors.blue, title: 'הגדרות משפחה וסטטוס',
+                    onTap: () {
                       Navigator.pop(ctx);
                       _showFamilySettingsBottomSheet(context, budget, showSavings);
-                  }, Colors.blue),
-              
-                  _buildSettingsCard(ctx, Icons.pie_chart_outline, 'אחוז משתנות (רמת חיים)', () {
+                    }
+                  ),
+                
+                  _buildMenuTile(
+                    icon: Icons.pie_chart_outline, color: Colors.orange, title: 'אחוז משתנות (רמת חיים)',
+                    onTap: () {
                       Navigator.pop(ctx);
                       _showRatioSettingsBottomSheet(context, budget, showSavings);
-                  }, Colors.orange),
+                    }
+                  ),
                   
-                  _buildSettingsCard(ctx, Icons.balance, 'חלוקת שארית (עתידיות/פיננסיות)', () {
+                  _buildMenuTile(
+                    icon: Icons.balance, color: Colors.purple, title: 'חלוקת שארית (עתידיות/פיננסיות)',
+                    onTap: () {
                       Navigator.pop(ctx);
                       _showFutureVsFinancialBottomSheet(context, budget, showSavings);
-                  }, Colors.purple),
+                    }
+                  ),
                   
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1)),
+                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1)),
                   
-                  _buildSettingsCard(ctx, Icons.restore, 'איפוס כל הנתונים', () {
+                  _buildMenuTile(
+                    icon: Icons.restore, color: Colors.red, title: 'איפוס כל הנתונים',
+                    onTap: () {
                       Navigator.pop(ctx);
                       _showFactoryResetConfirm(context, budget); 
-                  }, Colors.red),
+                    }
+                  ),
                 ],
               ),
             ),
@@ -481,28 +519,6 @@ Widget _buildUserProfileCard(BuildContext context, User user) {
           ),
         )
       ],
-    ),
-  );
-}
-
-Widget _buildSettingsCard(BuildContext ctx, IconData icon, String text, VoidCallback onTap, Color iconColor) {
-  return Card(
-    elevation: 0, color: iconColor.withValues(alpha: 0.05), margin: const EdgeInsets.only(bottom: 12),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: iconColor.withValues(alpha: 0.1))),
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        child: Row(
-          children: [
-            CircleAvatar(backgroundColor: iconColor.withValues(alpha: 0.15), radius: 18, child: Icon(icon, color: iconColor, size: 20)),
-            const SizedBox(width: 16),
-            Expanded(child: Text(text, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey[900]))),
-            Icon(Icons.arrow_forward_ios, size: 14, color: Colors.blueGrey[300]),
-          ],
-        ),
-      ),
     ),
   );
 }
