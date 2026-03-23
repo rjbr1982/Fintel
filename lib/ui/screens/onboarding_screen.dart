@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed SegmentedButton UI, Marital Status & Gender DB Saving, and Auto Parent/Child Logic + Freedom Gate Routing)
+// 🔒 STATUS: EDITED (Light Theme Implementation & Dynamic Plural/Single Texts)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -138,6 +138,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     bool isMale = _gender == 'male';
+    bool isSingle = _maritalStatus == 'single';
     String welcomeText = isMale ? 'ברוך הבא לדוחכם' : 'ברוכה הבאה לדוחכם';
     String continueText = isMale ? 'המשך' : 'המשכי';
     String finishText = isMale ? 'מוכן! צור לי תקציב' : 'מוכנה! צור לי תקציב';
@@ -146,13 +147,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final segmentedStyle = SegmentedButton.styleFrom(
       selectedForegroundColor: Colors.blue[900],
       selectedBackgroundColor: Colors.blue[100],
-      foregroundColor: Colors.grey[400],
+      foregroundColor: Colors.blueGrey,
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text(welcomeText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+        title: Text(welcomeText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black87)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -165,7 +166,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               const SizedBox(height: 20),
               Text(
                 isMale ? 'בונה את התקציב החכם שלך...' : 'בונה את התקציב החכם שלך...',
-                style: const TextStyle(color: Colors.white, fontSize: 16)
+                style: const TextStyle(color: Colors.black87, fontSize: 16)
               )
             ],
           ))
@@ -206,7 +207,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     if (_currentStep > 0)
                       TextButton(
                         onPressed: details.onStepCancel,
-                        child: const Text('חזור', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                        child: const Text('חזור', style: TextStyle(color: Colors.blueGrey, fontSize: 16)),
                       ),
                   ],
                 ),
@@ -215,11 +216,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             steps: [
               // --- שלב 1 ---
               Step(
-                title: const Text('היכרות וסטטוס', style: TextStyle(fontSize: 18, color: Colors.white)),
+                title: const Text('היכרות וסטטוס', style: TextStyle(fontSize: 18, color: Colors.black87)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('איך תעדיף/י שאפנה אליך?', style: TextStyle(color: Colors.grey)),
+                    const Text('איך תעדיף/י שאפנה אליך?', style: TextStyle(color: Colors.blueGrey)),
                     const SizedBox(height: 12),
                     SegmentedButton<String>(
                       style: segmentedStyle,
@@ -231,7 +232,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       onSelectionChanged: (val) => setState(() => _gender = val.first),
                     ),
                     const SizedBox(height: 30),
-                    Text(isMale ? 'מה הסטטוס האישי שלך?' : 'מה הסטטוס האישי שלך?', style: const TextStyle(color: Colors.grey)),
+                    Text(isMale ? 'מה הסטטוס האישי שלך?' : 'מה הסטטוס האישי שלך?', style: const TextStyle(color: Colors.blueGrey)),
                     const SizedBox(height: 12),
                     SegmentedButton<String>(
                       style: segmentedStyle,
@@ -249,7 +250,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
               // --- שלב 2 ---
               Step(
-                title: const Text('הרכב משפחתי', style: TextStyle(fontSize: 18, color: Colors.white)),
+                title: const Text('הרכב משפחתי', style: TextStyle(fontSize: 18, color: Colors.black87)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -261,7 +262,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       'השם שלך', 
                       showDelete: false
                     ),
-                    if (_maritalStatus == 'married') ...[
+                    if (!isSingle) ...[
                       const SizedBox(height: 12),
                       _buildFamilyRow(
                         _adults[1]['name']!, 
@@ -272,7 +273,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ],
                     const SizedBox(height: 30),
                     
-                    Text(isMale ? 'האם יש לכם ילדים?' : 'האם יש לכם ילדים?', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                    Text(isSingle ? 'האם יש לך ילדים?' : 'האם יש לכם ילדים?', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
                     const SizedBox(height: 12),
                     SegmentedButton<bool>(
                       style: segmentedStyle,
@@ -318,13 +319,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
               // --- שלב 3 ---
               Step(
-                title: const Text('מקורות הכנסה', style: TextStyle(fontSize: 18, color: Colors.white)),
+                title: const Text('מקורות הכנסה', style: TextStyle(fontSize: 18, color: Colors.black87)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('כדי שהתקציב יהיה מציאותי, נצטרך הערכה גסה של ההכנסות. אפשר לתקן זאת תמיד.', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                    const Text('כדי שהתקציב יהיה מציאותי, נצטרך הערכה גסה של ההכנסות. אפשר לתקן זאת תמיד.', style: TextStyle(color: Colors.blueGrey, fontSize: 13)),
                     const SizedBox(height: 20),
-                    if (_maritalStatus == 'single') ...[
+                    if (isSingle) ...[
                       _buildSetupField('משכורת / הכנסה אישית (משוער)', _income1Ctrl),
                     ] else ...[
                       _buildSetupField('הכנסה שלך (משוער לחודש)', _income1Ctrl),
@@ -338,19 +339,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
               // --- שלב 4 ---
               Step(
-                title: const Text('מגורים וניידות', style: TextStyle(fontSize: 18, color: Colors.white)),
+                title: const Text('מגורים וניידות', style: TextStyle(fontSize: 18, color: Colors.black87)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('מה מצב המגורים שלכם?', style: TextStyle(color: Colors.grey)),
+                    Text(isSingle ? 'מה מצב המגורים שלך?' : 'מה מצב המגורים שלכם?', style: const TextStyle(color: Colors.blueGrey)),
                     const SizedBox(height: 12),
                     InputDecorator(
-                      decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(), 
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
+                      ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _housingType,
-                          dropdownColor: Colors.grey[900],
-                          style: const TextStyle(color: Colors.white),
+                          dropdownColor: Colors.white,
+                          style: const TextStyle(color: Colors.black87),
                           isExpanded: true,
                           items: const [
                             DropdownMenuItem(value: 'rent', child: Text('שכירות')),
@@ -362,15 +367,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text('איך אתם מתניידים ביומיום?', style: TextStyle(color: Colors.grey)),
+                    Text(
+                      isSingle 
+                        ? (isMale ? 'איך אתה מתנייד ביומיום?' : 'איך את מתניידת ביומיום?') 
+                        : 'איך אתם מתניידים ביומיום?', 
+                      style: const TextStyle(color: Colors.blueGrey)
+                    ),
                     const SizedBox(height: 12),
                     InputDecorator(
-                      decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(), 
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
+                      ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _vehicleType,
-                          dropdownColor: Colors.grey[900],
-                          style: const TextStyle(color: Colors.white),
+                          dropdownColor: Colors.white,
+                          style: const TextStyle(color: Colors.black87),
                           isExpanded: true,
                           items: const [
                             DropdownMenuItem(value: 'car', child: Text('רכב פרטי אחד')),
@@ -389,12 +403,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
               // --- שלב 5 ---
               Step(
-                title: const Text('הגדרות מאקרו', style: TextStyle(fontSize: 18, color: Colors.white)),
+                title: const Text('הגדרות מאקרו', style: TextStyle(fontSize: 18, color: Colors.black87)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('האם יש לכם כיום חובות פעילים?', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
-                    const Text('(הלוואות, מינוס עמוק, או תשלומים באשראי)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text(isSingle ? 'האם יש לך כיום חובות פעילים?' : 'האם יש לכם כיום חובות פעילים?', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                    const Text('(הלוואות, מינוס עמוק, או תשלומים באשראי)', style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
                     const SizedBox(height: 12),
                     SegmentedButton<bool>(
                       style: segmentedStyle,
@@ -407,7 +421,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     const SizedBox(height: 30),
                     const Text('האם לכלול הוצאות מסורת וחגי ישראל?', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
-                    const Text('(חגים ומועדים יוזנו אוטומטית לקופות חסכון שוטפות)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    const Text('(חגים ומועדים יוזנו אוטומטית לקופות חסכון שוטפות)', style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
                     const SizedBox(height: 12),
                     SegmentedButton<bool>(
                       style: segmentedStyle,
@@ -433,15 +447,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: TextField(
         controller: controller,
         keyboardType: TextInputType.number,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: Colors.black87),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey),
+          labelStyle: const TextStyle(color: Colors.blueGrey),
           border: const OutlineInputBorder(),
-          enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+          enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
           isDense: true,
           suffixText: '₪',
-          suffixStyle: const TextStyle(color: Colors.white),
+          suffixStyle: const TextStyle(color: Colors.black87),
         ),
       ),
     );
@@ -454,8 +468,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           flex: 3,
           child: TextField(
             controller: nameCtrl,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(labelText: nameLabel, labelStyle: const TextStyle(color: Colors.grey), isDense: true, border: const OutlineInputBorder(), enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24))),
+            style: const TextStyle(color: Colors.black87),
+            decoration: InputDecoration(
+              labelText: nameLabel, 
+              labelStyle: const TextStyle(color: Colors.blueGrey), 
+              isDense: true, 
+              border: const OutlineInputBorder(), 
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300))
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -464,8 +484,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: TextField(
             controller: yearCtrl,
             keyboardType: TextInputType.number,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(labelText: 'שנת לידה', labelStyle: TextStyle(color: Colors.grey), isDense: true, border: OutlineInputBorder(), enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24))),
+            style: const TextStyle(color: Colors.black87),
+            decoration: InputDecoration(
+              labelText: 'שנת לידה', 
+              labelStyle: const TextStyle(color: Colors.blueGrey), 
+              isDense: true, 
+              border: const OutlineInputBorder(), 
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300))
+            ),
           ),
         ),
         if (showDelete) ...[

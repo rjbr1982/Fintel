@@ -5,11 +5,10 @@
 ## 1. Project Overview
 "Dohaham" (Fintel) is a smart family budget management application designed for Israeli users. It uses Flutter, Provider for state management, and local SQLite synced to Firebase. The architecture follows a strict "E-Myth" philosophy (Financial Intelligence).
 
-## 2. Recent Major Updates (v12.82 - Shopping UI & Dynamic Seed)
-* **Shopping Screen Overhaul:** Replaced local app bar with `GlobalHeader` for brand consistency. Added a local Search Bar (magnifying glass) and rearranged action buttons (Zoom, Cart) below the budget card.
-* **Shopping Sort Persistence:** Integrated `shared_preferences` to persist multi-level sorting choices across app sessions.
-* **Frequency/History Bug Fix:** Fixed a bug where items purchased with a 0-week offset ("This Week") did not show the visual "Purchased" tag. Added Israeli calendar week alignment (Sunday start).
-* **Dynamic Seed Delta:** Refactored `SeedService` to mathematically calculate the theoretical shopping basket cost based on marital status and children count. The Variable Expense "Shopping Anchor" is now strictly set to Basket Cost + 200 ILS to ensure a positive delta default.
+## 2. Recent Major Updates (v12.82 - UI Consistency & Onboarding Refinement)
+* **Hamburger Menu Restructuring:** Reordered the main menu to prioritize core screens (PnL -> Shopping -> Savings -> Checking -> Salary). Created a distinct utility section at the bottom, highlighting the "Fintel Academy" with a premium boxed design.
+* **Onboarding Screen (Light Theme & Dynamic Text):** Replaced the dark theme with a clean Light Theme (grey.shade50) to align with the brand's UI consistency. Implemented dynamic text rendering to adapt singular/plural pronouns based on both `gender` and `maritalStatus` (e.g., Single users are asked "Do *you* have kids?" instead of "Do *you both* have kids?").
+* **Academy Screen (Light Theme):** Transitioned from Deep Slate to a clean Light Theme to maintain visual continuity with the rest of the application, while retaining the premium Amber/Gold accents.
 
 ## 3. UNRESOLVED ISSUES
 * None. The infrastructure is clean, stable, fully secured, and Linter-warning-free (0 issues).

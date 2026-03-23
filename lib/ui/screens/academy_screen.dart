@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Linter errors - Added const to ColorScheme and side to RoundedRectangleBorder)
+// 🔒 STATUS: EDITED (Light Theme Implementation for UI Consistency)
 import 'package:flutter/material.dart';
 import '../../data/academy_content.dart';
 
@@ -6,7 +6,7 @@ class AcademyScreen extends StatelessWidget {
   const AcademyScreen({super.key});
 
   Widget _buildBlock(AcademyBlock block) {
-    const textColor = Colors.white70;
+    const textColor = Colors.black87;
 
     switch (block.type) {
       case BlockType.paragraph:
@@ -39,7 +39,7 @@ class AcademyScreen extends StatelessWidget {
           padding: const EdgeInsets.only(top: 8.0, bottom: 12.0),
           child: Text(
             block.text,
-            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, height: 1.5),
+            style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold, height: 1.5),
           ),
         );
     }
@@ -47,15 +47,14 @@ class AcademyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color deepSlate = Color(0xFF121212);
     const Color goldAccents = Color(0xFFFFB800);
 
     return Scaffold(
-      backgroundColor: deepSlate,
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        backgroundColor: deepSlate,
+        backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.black87),
         title: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -63,7 +62,7 @@ class AcademyScreen extends StatelessWidget {
             SizedBox(width: 8),
             Text(
               'המדריך לחירות פיננסית',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -75,26 +74,27 @@ class AcademyScreen extends StatelessWidget {
           final chapter = academyChapters[index];
           
           return Card(
-            color: Colors.blueGrey[900],
+            color: Colors.white,
             margin: const EdgeInsets.only(bottom: 12.0),
+            elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.blueGrey[800]!),
+              side: BorderSide(color: Colors.grey.shade300),
             ),
             child: Theme(
               data: Theme.of(context).copyWith(
                 dividerColor: Colors.transparent,
-                colorScheme: const ColorScheme.dark(
-                  primary: goldAccents, // Sets expansion icon color when expanded
+                colorScheme: ColorScheme.light(
+                  primary: Colors.amber.shade700,
                 ),
               ),
               child: ExpansionTile(
-                iconColor: goldAccents,
-                collapsedIconColor: Colors.blueGrey[400],
+                iconColor: Colors.amber.shade700,
+                collapsedIconColor: Colors.blueGrey,
                 title: Text(
                   chapter.title,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black87,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),

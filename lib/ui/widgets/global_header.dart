@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Linter Warnings: const & activeThumbColor)
+// 🔒 STATUS: EDITED (Reordered Hamburger Menu & Boxed Academy)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart'; 
@@ -144,19 +144,19 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Column(
               children: [
-                // --- קבוצה 1: פעולות שוטפות ---
-                _buildMenuTile(
-                  icon: Icons.shopping_cart_outlined, color: Colors.blueGrey[900]!, title: 'רשימת קניות',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ShoppingScreen()));
-                  },
-                ),
+                // --- קבוצה 1: פעולות וליבה ---
                 _buildMenuTile(
                   icon: Icons.account_balance_wallet, color: Colors.blue, title: 'תזרים פיננסי (PnL)',
                   onTap: () {
                     Navigator.pop(ctx);
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const PnLScreen()));
+                  },
+                ),
+                _buildMenuTile(
+                  icon: Icons.shopping_cart_outlined, color: Colors.blueGrey[900]!, title: 'רשימת קניות',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ShoppingScreen()));
                   },
                 ),
                 if (showSavings)
@@ -167,19 +167,6 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                       Navigator.push(context, MaterialPageRoute(builder: (_) => const SinkingFundsScreen()));
                     },
                   ),
-                
-                const Divider(), // מפריד קבוצות
-
-                // --- קבוצה 2: בקרה וניתוח ---
-                _buildMenuTile(
-                  icon: Icons.school, color: Colors.amber[700]!, title: 'אקדמיית Fintel (השיטה)', isPremium: true,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    PremiumService.requirePremium(context, () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AcademyScreen()));
-                    });
-                  },
-                ),
                 _buildMenuTile(
                   icon: Icons.account_balance_wallet_outlined, color: Colors.blueGrey, title: 'מעקב עו"ש',
                   onTap: () {
@@ -196,6 +183,27 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     });
                   },
                 ),
+
+                const Divider(), // מפריד כלי עזר
+
+                // --- קבוצה 2: עזרים והגדרות ---
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber.shade200),
+                  ),
+                  child: _buildMenuTile(
+                    icon: Icons.school, color: Colors.amber[800]!, title: 'אקדמיית Fintel (השיטה)', isPremium: true,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      PremiumService.requirePremium(context, () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const AcademyScreen()));
+                      });
+                    },
+                  ),
+                ),
                 _buildMenuTile(
                   icon: Icons.psychology, color: Colors.deepPurple, title: 'ייצוא נתונים ל-AI', isPremium: true,
                   onTap: () {
@@ -210,10 +218,6 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     });
                   },
                 ),
-
-                const Divider(), // מפריד קבוצות
-
-                // --- קבוצה 3: הגדרות ושונות ---
                 _buildMenuTile(
                   icon: Icons.settings, color: Colors.grey.shade700, title: 'הגדרות מערכת',
                   onTap: () {
