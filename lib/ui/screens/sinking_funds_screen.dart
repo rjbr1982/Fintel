@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Removed unused DatabaseHelper import)
+// 🔒 STATUS: EDITED (Fix dialog pop after async gap via try-finally)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -753,9 +753,12 @@ class _EditIndividualBalanceDialogState extends State<_EditIndividualBalanceDial
             onPressed: () async {
               final val = double.tryParse(_ctrl.text);
               if (val != null) {
-                await Provider.of<BudgetProvider>(context, listen: false).setExpenseCurrentBalance(widget.expense.id!, val);
-                if (!context.mounted) return;
-                Navigator.pop(context);
+                final nav = Navigator.of(context);
+                try {
+                  await Provider.of<BudgetProvider>(context, listen: false).setExpenseCurrentBalance(widget.expense.id!, val);
+                } finally {
+                  nav.pop();
+                }
               }
             },
             child: const Text('שמור'),
@@ -817,16 +820,19 @@ class _EditUnifiedBalancesDialogState extends State<_EditUnifiedBalancesDialog> 
             onPressed: () async {
               final val = double.tryParse(_ctrl.text);
               if (val != null) {
-                final provider = Provider.of<BudgetProvider>(context, listen: false);
-                for (int i = 0; i < widget.expenses.length; i++) {
-                  if (i == 0) {
-                    await provider.setExpenseCurrentBalance(widget.expenses[i].id!, val);
-                  } else {
-                    await provider.setExpenseCurrentBalance(widget.expenses[i].id!, 0);
+                final nav = Navigator.of(context);
+                try {
+                  final provider = Provider.of<BudgetProvider>(context, listen: false);
+                  for (int i = 0; i < widget.expenses.length; i++) {
+                    if (i == 0) {
+                      await provider.setExpenseCurrentBalance(widget.expenses[i].id!, val);
+                    } else {
+                      await provider.setExpenseCurrentBalance(widget.expenses[i].id!, 0);
+                    }
                   }
+                } finally {
+                  nav.pop();
                 }
-                if (!context.mounted) return;
-                Navigator.pop(context);
               }
             },
             child: const Text('שמור'),
@@ -888,9 +894,12 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
             onPressed: () async {
               final val = double.tryParse(_ctrl.text);
               if (val != null) {
-                await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
-                if (!context.mounted) return;
-                Navigator.pop(context);
+                final nav = Navigator.of(context);
+                try {
+                  await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
+                } finally {
+                  nav.pop();
+                }
               }
             },
             child: const Text('שמור'),
@@ -953,16 +962,19 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
             onPressed: () async {
               final val = double.tryParse(_ctrl.text);
               if (val != null && widget.expenses.isNotEmpty) {
-                final provider = Provider.of<BudgetProvider>(context, listen: false);
-                for (int i = 0; i < widget.expenses.length; i++) {
-                  if (i == 0) {
-                    await provider.updateBankDeposit(widget.expenses[i].id!, val);
-                  } else {
-                    await provider.updateBankDeposit(widget.expenses[i].id!, 0);
+                final nav = Navigator.of(context);
+                try {
+                  final provider = Provider.of<BudgetProvider>(context, listen: false);
+                  for (int i = 0; i < widget.expenses.length; i++) {
+                    if (i == 0) {
+                      await provider.updateBankDeposit(widget.expenses[i].id!, val);
+                    } else {
+                      await provider.updateBankDeposit(widget.expenses[i].id!, 0);
+                    }
                   }
+                } finally {
+                  nav.pop();
                 }
-                if (!context.mounted) return;
-                Navigator.pop(context);
               }
             },
             child: const Text('שמור'),
