@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Reorganized Hamburger Menu for Logical Flow)
+// 🔒 STATUS: EDITED (Added Academy Premium Button to Hamburger Menu)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart'; 
@@ -17,6 +17,7 @@ import '../screens/checking_history_screen.dart';
 import '../screens/salary_engine_screen.dart';
 import '../screens/shopping_screen.dart';
 import '../screens/pnl_screen.dart';
+import '../screens/academy_screen.dart'; // Added Import for Academy
 import '../../main.dart'; 
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -170,6 +171,15 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                 const Divider(), // מפריד קבוצות
 
                 // --- קבוצה 2: בקרה וניתוח ---
+                _buildMenuTile(
+                  icon: Icons.school, color: Colors.amber[700]!, title: 'אקדמיית Fintel (השיטה)', isPremium: true,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    PremiumService.requirePremium(context, () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AcademyScreen()));
+                    });
+                  },
+                ),
                 _buildMenuTile(
                   icon: Icons.account_balance_wallet_outlined, color: Colors.blueGrey, title: 'מעקב עו"ש',
                   onTap: () {

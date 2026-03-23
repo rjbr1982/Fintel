@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Forced explicit border colors and fill for TextFields in Dialog)
+// 🔒 STATUS: EDITED (Added contextual onboarding info-dialogs)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -37,6 +37,34 @@ class SmartWithdrawalsScreen extends StatelessWidget {
       }
     }
     return buckets.toList()..sort();
+  }
+
+  // === פונקציית עזר לתמרורי הדרכה ===
+  void _showInfoDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showAddPlannedWithdrawalDialog(BuildContext context, BudgetProvider provider) {
@@ -169,7 +197,15 @@ class SmartWithdrawalsScreen extends StatelessWidget {
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('תחנת יציאה: $bucketName', style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+          title: Row(
+            children: [
+              Expanded(child: Text('תחנת יציאה: $bucketName', style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18))),
+              InkWell(
+                onTap: () => _showInfoDialog(context, 'תחנת יציאה בנקאית', 'קבע את היום הקבוע בחודש שבו תבצע משיכה פיזית מרוכזת מהפיקדון לעו"ש. המערכת תאגור את כל המשיכות המתוכננות שלך בדיוק לתאריך זה, כדי לחסוך עמלות ולשמור על סדר בבנק.'),
+                child: const Icon(Icons.info_outline, size: 22, color: Colors.blueGrey),
+              ),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

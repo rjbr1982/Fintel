@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (PRO MODE: Complete cleanup of duplicates, fixed context.mounted checks. Zero Linter warnings)
+// 🔒 STATUS: EDITED (Added contextual onboarding info-dialogs)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -74,6 +74,34 @@ void _showUnifiedModeDialog(BuildContext context, BudgetProvider provider, Strin
         );
       }
     )
+  );
+}
+
+// === פונקציית עזר לתמרורי הדרכה ===
+void _showInfoDialog(BuildContext context, String title, String content) {
+  showDialog(
+    context: context,
+    builder: (ctx) => Theme(
+      data: ThemeData.light(),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline, color: Colors.blue),
+            const SizedBox(width: 8),
+            Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+          ],
+        ),
+        content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    ),
   );
 }
 
@@ -324,7 +352,16 @@ class CategoryDrilldownScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('$boxTitle: ₪${totalBalance.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color == Colors.orange ? Colors.orange[900] : color)),
+                Row(
+                  children: [
+                    Text('$boxTitle: ₪${totalBalance.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color == Colors.orange ? Colors.orange[900] : color)),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: () => _showInfoDialog(context, 'רמזור הבילויים', 'המערכת מנתחת את יתרת הבילויים ומתריעה בצבעים. לחץ על סמל העיפרון כדי לכייל מאיזה סכום תופיע אזהרת תקציב (כתום) ומאיזה סכום תוצג הודעת שפע (ירוק).'),
+                      child: Icon(Icons.info_outline, size: 16, color: color == Colors.orange ? Colors.orange[900] : color),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 4),
                 Text(message, style: TextStyle(fontSize: 12, color: Colors.blueGrey[800], fontWeight: FontWeight.w500)),
               ],
@@ -452,7 +489,16 @@ class CategoryDrilldownScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     
-                    const Align(alignment: Alignment.centerRight, child: Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                        InkWell(
+                          onTap: () => _showInfoDialog(context, 'נוסחת הפסיביות', 'כדי שעסק יוכר כ"נכס פסיבי" שיקזז את יעד המחייה שלך, עליו לעמוד בשני תנאים מתמטיים: ייצור רווח נטו חיובי, ודרישת עבודה של מקסימום 4 שעות בשבוע.'),
+                          child: const Icon(Icons.info_outline, size: 18, color: Colors.blueGrey),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -1489,7 +1535,22 @@ class SpecificExpensesScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     
-                    const Align(alignment: Alignment.centerRight, child: Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                            const SizedBox(width: 6),
+                            InkWell(
+                              onTap: () => _showInfoDialog(context, 'נוסחת הפסיביות', 'כדי שעסק יוכר כ"נכס פסיבי" שיקזז את יעד המחייה שלך, עליו לעמוד בשני תנאים מתמטיים: ייצור רווח נטו חיובי, ודרישת עבודה של מקסימום 4 שעות בשבוע.'),
+                              child: const Icon(Icons.info_outline, size: 16, color: Colors.blueGrey),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
