@@ -5,11 +5,11 @@
 ## 1. Project Overview
 "Dohaham" (Fintel) is a smart family budget management application designed for Israeli users. It uses Flutter, Provider for state management, and local SQLite synced to Firebase. The architecture follows a strict "E-Myth" philosophy (Financial Intelligence).
 
-## 2. Recent Major Updates (v12.82 - Contextual Onboarding & UI Standardization)
-* **The 11 Signposts (Contextual Onboarding):** Fully implemented Section 5.12. Removed all static explanatory banners across the app (PnL, Shopping, Sinking Funds, Assets, Reducing, Salary Engine) and replaced them with a uniform `_showInfoDialog` triggered by discreet `info_outline` icons.
-* **Menu UI Standardization:** Refactored the Settings Bottom Sheet to share the exact same `_buildMenuTile` UI component as the Main Menu for pixel-perfect brand consistency.
-* **WhatsApp Integration:** Added a direct WhatsApp support button to the Support & Legal menu, handling fallbacks (copy to clipboard) gracefully.
-* **Async Dialog Fixes:** Resolved an issue where Sinking Fund dialogs wouldn't close after a database save by capturing the `Navigator` before the `await` gap and utilizing `try-finally` blocks.
+## 2. Recent Major Updates (v12.82 - Shopping UI & Dynamic Seed)
+* **Shopping Screen Overhaul:** Replaced local app bar with `GlobalHeader` for brand consistency. Added a local Search Bar (magnifying glass) and rearranged action buttons (Zoom, Cart) below the budget card.
+* **Shopping Sort Persistence:** Integrated `shared_preferences` to persist multi-level sorting choices across app sessions.
+* **Frequency/History Bug Fix:** Fixed a bug where items purchased with a 0-week offset ("This Week") did not show the visual "Purchased" tag. Added Israeli calendar week alignment (Sunday start).
+* **Dynamic Seed Delta:** Refactored `SeedService` to mathematically calculate the theoretical shopping basket cost based on marital status and children count. The Variable Expense "Shopping Anchor" is now strictly set to Basket Cost + 200 ILS to ensure a positive delta default.
 
 ## 3. UNRESOLVED ISSUES
 * None. The infrastructure is clean, stable, fully secured, and Linter-warning-free (0 issues).

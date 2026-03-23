@@ -1,10 +1,12 @@
-// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
+// 🔒 STATUS: EDITED (Added Persistence for Sort Preferences via SharedPreferences)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/shopping_provider.dart';
 import '../../providers/budget_provider.dart'; 
 import '../../data/shopping_model.dart';
 import '../../data/expense_model.dart';
+import '../widgets/global_header.dart';
 
 class ShoppingScreen extends StatefulWidget {
   const ShoppingScreen({super.key});
@@ -23,14 +25,50 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   double _textScale = 1.0;
   bool _showOnlyChecked = false;
 
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
+    _loadSortPreferences();
+    
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
+
     Future.microtask(() {
       if (mounted) {
         context.read<ShoppingProvider>().loadItems();
       }
     });
+  }
+
+  Future<void> _loadSortPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedActive = prefs.getStringList('shopping_active_sorts');
+    final savedAll = prefs.getStringList('shopping_all_sorts');
+    
+    if (savedActive != null && savedActive.isNotEmpty && savedAll != null && savedAll.isNotEmpty) {
+      setState(() {
+        _activeSorts = savedActive;
+        _allSortOptions = savedAll;
+      });
+    }
+  }
+
+  Future<void> _saveSortPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('shopping_active_sorts', _activeSorts);
+    await prefs.setStringList('shopping_all_sorts', _allSortOptions);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   // === פונקציית עזר לתמרורי הדרכה ===
@@ -78,11 +116,13 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   }
 
   bool _wasItemPurchasedInWeek(ShoppingItem item, int offset) {
-    if (item.lastPurchaseDateTime == null || offset == 0) {
+    if (item.lastPurchaseDateTime == null) {
       return false;
     }
     final now = DateTime.now();
-    final startOfCurrentWeek = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday % 7));
+    int daysToSubtract = now.weekday == 7 ? 0 : now.weekday;
+    final startOfCurrentWeek = DateTime(now.year, now.month, now.day).subtract(Duration(days: daysToSubtract));
+    
     final startOfTargetWeek = startOfCurrentWeek.add(Duration(days: offset * 7));
     final endOfTargetWeek = startOfTargetWeek.add(const Duration(days: 7));
 
@@ -146,6 +186,10 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       displayedItems = displayedItems.where((i) => shoppingProvider.isChecked(i.id ?? -1)).toList();
     }
 
+    if (_searchQuery.isNotEmpty) {
+      displayedItems = displayedItems.where((i) => i.name.toLowerCase().contains(_searchQuery)).toList();
+    }
+
     displayedItems.sort((a, b) {
       for (String sort in _activeSorts) {
         int result = 0;
@@ -177,45 +221,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.blueGrey, size: 20),
-          onPressed: () {
-            Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
-          },
-        ),
-        title: const Text('רשימת קניות', style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _showOnlyChecked ? Icons.shopping_cart : Icons.shopping_cart_outlined,
-              color: _showOnlyChecked ? Colors.blue : Colors.blueGrey,
-              size: 24,
-            ),
-            tooltip: _showOnlyChecked ? 'הצג את כל הרשימה' : 'הצג רק מוצרים שסומנו',
-            onPressed: () {
-              setState(() {
-                _showOnlyChecked = !_showOnlyChecked;
-              });
-            },
-          ),
-          Container(height: 24, width: 1, color: Colors.grey[300], margin: const EdgeInsets.symmetric(horizontal: 4)),
-          IconButton(
-            icon: const Text('A-', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold, fontSize: 16)),
-            tooltip: 'הקטן טקסט',
-            onPressed: _zoomOut,
-          ),
-          IconButton(
-            icon: const Text('A+', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 18)),
-            tooltip: 'הגדל טקסט',
-            onPressed: _zoomIn,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: const GlobalHeader(title: 'רשימת קניות'),
       floatingActionButton: currentBasket > 0 
           ? null 
           : FloatingActionButton(
@@ -226,6 +232,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       body: Column(
         children: [
           _buildEnhancedBudgetCard(budgetLimit, plannedMonthly, actualMonthly),
+          _buildSearchBarAndActions(),
           _buildComparisonNavigator(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -261,7 +268,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                           final bool wasPurchased = _wasItemPurchasedInWeek(item, _comparisonOffset);
                           Widget tile = _buildComparisonTile(item, shoppingProvider, wasPurchased);
 
-                          if (_activeSorts.isNotEmpty && _activeSorts.first == 'סיווג' && _selectedCategory == 'הכל') {
+                          if (_activeSorts.isNotEmpty && _activeSorts.first == 'סיווג' && _selectedCategory == 'הכל' && _searchQuery.isEmpty) {
                             bool isFirst = index == 0;
                             bool isNewCat = isFirst || displayedItems[index - 1].category != item.category;
                             
@@ -287,6 +294,74 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                       ),
                 if (currentBasket > 0) _buildActiveBasketBar(currentBasket, shoppingProvider),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBarAndActions() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 42 * _textScale,
+              child: TextField(
+                controller: _searchController,
+                style: TextStyle(fontSize: 14 * _textScale),
+                decoration: InputDecoration(
+                  hintText: 'חיפוש מוצר...',
+                  hintStyle: TextStyle(fontSize: 13 * _textScale),
+                  prefixIcon: Icon(Icons.search, size: 20 * _textScale),
+                  suffixIcon: _searchQuery.isNotEmpty 
+                    ? IconButton(icon: Icon(Icons.clear, size: 18 * _textScale), onPressed: () => _searchController.clear()) 
+                    : null,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: () => setState(() => _showOnlyChecked = !_showOnlyChecked),
+            child: Container(
+              height: 42 * _textScale,
+              width: 42 * _textScale,
+              decoration: BoxDecoration(
+                color: _showOnlyChecked ? Colors.blue.shade50 : Colors.white,
+                border: Border.all(color: _showOnlyChecked ? Colors.blue.shade200 : Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(_showOnlyChecked ? Icons.shopping_cart : Icons.shopping_cart_outlined, color: _showOnlyChecked ? Colors.blue : Colors.blueGrey, size: 20 * _textScale),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: _zoomOut,
+            child: Container(
+              height: 42 * _textScale,
+              width: 42 * _textScale,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+              child: Text('A-', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold, fontSize: 13 * _textScale)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: _zoomIn,
+            child: Container(
+              height: 42 * _textScale,
+              width: 42 * _textScale,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+              child: Text('A+', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 14 * _textScale)),
             ),
           ),
         ],
@@ -400,7 +475,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                 ),
               ),
             ),
-            if (_comparisonOffset != 0)
+            if (wasPurchasedInHistory || _comparisonOffset != 0)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -681,6 +756,10 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                           _activeSorts = newSorts;
                           _allSortOptions = List.from(currentOrder); 
                         });
+                        
+                        // שמירת הבחירה בזיכרון המקומי
+                        _saveSortPreferences();
+                        
                         Navigator.pop(ctx);
                       },
                       child: Text("החל מיון", style: TextStyle(fontSize: 14 * _textScale)),

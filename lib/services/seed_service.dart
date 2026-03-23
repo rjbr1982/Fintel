@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Housing/Utilities exclusion and expanded universal Shopping Seed List)
+// 🔒 STATUS: EDITED (Dynamic Shopping Seed Calculation + Anchor Synchronization)
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
 import '../data/shopping_model.dart';
@@ -22,7 +22,44 @@ class SeedService {
       return; 
     }
 
-    // --- לוגיקת קביעת שמות הישויות (State Machine) ---
+    // --- 1. בניית קטלוג קניות וחישוב עוגן דינמי ---
+    // אנו קובעים מכפילים כדי לייקר את הסל התיאורטי בהתאם למספר הנפשות
+    double baseMultiplier = 1.0;
+    if (maritalStatus == 'married') baseMultiplier += 0.8; // +80% לבן/בת זוג
+    baseMultiplier += (childrenCount * 0.3); // +30% לכל ילד
+
+    double shoppingMonthlyTotal = 0.0;
+    List<ShoppingItem> initialShoppingItems = [];
+
+    ShoppingItem addSeedShopping(String name, String category, double basePrice, int weeks) {
+      double adjustedPrice = (basePrice * baseMultiplier).roundToDouble();
+      // חישוב העלות החודשית האמיתית של המוצר לפי תדירותו
+      shoppingMonthlyTotal += (adjustedPrice * 1.0 * (4.0 / weeks));
+      return _createShopping(name, category, adjustedPrice, weeks);
+    }
+
+    initialShoppingItems.addAll([
+      addSeedShopping('ביצים', 'ביצים', 35.0, 1),
+      addSeedShopping('מוצרי חלב בסיסיים (חלב, גבינות, חמאה)', 'מוצרי חלב', 40.0, 1),
+      addSeedShopping('לחם ומאפים', 'לחמים', 20.0, 1),
+      addSeedShopping('ירקות בסיס (עגבניה, מלפפון, בצל, וכו\')', 'ירקות', 35.0, 1),
+      addSeedShopping('פירות העונה', 'פירות', 30.0, 1),
+      addSeedShopping('בשר ועוף מרכזי', 'בשר', 100.0, 1),
+      addSeedShopping('חטיפי בשר (שניצלונים/נקניקיות)', 'בשר', 45.0, 2),
+      addSeedShopping('דגים', 'דגים', 50.0, 2),
+      addSeedShopping('נייר טואלט', 'חומרי ניקוי', 40.0, 4),
+      addSeedShopping('חומרי ניקוי (כלים, כביסה, רצפה)', 'חומרי ניקוי', 50.0, 4),
+      addSeedShopping('טואלטיקה (שמפו, משחות)', 'טואלטיקה', 45.0, 4),
+      addSeedShopping('פחמימות בסיס (אורז, פסטה)', 'מזווה', 25.0, 2),
+      addSeedShopping('שמן', 'מזווה', 15.0, 4),
+      addSeedShopping('קפה ותה', 'מזווה', 25.0, 4),
+      addSeedShopping('סוכר, מלח ותבלינים', 'מזווה', 15.0, 4),
+    ]);
+
+    // קביעת עוגן הקניות הראשי כדלתא של +200 ש"ח בדיוק מעלות הסל התיאורטי המחושב
+    double shoppingAnchor = (shoppingMonthlyTotal + 200.0).roundToDouble();
+
+    // --- 2. לוגיקת קביעת שמות הישויות (State Machine) ---
     String parent1Name = '';
     String parent2Name = '';
 
@@ -127,8 +164,8 @@ class SeedService {
       _create('תספורת', 'קבועות', 'תספורת', 0),
       _create('קטנות לבית (פארם/שונות)', 'קבועות', 'קטנות לבית', 100, isSinking: true),
 
-      // === משתנות (קניות - עוגן) ===
-      _create('קניות', 'משתנות', 'קניות', 3500),
+      // === משתנות (קניות - עוגן דינמי מחושב מראש) ===
+      _create('קניות', 'משתנות', 'קניות', shoppingAnchor),
 
       // === משתנות (חלוקה דינמית לפי משפחה) ===
       if (maritalStatus == 'single' && childrenCount > 0) ...[
@@ -175,27 +212,9 @@ class SeedService {
       await db.insertExpense(expense);
     }
 
-    // --- רשימת האמת לקניות (Seed Data) חלופה אוניברסלית ---
+    // --- הזרקת רשימת הקניות החכמה והמחושבת ---
     final existingShopping = await db.getShoppingItems();
     if (existingShopping.isEmpty) {
-      final List<ShoppingItem> initialShoppingItems = [
-        _createShopping('ביצים', 'ביצים', 35.0, 1),
-        _createShopping('מוצרי חלב בסיסיים (חלב, גבינות, חמאה)', 'מוצרי חלב', 40.0, 1),
-        _createShopping('לחם ומאפים', 'לחמים', 20.0, 1),
-        _createShopping('ירקות בסיס (עגבניה, מלפפון, בצל, וכו\')', 'ירקות', 35.0, 1),
-        _createShopping('פירות העונה', 'פירות', 30.0, 1),
-        _createShopping('בשר ועוף מרכזי', 'בשר', 100.0, 1),
-        _createShopping('חטיפי בשר (שניצלונים/נקניקיות)', 'בשר', 45.0, 2),
-        _createShopping('דגים', 'דגים', 50.0, 2),
-        _createShopping('נייר טואלט', 'חומרי ניקוי', 40.0, 4),
-        _createShopping('חומרי ניקוי (כלים, כביסה, רצפה)', 'חומרי ניקוי', 50.0, 4),
-        _createShopping('טואלטיקה (שמפו, משחות)', 'טואלטיקה', 45.0, 4),
-        _createShopping('פחמימות בסיס (אורז, פסטה)', 'מזווה', 25.0, 2),
-        _createShopping('שמן', 'מזווה', 15.0, 4),
-        _createShopping('קפה ותה', 'מזווה', 25.0, 4),
-        _createShopping('סוכר, מלח ותבלינים', 'מזווה', 15.0, 4),
-      ];
-
       for (var item in initialShoppingItems) {
         await db.insertShoppingItem(item);
       }
