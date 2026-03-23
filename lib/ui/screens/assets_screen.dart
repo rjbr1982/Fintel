@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Asset deletion - added Dismissible wrapper and safe ID checks)
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/asset_provider.dart';
@@ -26,6 +26,33 @@ class _AssetsScreenState extends State<AssetsScreen> {
     });
   }
 
+  void _showInfoDialog(String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
@@ -42,34 +69,9 @@ class _AssetsScreenState extends State<AssetsScreen> {
         builder: (context, provider, child) {
           return Column(
             children: [
-              // באנר הדרכה - תמיד בראש המסך (Contextual Onboarding)
               Container(
                 width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.lightbulb, color: Colors.blue[800], size: 22),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "חישוב המאקרו: מנוע החירות סוכם את שווי הנכסים ומפעיל עליהם את התשואה הכללית מהדשבורד. התשואות הפרטניות כאן נועדו למעקב אישי בלבד.",
-                        style: TextStyle(color: Colors.blueGrey[900], fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.green.withValues(alpha: 0.05),
@@ -78,9 +80,19 @@ class _AssetsScreenState extends State<AssetsScreen> {
                 ),
                 child: Column(
                   children: [
-                    Text(
-                      loc.get('net_worth'),
-                      style: TextStyle(fontSize: 16, color: Colors.green[800], fontWeight: FontWeight.w500),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          loc.get('net_worth'),
+                          style: TextStyle(fontSize: 16, color: Colors.green[800], fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () => _showInfoDialog('חישוב נכסים', 'חישוב המאקרו: מנוע החירות סוכם את שווי הנכסים ומפעיל עליהם את התשואה הכללית מהדשבורד. התשואות הפרטניות כאן נועדו למעקב אישי בלבד.'),
+                          child: Icon(Icons.info_outline, size: 18, color: Colors.green[800]),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Text(

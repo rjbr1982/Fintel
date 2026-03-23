@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added contextual onboarding info-dialogs)
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -492,10 +492,16 @@ class CategoryDrilldownScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
-                        InkWell(
-                          onTap: () => _showInfoDialog(context, 'נוסחת הפסיביות', 'כדי שעסק יוכר כ"נכס פסיבי" שיקזז את יעד המחייה שלך, עליו לעמוד בשני תנאים מתמטיים: ייצור רווח נטו חיובי, ודרישת עבודה של מקסימום 4 שעות בשבוע.'),
-                          child: const Icon(Icons.info_outline, size: 18, color: Colors.blueGrey),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                            const SizedBox(width: 6),
+                            InkWell(
+                              onTap: () => _showInfoDialog(context, 'נוסחת הפסיביות', 'כדי שעסק יוכר כ"נכס פסיבי" שיקזז את יעד המחייה שלך, עליו לעמוד בשני תנאים מתמטיים: ייצור רווח נטו חיובי, ודרישת עבודה של מקסימום 4 שעות בשבוע.'),
+                              child: const Icon(Icons.info_outline, size: 16, color: Colors.blueGrey),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -741,28 +747,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
       body: Column(
         children: [
           if (mainCategory == 'משתנות') ...[
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.lightbulb_outline, color: Colors.blue[700], size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "עוגנים מול אחוזים: הוצאת ה'קניות' מוגדרת כעוגן קבוע. היא מופחתת תחילה, והיתרה מתחלקת אוטומטית לשאר הסעיפים לפי האחוזים שהוגדרו.",
-                      style: TextStyle(color: Colors.blueGrey[800], fontSize: 13, height: 1.4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
             if (provider.variableDeficit > 0)
               Container(
                 width: double.infinity,
@@ -1854,7 +1838,18 @@ class SpecificExpensesScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('סה"כ תזרים חודשי:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                    Row(
+                      children: [
+                        const Text('סה"כ תזרים חודשי:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                        if (mainCategory == 'משתנות') ...[
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _showInfoDialog(context, 'מודל העוגן', "עוגנים מול אחוזים: הוצאת ה'קניות' מוגדרת כעוגן קבוע. היא מופחתת תחילה, והיתרה מתחלקת אוטומטית לשאר הסעיפים לפי האחוזים שהוגדרו."),
+                            child: const Icon(Icons.info_outline, size: 20, color: Colors.blue),
+                          )
+                        ]
+                      ],
+                    ),
                     Row(
                       children: [
                         Column(
@@ -2595,9 +2590,16 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
         ),
 
         const SizedBox(height: 20),
-        const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
-        const SizedBox(height: 4),
-        const Align(alignment: Alignment.centerRight, child: Text("הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף.", style: TextStyle(fontSize: 12, color: Colors.black54))),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+            InkWell(
+              onTap: () => _showInfoDialog(context, 'משיכה חדשה', "הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף."),
+              child: const Icon(Icons.info_outline, size: 20, color: Colors.blue),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         Row(
           children: [
@@ -2970,9 +2972,16 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
 
               const SizedBox(height: 20),
               
-              const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
-              const SizedBox(height: 4),
-              const Align(alignment: Alignment.centerRight, child: Text("הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף.", style: TextStyle(fontSize: 12, color: Colors.black54))),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                  InkWell(
+                    onTap: () => _showInfoDialog(context, 'משיכה חדשה', "הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף."),
+                    child: const Icon(Icons.info_outline, size: 20, color: Colors.blue),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [

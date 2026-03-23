@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed curly_braces_in_flow_control_structures linter warnings)
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/shopping_provider.dart';
@@ -31,6 +31,34 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         context.read<ShoppingProvider>().loadItems();
       }
     });
+  }
+
+  // === פונקציית עזר לתמרורי הדרכה ===
+  void _showInfoDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _zoomIn() {
@@ -708,15 +736,11 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text("הפרש (דלתא)", textAlign: TextAlign.center, style: TextStyle(fontSize: 10 * _textScale, color: Colors.grey, fontWeight: FontWeight.bold)),
-            const SizedBox(width: 2),
-            Tooltip(
-              message: "הדלתא מחשבת את הפער בין תקציב ה'עוגן' לעלות החודשית התיאורטית של הרשימה.",
-              triggerMode: TooltipTriggerMode.tap,
-              child: Padding(
-                padding: const EdgeInsets.all(4.0),
-                child: Icon(Icons.info, size: 16 * _textScale, color: Colors.blue),
-              ),
-            )
+            const SizedBox(width: 4),
+            InkWell(
+              onTap: () => _showInfoDialog(context, 'הפרש (דלתא)', "הדלתא מחשבת את הפער בין תקציב ה'עוגן' שהגדרת, לעלות החודשית התיאורטית של הרשימה. שמור עליה ירוקה."),
+              child: Icon(Icons.info_outline, size: 14 * _textScale, color: Colors.blue),
+            ),
           ],
         ),
         FittedBox(fit: BoxFit.scaleDown, child: Text("₪${delta.abs().toStringAsFixed(0)}", style: TextStyle(fontSize: 15 * _textScale, fontWeight: FontWeight.bold, color: valueColor)))
@@ -750,13 +774,15 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.warning_amber_rounded, size: 14 * _textScale, color: Colors.orange[800]),
-                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      "שים לב: סימנת מוצרים מוקדם מדי מתדירות הקנייה שהגדרת להם.",
+                      "שים לב: חריגת תדירות",
                       style: TextStyle(fontSize: 11 * _textScale, color: Colors.orange[900], fontWeight: FontWeight.w600),
                     ),
+                  ),
+                  InkWell(
+                    onTap: () => _showInfoDialog(context, 'תדירות קנייה', 'לכל מוצר יש תדירות מוגדרת. סימון מוצר מוקדם מדי יציג אזהרה למניעת חריגה.'),
+                    child: Icon(Icons.info_outline, size: 16 * _textScale, color: Colors.orange[900]),
                   ),
                 ],
               ),

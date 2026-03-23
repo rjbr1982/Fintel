@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added contextual onboarding info-dialogs)
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -80,13 +80,20 @@ class SmartWithdrawalsScreen extends StatelessWidget {
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('תכנון הוצאה עתידית', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Flexible(child: Text('תכנון הוצאה עתידית', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18))),
+              InkWell(
+                onTap: () => _showInfoDialog(context, 'תכנון הוצאה', 'בחר מאיזו קופה תרצה למשוך, ומנהל המשיכות יאגד אותה לתחנת היציאה הבאה.'),
+                child: const Icon(Icons.info_outline, size: 22, color: Colors.blue),
+              ),
+            ],
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('בחר מאיזו קופה תרצה למשוך, ומנהל המשיכות יאגד אותה לתחנת היציאה הבאה.', style: TextStyle(fontSize: 13, color: Colors.blueGrey)),
-                const SizedBox(height: 20),
                 if (buckets.isEmpty)
                   const Text('אין קופות צוברות זמינות.', style: TextStyle(color: Colors.red))
                 else

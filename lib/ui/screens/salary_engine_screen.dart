@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed AppBar Title to 'ממוצע שכר')
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui' as ui;
@@ -17,6 +17,34 @@ class SalaryEngineScreen extends StatefulWidget {
 class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
   int? _selectedExpenseId;
   int _selectedRange = 6; // 3, 6, 12, 0 (0 means All)
+
+  // === פונקציית עזר לתמרורי הדרכה ===
+  void _showInfoDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   String _formatMonthYear(String isoDate) {
     try {
@@ -196,31 +224,17 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
-              // CONTEXTUAL ONBOARDING - תמיד מוצג בראש המסך
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 20),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.insights, color: Colors.blue[800], size: 22),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "ייצוב התזרים: הזן משכורות עבר כדי שהמנוע יחשב ממוצע אמיתי וימנע גירעון סמוי עקב תנודות שכר.",
-                        style: TextStyle(color: Colors.blueGrey[900], fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  ],
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('מקור הכנסה לחישוב:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
+                  InkWell(
+                    onTap: () => _showInfoDialog(context, 'ייצוב התזרים', 'הזן נתוני שכר כדי לייצב את התזרים ולהימנע מגירעון סמוי עקב תנודות שכר.'),
+                    child: const Icon(Icons.info_outline, size: 20, color: Colors.blue),
+                  ),
+                ],
               ),
+              const SizedBox(height: 8),
 
               // בורר מקור הכנסה
               Container(

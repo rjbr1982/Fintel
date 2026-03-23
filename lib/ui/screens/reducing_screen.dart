@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Target Debt Accelerated Payment UI rendering)
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/debt_provider.dart';
@@ -10,6 +10,34 @@ import 'debt_schedule_screen.dart';
 
 class ReducingScreen extends StatelessWidget {
   const ReducingScreen({super.key});
+
+  // === פונקציית עזר לתמרורי הדרכה ===
+  void _showInfoDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,34 +72,10 @@ class ReducingScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // הדרכה שקטה - תמיד בראש המסך
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.history, color: Colors.blue[800], size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    "מכונת הזמן: כל חוב שתסיים לשלם לא ייבלע בשוטף, אלא יופנה אוטומטית כ'כוח אש' לחיסול מואץ של החוב הבא.",
-                    style: TextStyle(color: Colors.blueGrey[900], fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           if (!hasActiveDebts) 
             Expanded(child: _buildVictoryState()) 
           else ...[
+            const SizedBox(height: 8),
             _buildMissionCard(actualMissionAmount, targetDebt),
             _buildTimeMachineHeader(context, originalFinalDate, acceleratedFinalDate),
             
@@ -233,9 +237,19 @@ class ReducingScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text(
-            'תחזית לסיום כל החובות',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0066FF)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'תחזית לסיום כל החובות',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0066FF)),
+              ),
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: () => _showInfoDialog(context, 'מכונת הזמן', "כל חוב שתסיים לשלם לא ייבלע בשוטף, אלא יופנה אוטומטית כ'כוח אש' לחיסול מואץ של החוב הבא."),
+                child: const Icon(Icons.info_outline, size: 18, color: Color(0xFF0066FF)),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           Row(

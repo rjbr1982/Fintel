@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Passive Income Reduction UI Indicator on Freedom Card)
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -13,6 +13,34 @@ class PnLScreen extends StatelessWidget {
   final bool isCalibrationMode; 
   
   const PnLScreen({super.key, this.isCalibrationMode = false});
+
+  // === פונקציית עזר לתמרורי הדרכה ===
+  void _showInfoDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +109,8 @@ class PnLScreen extends StatelessWidget {
                   'משתנות', 
                   displayVariableAmount, 
                   variableDeficit > 0 ? Colors.red[900]! : Colors.black, 
-                  onLongPress: () => _showRatioDialog(context, budget, isVariable: true)
+                  onLongPress: () => _showRatioDialog(context, budget, isVariable: true),
+                  onInfoTap: () => _showInfoDialog(context, 'שליטת מאקרו', "התקציב המשתנה הוא 'קופסה סגורה'. כדי להגדיל את התזרים לחירות פיננסית, עליך לשנות את חלוקת האחוזים הראשית על ידי לחיצה ארוכה על שורת ה'משתנות'.")
                 ),
                 
                 if (variableDeficit > 0)
@@ -172,7 +201,7 @@ class PnLScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRow(BuildContext context, String title, double amount, Color color, {bool isHeader = false, VoidCallback? onLongPress}) {
+  Widget _buildRow(BuildContext context, String title, double amount, Color color, {bool isHeader = false, VoidCallback? onLongPress, VoidCallback? onInfoTap}) {
     return InkWell(
       onTap: () {
         Navigator.push(context, MaterialPageRoute(
@@ -185,7 +214,18 @@ class PnLScreen extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(title, style: TextStyle(fontSize: isHeader ? 22 : 17, fontWeight: isHeader ? FontWeight.bold : FontWeight.w600, color: Colors.black)),
+            Row(
+              children: [
+                Text(title, style: TextStyle(fontSize: isHeader ? 22 : 17, fontWeight: isHeader ? FontWeight.bold : FontWeight.w600, color: Colors.black)),
+                if (onInfoTap != null) ...[
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: onInfoTap,
+                    child: const Icon(Icons.info_outline, size: 18, color: Colors.blue),
+                  ),
+                ]
+              ],
+            ),
             Row(
               children: [
                 Text('₪${amount.toStringAsFixed(0)}', style: TextStyle(fontSize: isHeader ? 22 : 17, fontWeight: FontWeight.bold, color: color)),
