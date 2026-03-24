@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Persistence for Sort Preferences via SharedPreferences)
+// 🔒 STATUS: EDITED (Enhanced Search Bar UI Contrast and Visibility)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -303,25 +303,44 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
   Widget _buildSearchBarAndActions() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
         children: [
           Expanded(
-            child: SizedBox(
-              height: 42 * _textScale,
+            child: Container(
+              height: 46 * _textScale, // Increased height slightly
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(10), // Subtle shadow
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
               child: TextField(
                 controller: _searchController,
-                style: TextStyle(fontSize: 14 * _textScale),
+                style: TextStyle(fontSize: 14 * _textScale, color: Colors.black87),
                 decoration: InputDecoration(
                   hintText: 'חיפוש מוצר...',
-                  hintStyle: TextStyle(fontSize: 13 * _textScale),
-                  prefixIcon: Icon(Icons.search, size: 20 * _textScale),
+                  hintStyle: TextStyle(fontSize: 14 * _textScale, color: Colors.blueGrey.shade400, fontWeight: FontWeight.w500),
+                  prefixIcon: Icon(Icons.search, size: 22 * _textScale, color: Colors.blue), // Colored and slightly larger icon
                   suffixIcon: _searchQuery.isNotEmpty 
-                    ? IconButton(icon: Icon(Icons.clear, size: 18 * _textScale), onPressed: () => _searchController.clear()) 
+                    ? IconButton(icon: Icon(Icons.clear, size: 20 * _textScale, color: Colors.blueGrey), onPressed: () => _searchController.clear()) 
                     : null,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12), // Rounder edges
+                    borderSide: BorderSide(color: Colors.blueGrey.shade200, width: 1.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.blueGrey.shade200, width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.blue, width: 2.0),
+                  ),
                   filled: true,
                   fillColor: Colors.white,
                 ),
@@ -332,36 +351,47 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
           InkWell(
             onTap: () => setState(() => _showOnlyChecked = !_showOnlyChecked),
             child: Container(
-              height: 42 * _textScale,
-              width: 42 * _textScale,
+              height: 46 * _textScale,
+              width: 46 * _textScale,
               decoration: BoxDecoration(
                 color: _showOnlyChecked ? Colors.blue.shade50 : Colors.white,
-                border: Border.all(color: _showOnlyChecked ? Colors.blue.shade200 : Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _showOnlyChecked ? Colors.blue.shade300 : Colors.blueGrey.shade200, width: 1.5),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)],
               ),
-              child: Icon(_showOnlyChecked ? Icons.shopping_cart : Icons.shopping_cart_outlined, color: _showOnlyChecked ? Colors.blue : Colors.blueGrey, size: 20 * _textScale),
+              child: Icon(_showOnlyChecked ? Icons.shopping_cart : Icons.shopping_cart_outlined, color: _showOnlyChecked ? Colors.blue : Colors.blueGrey, size: 22 * _textScale),
             ),
           ),
           const SizedBox(width: 8),
           InkWell(
             onTap: _zoomOut,
             child: Container(
-              height: 42 * _textScale,
-              width: 42 * _textScale,
+              height: 46 * _textScale,
+              width: 46 * _textScale,
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
-              child: Text('A-', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold, fontSize: 13 * _textScale)),
+              decoration: BoxDecoration(
+                color: Colors.white, 
+                border: Border.all(color: Colors.blueGrey.shade200, width: 1.5), 
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)],
+              ),
+              child: Text('A-', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold, fontSize: 14 * _textScale)),
             ),
           ),
           const SizedBox(width: 8),
           InkWell(
             onTap: _zoomIn,
             child: Container(
-              height: 42 * _textScale,
-              width: 42 * _textScale,
+              height: 46 * _textScale,
+              width: 46 * _textScale,
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
-              child: Text('A+', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 14 * _textScale)),
+              decoration: BoxDecoration(
+                color: Colors.white, 
+                border: Border.all(color: Colors.blueGrey.shade200, width: 1.5), 
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)],
+              ),
+              child: Text('A+', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 15 * _textScale)),
             ),
           ),
         ],

@@ -1,9 +1,16 @@
-// 🔒 STATUS: EDITED (Light Theme Implementation for UI Consistency)
+// 🔒 STATUS: EDITED (Active Content View & Horizontal Chips Implementation, fixed spread operator lint)
 import 'package:flutter/material.dart';
 import '../../data/academy_content.dart';
 
-class AcademyScreen extends StatelessWidget {
+class AcademyScreen extends StatefulWidget {
   const AcademyScreen({super.key});
+
+  @override
+  State<AcademyScreen> createState() => _AcademyScreenState();
+}
+
+class _AcademyScreenState extends State<AcademyScreen> {
+  int _selectedIndex = 0;
 
   Widget _buildBlock(AcademyBlock block) {
     const textColor = Colors.black87;
@@ -14,7 +21,7 @@ class AcademyScreen extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 16.0),
           child: Text(
             block.text,
-            style: const TextStyle(color: textColor, fontSize: 15, height: 1.6),
+            style: const TextStyle(color: textColor, fontSize: 16, height: 1.6),
           ),
         );
       case BlockType.bullet:
@@ -23,12 +30,12 @@ class AcademyScreen extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('•', style: TextStyle(color: Color(0xFFFFB800), fontSize: 18, height: 1.2)),
+              const Text('•', style: TextStyle(color: Color(0xFFFFB800), fontSize: 20, height: 1.2)),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   block.text,
-                  style: const TextStyle(color: textColor, fontSize: 15, height: 1.6),
+                  style: const TextStyle(color: textColor, fontSize: 16, height: 1.6),
                 ),
               ),
             ],
@@ -39,7 +46,7 @@ class AcademyScreen extends StatelessWidget {
           padding: const EdgeInsets.only(top: 8.0, bottom: 12.0),
           child: Text(
             block.text,
-            style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold, height: 1.5),
+            style: const TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.bold, height: 1.5),
           ),
         );
     }
@@ -48,6 +55,7 @@ class AcademyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const Color goldAccents = Color(0xFFFFB800);
+    final activeChapter = academyChapters[_selectedIndex];
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -67,44 +75,92 @@ class AcademyScreen extends StatelessWidget {
           ],
         ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: academyChapters.length,
-        itemBuilder: (context, index) {
-          final chapter = academyChapters[index];
-          
-          return Card(
+      body: Column(
+        children: [
+          // Horizontal Chips Navigation
+          Container(
+            width: double.infinity,
             color: Colors.white,
-            margin: const EdgeInsets.only(bottom: 12.0),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.grey.shade300),
-            ),
-            child: Theme(
-              data: Theme.of(context).copyWith(
-                dividerColor: Colors.transparent,
-                colorScheme: ColorScheme.light(
-                  primary: Colors.amber.shade700,
-                ),
+            padding: const EdgeInsets.symmetric(vertical: 12.0),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: List.generate(academyChapters.length, (index) {
+                  final isSelected = _selectedIndex == index;
+                  // Shorten title for chip if it's too long, or use full title
+                  final shortTitle = academyChapters[index].title.split(':').first;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: ChoiceChip(
+                      label: Text(
+                        shortTitle,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black87,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      selected: isSelected,
+                      selectedColor: Colors.amber.shade700,
+                      backgroundColor: Colors.grey.shade100,
+                      onSelected: (bool selected) {
+                        if (selected) {
+                          setState(() {
+                            _selectedIndex = index;
+                          });
+                        }
+                      },
+                      elevation: isSelected ? 2 : 0,
+                      pressElevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(
+                          color: isSelected ? Colors.amber.shade700 : Colors.grey.shade300,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
               ),
-              child: ExpansionTile(
-                iconColor: Colors.amber.shade700,
-                collapsedIconColor: Colors.blueGrey,
-                title: Text(
-                  chapter.title,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+            ),
+          ),
+          
+          // Separator line
+          Container(
+            height: 1,
+            color: Colors.grey.shade200,
+          ),
+
+          // Active Content Area
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: ListView(
+                key: ValueKey<int>(_selectedIndex),
+                padding: const EdgeInsets.all(20.0),
+                children: [
+                  // Full Chapter Title
+                  Text(
+                    activeChapter.title,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                      height: 1.4,
+                    ),
                   ),
-                ),
-                childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                children: chapter.content.map((block) => _buildBlock(block)).toList(),
+                  const SizedBox(height: 20),
+                  
+                  // Blocks - Removed .toList() to fix unnecessary_to_list_in_spreads lint
+                  ...activeChapter.content.map((block) => _buildBlock(block)),
+                  
+                  const SizedBox(height: 40), // Bottom padding
+                ],
               ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }

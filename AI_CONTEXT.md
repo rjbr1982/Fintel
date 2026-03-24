@@ -1,14 +1,14 @@
 # AI_CONTEXT.md - Dohaham (Fintel)
-**Date:** March 23, 2026
+**Date:** March 24, 2026
 **Current Constitution Version:** 12.82
 
 ## 1. Project Overview
 "Dohaham" (Fintel) is a smart family budget management application designed for Israeli users. It uses Flutter, Provider for state management, and local SQLite synced to Firebase. The architecture follows a strict "E-Myth" philosophy (Financial Intelligence).
 
-## 2. Recent Major Updates (v12.82 - UI Consistency & Onboarding Refinement)
-* **Hamburger Menu Restructuring:** Reordered the main menu to prioritize core screens (PnL -> Shopping -> Savings -> Checking -> Salary). Created a distinct utility section at the bottom, highlighting the "Fintel Academy" with a premium boxed design.
-* **Onboarding Screen (Light Theme & Dynamic Text):** Replaced the dark theme with a clean Light Theme (grey.shade50) to align with the brand's UI consistency. Implemented dynamic text rendering to adapt singular/plural pronouns based on both `gender` and `maritalStatus` (e.g., Single users are asked "Do *you* have kids?" instead of "Do *you both* have kids?").
-* **Academy Screen (Light Theme):** Transitioned from Deep Slate to a clean Light Theme to maintain visual continuity with the rest of the application, while retaining the premium Amber/Gold accents.
+## 2. Recent Major Updates (v12.82 - Academy Refinement & UI Polish)
+* **Academy Screen Redesign:** Replaced the basic expansion list with an "Active Content View" architecture. A horizontal scrolling ChoiceChip bar now controls the visible chapter, with smooth fade transitions, saving vertical space on mobile devices.
+* **Academy Content Rationalization:** Rewrote the introduction to remove illogical marketing cliches (e.g., the "surprise" of needing data to calculate freedom). The text now strictly focuses on mathematical reality, Parkinson's Law, and the concept of the "objective mirror."
+* **Shopping Search UI:** Enhanced the search bar in the shopping list with better contrast, a subtle shadow, and a prominent blue icon to prevent it from blending into the Light Theme background.
 
 ## 3. UNRESOLVED ISSUES
 * None. The infrastructure is clean, stable, fully secured, and Linter-warning-free (0 issues).
