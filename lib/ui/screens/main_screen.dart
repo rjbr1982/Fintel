@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed unnecessary_const Linter Warnings)
+// 🔒 STATUS: EDITED (Fixed const Linter Warnings in Infinity Animation)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -282,7 +282,19 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                   elevation: 8,
                 ),
-                onPressed: () => setState(() => _currentState = RevealState.reveal),
+                onPressed: () {
+                  setState(() => _currentState = RevealState.reveal);
+                  
+                  // אם הגענו למצב נצח/אין יעד אפשרי - מחשבים מראש שחרור לדשבורד
+                  if (targetYear == null) {
+                    Future.delayed(const Duration(seconds: 4), () {
+                      if (mounted && _currentState == RevealState.reveal) {
+                        setState(() => _currentState = RevealState.dashboard);
+                        budget.completeGrandReveal();
+                      }
+                    });
+                  }
+                },
                 child: const Text('חשב את שנת החירות שלי', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ],
@@ -295,45 +307,79 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       return Material(
         color: const Color(0xFF121212),
         child: Center(
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: DateTime.now().year.toDouble(), end: (targetYear ?? DateTime.now().year + 10).toDouble()),
-            duration: const Duration(seconds: 3),
-            builder: (animContext, value, child) {
-              if (value.toInt() == targetYear && !_isRevealCompleting) {
-                _isRevealCompleting = true;
-                Future.delayed(const Duration(seconds: 2), () {
-                  if (mounted && _currentState == RevealState.reveal) {
-                    setState(() => _currentState = RevealState.dashboard);
-                    budget.completeGrandReveal();
+          child: targetYear == null
+            // === מצב נצח (Infinity) ===
+            ? TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(seconds: 2),
+                builder: (animContext, opacity, child) {
+                  return Opacity(
+                    opacity: opacity,
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('שנת החירות שלך היא:', style: TextStyle(color: Colors.white70, fontSize: 18)),
+                        SizedBox(height: 10),
+                        Text(
+                          '∞', 
+                          style: TextStyle(
+                            color: Color(0xFF00FF85), 
+                            fontSize: 110, 
+                            fontWeight: FontWeight.w300,
+                            shadows: [
+                              Shadow(color: Color(0xFF00FF85), blurRadius: 30),
+                            ]
+                          )
+                        ),
+                        SizedBox(height: 20),
+                        Text('התזרים הנוכחי דורש כיול.', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 10),
+                        Text('המסע מתחיל עכשיו.', style: TextStyle(color: Colors.white54, fontSize: 18)),
+                      ],
+                    ),
+                  );
+                },
+              )
+            // === מצב תקין (ספירת שנים) ===
+            : TweenAnimationBuilder<double>(
+                tween: Tween(begin: DateTime.now().year.toDouble(), end: targetYear.toDouble()),
+                duration: const Duration(seconds: 3),
+                builder: (animContext, value, child) {
+                  if (value.toInt() == targetYear && !_isRevealCompleting) {
+                    _isRevealCompleting = true;
+                    Future.delayed(const Duration(seconds: 2), () {
+                      if (mounted && _currentState == RevealState.reveal) {
+                        setState(() => _currentState = RevealState.dashboard);
+                        budget.completeGrandReveal();
+                      }
+                    });
                   }
-                });
-              }
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('שנת החירות שלך היא:', style: TextStyle(color: Colors.white70, fontSize: 18)),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${value.toInt()}', 
-                    style: TextStyle(
-                      color: const Color(0xFF00FF85), 
-                      fontSize: 90, 
-                      fontWeight: FontWeight.w900,
-                      shadows: [
-                        Shadow(color: const Color(0xFF00FF85).withValues(alpha: 0.5), blurRadius: 30),
-                      ]
-                    )
-                  ),
-                  const SizedBox(height: 30),
-                  AnimatedOpacity(
-                    opacity: _isRevealCompleting ? 1.0 : 0.0,
-                    duration: const Duration(seconds: 1),
-                    child: const Text('כעת, בוא ננהל את זה.', style: TextStyle(color: Colors.white54, fontSize: 18)),
-                  ),
-                ],
-              );
-            },
-          ),
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('שנת החירות שלך היא:', style: TextStyle(color: Colors.white70, fontSize: 18)),
+                      const SizedBox(height: 10),
+                      Text(
+                        '${value.toInt()}', 
+                        style: TextStyle(
+                          color: const Color(0xFF00FF85), 
+                          fontSize: 90, 
+                          fontWeight: FontWeight.w900,
+                          shadows: [
+                            Shadow(color: const Color(0xFF00FF85).withValues(alpha: 0.5), blurRadius: 30),
+                          ]
+                        )
+                      ),
+                      const SizedBox(height: 30),
+                      AnimatedOpacity(
+                        opacity: _isRevealCompleting ? 1.0 : 0.0,
+                        duration: const Duration(seconds: 1),
+                        child: const Text('כעת, בוא ננהל את זה.', style: TextStyle(color: Colors.white54, fontSize: 18)),
+                      ),
+                    ],
+                  );
+                },
+              ),
         ),
       );
     }
@@ -365,7 +411,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         Scaffold(
           backgroundColor: Colors.white,
           appBar: const GlobalHeader(),
-          // ה-FloatingActionButton הוסר למניעת כפילות
           body: Center(
             child: SingleChildScrollView(
               child: Padding(
