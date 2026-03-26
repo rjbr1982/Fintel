@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Maintains full SaaS NoSQL compatibility for Business / Passive Income data)
+// 🔒 STATUS: EDITED (Added User Root Methods for Premium/Paywall Management)
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -46,6 +46,27 @@ class DatabaseHelper {
         metricKey: value
       },
       'lastActive': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  // ==========================================
+  // משיכת נתוני השורש (לצורכי חומת תשלום והרשאות)
+  // ==========================================
+  
+  Future<Map<String, dynamic>?> getUserRootData() async {
+    if (_uid == 'unauthenticated') return null;
+    try {
+      final doc = await _db.collection('users').doc(_uid).get();
+      return doc.data();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> setPremiumStatus(bool isPremium) async {
+    if (_uid == 'unauthenticated') return;
+    await _db.collection('users').doc(_uid).set({
+      'isPremium': isPremium,
     }, SetOptions(merge: true));
   }
 
@@ -284,7 +305,6 @@ class DatabaseHelper {
           .get();
       
       final items = snap.docs.map((doc) => Withdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
-      // מיון מקומי פותר את שגיאת Firebase הקשורה לאינדקס מורכב חסר
       items.sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
       return items;
     } catch (e) {
