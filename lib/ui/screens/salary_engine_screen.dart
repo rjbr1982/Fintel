@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding + Root Metrics Sync)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui' as ui;
@@ -118,6 +118,11 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                       hours: hours,
                     );
                     await DatabaseHelper.instance.insertSalaryRecord(record);
+                    
+                    // --- סנכרון מדד ל-Admin Dashboard ---
+                    await DatabaseHelper.instance.updateUserMetric('hasSalary', true);
+                    // ------------------------------------
+
                     if (ctx.mounted) Navigator.pop(ctx);
                   }
                 },

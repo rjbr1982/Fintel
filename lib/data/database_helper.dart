@@ -24,6 +24,32 @@ class DatabaseHelper {
   int _generateId() => DateTime.now().millisecondsSinceEpoch;
 
   // ==========================================
+  // רשומת משתמש שורשית (Root User Document & Metrics)
+  // ==========================================
+  
+  Future<void> initializeUserRoot({required String email, String generation = 'Regular', String country = 'Unknown'}) async {
+    if (_uid == 'unauthenticated') return;
+    
+    await _db.collection('users').doc(_uid).set({
+      'email': email,
+      'generation': generation,
+      'country': country,
+      'lastActive': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> updateUserMetric(String metricKey, bool value) async {
+    if (_uid == 'unauthenticated') return;
+
+    await _db.collection('users').doc(_uid).set({
+      'metrics': {
+        metricKey: value
+      },
+      'lastActive': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  // ==========================================
   // 🔄 REAL-TIME STREAMS (SaaS Sync)
   // ==========================================
   

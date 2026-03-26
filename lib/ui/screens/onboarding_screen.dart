@@ -1,6 +1,7 @@
-// 🔒 STATUS: EDITED (Light Theme Implementation & Dynamic Plural/Single Texts)
+// 🔒 STATUS: EDITED (Light Theme Implementation & Dynamic Plural/Single Texts + Root Metrics Init + Linter Fix)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../providers/budget_provider.dart';
 import '../../services/seed_service.dart';
 import '../../data/expense_model.dart';
@@ -90,6 +91,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       includeReligion: _includeReligion,
     );
 
+    if (!mounted) return;
+
+    // --- אתחול מסמך שורש של המשתמש ב-Firestore (SaaS Metrics) ---
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await DatabaseHelper.instance.initializeUserRoot(
+        email: user.email ?? 'unknown_email@fintel.com',
+      );
+    }
+    // -------------------------------------------------------------
+
+    // בדיקת mounted נוספת לאחר ה-Async gap החדש שנוצר מה-await הקודם
     if (!mounted) return;
 
     final budget = Provider.of<BudgetProvider>(context, listen: false);

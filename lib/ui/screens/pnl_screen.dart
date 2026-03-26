@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding + Root Metrics Sync)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -8,6 +8,7 @@ import 'category_drilldown_screen.dart';
 import 'reducing_screen.dart'; 
 import 'assets_screen.dart'; 
 import 'main_screen.dart'; 
+import '../../data/database_helper.dart';
 
 class PnLScreen extends StatelessWidget {
   final bool isCalibrationMode; 
@@ -68,8 +69,13 @@ class PnLScreen extends StatelessWidget {
       ),
       floatingActionButton: isCalibrationMode ? FloatingActionButton.extended(
         backgroundColor: const Color(0xFF00C853),
-        onPressed: () {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainScreen()));
+        onPressed: () async {
+          // --- הזרקת המדד ל-Admin Dashboard ---
+          await DatabaseHelper.instance.updateUserMetric('hasViewedFreedom', true);
+          
+          if (context.mounted) {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainScreen()));
+          }
         },
         label: const Text('התקציב שלי מוכן!', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
         icon: const Icon(Icons.check_circle, color: Colors.white),

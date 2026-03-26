@@ -1,4 +1,5 @@
-// 🔒 STATUS: EDITED (Reordered Hamburger Menu & Boxed Academy)
+// 🔒 STATUS: EDITED (Admin God-Mode Trigger - Perfectly Centered Text via Stack)
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart'; 
@@ -18,6 +19,7 @@ import '../screens/salary_engine_screen.dart';
 import '../screens/shopping_screen.dart';
 import '../screens/pnl_screen.dart';
 import '../screens/academy_screen.dart'; 
+import '../screens/admin_dashboard_screen.dart';
 import '../../main.dart'; 
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -129,6 +131,102 @@ Widget _buildBottomSheetHeader(BuildContext context, String title, VoidCallback?
   );
 }
 
+// ----------------------------------------------------------------------
+// ADMIN TRIGGER LOGIC (Sandbox Doctrine: Section 13.1.1)
+// ----------------------------------------------------------------------
+int _adminTapCount = 0;
+Timer? _adminTapTimer;
+const String _masterPin = "0511820511"; // Hardcoded complex PIN
+
+void _handleAdminTap(BuildContext context) {
+  _adminTapCount++;
+  
+  if (_adminTapTimer?.isActive ?? false) {
+    _adminTapTimer!.cancel();
+  }
+  
+  // Reset counter after 2 seconds of inactivity
+  _adminTapTimer = Timer(const Duration(seconds: 2), () {
+    _adminTapCount = 0;
+  });
+
+  if (_adminTapCount >= 5) {
+    _adminTapCount = 0;
+    _adminTapTimer?.cancel();
+    Navigator.pop(context); // Close the bottom sheet
+    _showAdminPinDialog(context);
+  }
+}
+
+void _showAdminPinDialog(BuildContext context) {
+  final TextEditingController pinController = TextEditingController();
+  final ValueNotifier<bool> hasError = ValueNotifier(false);
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
+      title: const Center(child: Text('Fintel Admin', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('הזן קוד מאסטר:', style: TextStyle(color: Colors.blueGrey)),
+          const SizedBox(height: 16),
+          ValueListenableBuilder<bool>(
+            valueListenable: hasError,
+            builder: (context, error, child) {
+              return TextField(
+                controller: pinController,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                style: const TextStyle(letterSpacing: 8, fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  errorText: error ? 'קוד שגוי' : null,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+                onChanged: (_) => hasError.value = false,
+              );
+            }
+          ),
+        ],
+      ),
+      actionsAlignment: MainAxisAlignment.spaceEvenly,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('ביטול', style: TextStyle(color: Colors.blueGrey)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.black87,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+          ),
+          onPressed: () {
+            if (pinController.text == _masterPin) {
+              Navigator.pop(ctx);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminDashboardScreen()));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('קוד מאושר. מתחבר לשרת...'), backgroundColor: Colors.green),
+              );
+            } else {
+              hasError.value = true;
+              pinController.clear();
+            }
+          },
+          child: const Text('התחבר', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      ],
+    ),
+  );
+}
+// ----------------------------------------------------------------------
+
 void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
   showModalBottomSheet(
     context: context,
@@ -234,7 +332,29 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                 ),
 
                 const SizedBox(height: 16),
-                const Text('© 2026 Fintel - כל הזכויות שמורות\nv1.0.0', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: Colors.grey, height: 1.5)),
+                
+                // Admin God-Mode Secret Trigger Area (Fixed Centering via Stack)
+                SizedBox(
+                  height: 40,
+                  width: double.infinity,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Text('© 2026 Fintel - כל הזכויות שמורות\nv1.0.0', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: Colors.grey, height: 1.5)),
+                      Positioned(
+                        right: 20,
+                        top: 0,
+                        bottom: 0,
+                        width: 60,
+                        child: GestureDetector(
+                          onTap: () => _handleAdminTap(context),
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(color: Colors.transparent),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 8),
               ],
             ),

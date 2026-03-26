@@ -1,8 +1,9 @@
-// 🔒 STATUS: EDITED (Fix dialog pop after async gap via try-finally)
+// 🔒 STATUS: EDITED (Fix dialog pop after async gap via try-finally + Root Metrics Sync)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
+import '../../data/database_helper.dart';
 import '../widgets/global_header.dart';
 import 'smart_withdrawals_screen.dart'; 
 
@@ -320,6 +321,7 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
         finalNote = '[$childName] $finalNote'; 
       }
       await provider.addWithdrawal(widget.originalExpenses.first.id!, amt, finalNote);
+      await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
       _amountController.clear();
       _noteController.clear();
       _loadWithdrawals();
@@ -540,6 +542,7 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
     final amt = double.tryParse(_amountController.text);
     if (amt != null && amt > 0) {
       await provider.addWithdrawal(widget.expense.id!, amt, _noteController.text.trim());
+      await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
       _amountController.clear();
       _noteController.clear();
       _loadWithdrawals();
@@ -756,6 +759,7 @@ class _EditIndividualBalanceDialogState extends State<_EditIndividualBalanceDial
                 final nav = Navigator.of(context);
                 try {
                   await Provider.of<BudgetProvider>(context, listen: false).setExpenseCurrentBalance(widget.expense.id!, val);
+                  await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
                 } finally {
                   nav.pop();
                 }
@@ -830,6 +834,7 @@ class _EditUnifiedBalancesDialogState extends State<_EditUnifiedBalancesDialog> 
                       await provider.setExpenseCurrentBalance(widget.expenses[i].id!, 0);
                     }
                   }
+                  await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
                 } finally {
                   nav.pop();
                 }
@@ -897,6 +902,7 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
                 final nav = Navigator.of(context);
                 try {
                   await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
+                  await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
                 } finally {
                   nav.pop();
                 }
@@ -972,6 +978,7 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
                       await provider.updateBankDeposit(widget.expenses[i].id!, 0);
                     }
                   }
+                  await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
                 } finally {
                   nav.pop();
                 }
