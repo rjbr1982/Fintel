@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Light Theme Implementation & Dynamic Plural/Single Texts + Root Metrics Init + Linter Fix)
+// 🔒 STATUS: EDITED (Fixed Reveal Animation Timing Bug - Memory Sync)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -102,7 +102,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
     // -------------------------------------------------------------
 
-    // בדיקת mounted נוספת לאחר ה-Async gap החדש שנוצר מה-await הקודם
     if (!mounted) return;
 
     final budget = Provider.of<BudgetProvider>(context, listen: false);
@@ -136,10 +135,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       budget.updateHasActiveDebts(true);
     }
 
-    await budget.loadData();
-
-    // אתחול דגל חשיפה למצב "לא הושלם" כדי להפעיל את שער החירות
+    // אתחול דגל חשיפה למצב "לא הושלם" - מבוצע *לפני* הטעינה לזיכרון כדי למנוע את באג דילוג האנימציה
     await DatabaseHelper.instance.saveSetting('has_completed_reveal', 0.0);
+
+    // טעינת הנתונים לזיכרון המערכת כולל הדגל המעודכן
+    await budget.loadData();
 
     if (mounted) {
       Navigator.of(context).pushReplacement(

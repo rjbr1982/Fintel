@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Admin God-Mode Trigger - Perfectly Centered Text via Stack)
+// 🔒 STATUS: EDITED (Admin God-Mode Trigger + Sealed Freedom Gate + Premium Crown)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -41,7 +41,10 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final budget = context.watch<BudgetProvider>();
     final loc = AppLocalizations.of(context);
-    final canPop = Navigator.of(context).canPop();
+    
+    // נעילת ניווט אם המשתמש טרם סיים את חשיפת שער החירות
+    final isRevealed = budget.hasCompletedGrandReveal;
+    final canPop = Navigator.of(context).canPop() && isRevealed;
 
     const brandBlue = Color(0xFF00A3FF);
 
@@ -72,10 +75,23 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
           const SizedBox(width: 8),
           Flexible(
-            child: title != null 
-              ? Text(title!, style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)
-              : Text(loc?.get('appTitle') ?? 'דוחכם', 
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400])),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    title ?? (loc?.get('appTitle') ?? 'דוחכם'),
+                    style: title != null 
+                      ? const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)
+                      : TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400]),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // אייקון כתר פרימיום קבוע לציון סטטוס
+                const Icon(Icons.workspace_premium, color: Colors.amber, size: 18),
+              ],
+            ),
           ),
         ],
       ),
@@ -90,11 +106,12 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
             },
           ),
         
-        IconButton(
-          icon: const Icon(Icons.menu, color: brandBlue, size: 28),
-          tooltip: 'תפריט ראשי',
-          onPressed: () => _showMainMenuBottomSheet(context, budget, showSavingsIcon),
-        ),
+        if (isRevealed) // תפריט ההמבורגר מוסתר בזמן כיול ראשוני
+          IconButton(
+            icon: const Icon(Icons.menu, color: brandBlue, size: 28),
+            tooltip: 'תפריט ראשי',
+            onPressed: () => _showMainMenuBottomSheet(context, budget, showSavingsIcon),
+          ),
         const SizedBox(width: 4),
       ],
     );

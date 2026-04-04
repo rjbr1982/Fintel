@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding + Root Metrics Sync)
+// 🔒 STATUS: EDITED (Fixed Navigation Routing to assure clean Dashboard launch)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -74,7 +74,12 @@ class PnLScreen extends StatelessWidget {
           await DatabaseHelper.instance.updateUserMetric('hasViewedFreedom', true);
           
           if (context.mounted) {
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainScreen()));
+            // ניקוי עמוק של הערימה (Stack) כדי להבטיח הופעה חלקה של האנימציה בדשבורד הראשי
+            Navigator.pushAndRemoveUntil(
+              context, 
+              MaterialPageRoute(builder: (_) => const MainScreen()),
+              (route) => false
+            );
           }
         },
         label: const Text('התקציב שלי מוכן!', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
