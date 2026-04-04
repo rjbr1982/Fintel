@@ -58,3 +58,4 @@ flutter:
   assets:
     - assets/icon/Fintel_Icon.png
     - assets/icon/splash.gif
+    - assets/fintel_brain_capsule.txt

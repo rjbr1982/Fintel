@@ -1,4 +1,4 @@
-// 🔒 STATUS: FINAL (Admin God-Mode Dashboard - Fully Optimized & Zero Warnings & Localized & Hidden Screener)
+// 🔒 STATUS: FINAL (Admin God-Mode Dashboard - Fully Optimized & Zero Warnings & Localized & Hidden Screener & Brain Extractor)
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -144,6 +144,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
     );
+  }
+
+  // --- Fintel Brain Extractor ---
+  Future<void> _extractBrainCapsule(BuildContext context) async {
+    try {
+      final String capsuleData = await rootBundle.loadString('assets/fintel_brain_capsule.txt');
+      await Clipboard.setData(ClipboardData(text: capsuleData));
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ קפסולת הקוד הועתקה ללוח בהצלחה!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ שגיאה בחילוץ הקוד: $e\nהאם הרצת את pack_code.dart?'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showAdvancedScreener() {
@@ -309,6 +335,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: const Text('סטטוס: Live', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
               ],
+            ),
+            const SizedBox(height: 16),
+
+            // --- FINTEL BRAIN EXTRACTOR (Section 13.2.1) ---
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _extractBrainCapsule(context),
+                icon: const Icon(Icons.memory),
+                label: const Text('חילוץ קוד מערכת (Brain)', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple[800], 
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                ),
+              ),
             ),
             const SizedBox(height: 24),
 
