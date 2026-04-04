@@ -1,11 +1,12 @@
 # Project Status - Dohaham (Fintel)
-**Version:** Constitution 12.84
-**Last Updated:** March 27, 2026
+**Version:** Constitution 12.85
+**Last Updated:** April 4, 2026
 
 ## ✅ What is Working Perfectly (in 'dohaham' main project)
+* **Fintel Brain Extractor (Admin):** Local pre-build script (`pack_code.dart`) bundles the entire system codebase into a text asset, enabling full source-code extraction directly to the mobile device's clipboard via the Admin Dashboard.
 * **Standardized Graphs:** Both Salary and Checking graphs follow a standard financial LTR direction with smooth Bezier curves, explicit Date/Amount labels, and a Zero-Line indicator.
 * **Premium Gating (Simulated):** Full UI infrastructure for feature locking. Founders Gift dialog for Alpha/Beta users and a high-converting Paywall screen for Regular users.
-* **Admin Dashboard & SaaS Metrics:** Admin Center correctly tracks user metrics and metadata.
+* **Admin Dashboard & SaaS Metrics:** Admin Center correctly tracks user metrics, applies advanced screening, and handles bulk mailing.
 * **Infinity State Flow:** Graceful handling of zero/negative PCF in the Freedom Gate flow.
 * **Fintel Academy:** Content View with chip navigation is operational.
 * **The Freedom Engine:** Accurately calculates Time-to-Freedom based on Assets and PCF.
@@ -21,6 +22,7 @@
 4. **Localization & FCM Topics:** Setup `AppLocalizations` (Hebrew active, English dormant) and auto-subscribe devices to FCM language topics for marketing.
 
 ## 📓 Strategic Decision Log
+* **IP Protection vs. User Data (April 4, 2026 - v12.85):** Separated the concepts of "Data Export" and "Code Extraction". The public Hamburger menu now only exports personal User Data. A hidden Admin-only "Brain Extractor" handles full source-code extraction. Bypassed mobile compilation limits by introducing a pre-build `pack_code.dart` script that injects the source code as an internal asset (`fintel_brain_capsule.txt`).
 * **SaaS Hybrid Model (March 27, 2026):** Adopted dual pricing (MRR + Lifetime). Android uses RevenueCat (Google Play), Web uses Custom Israeli Gateway via Firebase Cloud Function. Firestore serves as the absolute SSOT.
 * **Grandfathering Logic (March 27, 2026):** Users with a `createdAt` timestamp prior to `commercial_launch_date` in `system_config` receive automatic `isFounder: true` status, seamlessly bypassing all paywalls.
 * **Localization & Push Notifications (March 27, 2026):** Rejected auto-translation for push notifications. Implemented FCM Topics (e.g., `marketing_he`) for targeted, human-crafted marketing copy. System messages use Data-Only keys translated locally via `AppLocalizations`.
