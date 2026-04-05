@@ -24,6 +24,7 @@ dependencies:
   # System
   path_provider: ^2.1.5
   local_auth: ^2.2.0
+  package_info_plus: ^8.0.0 # 🔒 ADDED: Automatic Version Tracking
   
   # SaaS & Firebase Cloud (Constitution 5.10)
   firebase_core: ^4.4.0 

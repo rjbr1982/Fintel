@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Admin God-Mode Trigger + Sealed Freedom Gate + Premium Crown)
+// 🔒 STATUS: EDITED (Added Dynamic Version Tracking via package_info_plus)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
 import '../../utils/app_localizations.dart';
@@ -320,14 +321,14 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                   ),
                 ),
                 _buildMenuTile(
-                  icon: Icons.psychology, color: Colors.deepPurple, title: 'ייצוא נתונים ל-AI', isPremium: true,
+                  icon: Icons.content_copy, color: Colors.deepPurple, title: 'ייצוא דוח פיננסי (טקסט)', isPremium: true,
                   onTap: () {
                     Navigator.pop(ctx);
                     PremiumService.requirePremium(context, () async {
                       await AiExportService.generateAndCopy(context);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('הנתונים הועתקו בהצלחה! ניתן להדביק בצ\'אט עם ה-AI.'), backgroundColor: Colors.green),
+                          const SnackBar(content: Text('הנתונים הועתקו בהצלחה! ניתן להדביק בצ\'אט עם ה-AI או במסמך.'), backgroundColor: Colors.green),
                         );
                       }
                     });
@@ -357,7 +358,14 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      const Text('© 2026 Fintel - כל הזכויות שמורות\nv1.0.0', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: Colors.grey, height: 1.5)),
+                      // רכיב FutureBuilder חכם לטעינת הגרסה
+                      FutureBuilder<PackageInfo>(
+                        future: PackageInfo.fromPlatform(),
+                        builder: (context, snapshot) {
+                          String versionText = snapshot.hasData ? 'v${snapshot.data!.version}' : '';
+                          return Text('© 2026 Fintel - כל הזכויות שמורות\n$versionText', textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, color: Colors.grey, height: 1.5));
+                        }
+                      ),
                       Positioned(
                         right: 20,
                         top: 0,

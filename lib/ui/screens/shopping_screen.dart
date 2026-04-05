@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Enhanced Search Bar UI Contrast and Visibility)
+// 🔒 STATUS: EDITED (Enhanced Search Bar UI Contrast, Visibility & Historical Spent View)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -231,7 +231,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
             ),
       body: Column(
         children: [
-          _buildEnhancedBudgetCard(budgetLimit, plannedMonthly, actualMonthly),
+          _buildEnhancedBudgetCard(budgetLimit, plannedMonthly, actualMonthly, shoppingProvider),
           _buildSearchBarAndActions(),
           _buildComparisonNavigator(),
           Padding(
@@ -308,11 +308,11 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         children: [
           Expanded(
             child: Container(
-              height: 46 * _textScale, // Increased height slightly
+              height: 46 * _textScale, 
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withAlpha(10), // Subtle shadow
+                    color: Colors.black.withAlpha(10), 
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -324,13 +324,13 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                 decoration: InputDecoration(
                   hintText: 'חיפוש מוצר...',
                   hintStyle: TextStyle(fontSize: 14 * _textScale, color: Colors.blueGrey.shade400, fontWeight: FontWeight.w500),
-                  prefixIcon: Icon(Icons.search, size: 22 * _textScale, color: Colors.blue), // Colored and slightly larger icon
+                  prefixIcon: Icon(Icons.search, size: 22 * _textScale, color: Colors.blue), 
                   suffixIcon: _searchQuery.isNotEmpty 
                     ? IconButton(icon: Icon(Icons.clear, size: 20 * _textScale, color: Colors.blueGrey), onPressed: () => _searchController.clear()) 
                     : null,
                   contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12), // Rounder edges
+                    borderRadius: BorderRadius.circular(12), 
                     borderSide: BorderSide(color: Colors.blueGrey.shade200, width: 1.5),
                   ),
                   enabledBorder: OutlineInputBorder(
@@ -804,7 +804,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     );
   }
 
-  Widget _buildEnhancedBudgetCard(double anchor, double planned, double actual) {
+  Widget _buildEnhancedBudgetCard(double anchor, double planned, double actual, ShoppingProvider provider) {
     double delta = anchor - planned;
     
     return Container(
@@ -818,7 +818,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
               Expanded(child: _buildStatDetail("תקציב עוגן", anchor, Colors.blueGrey)), 
               Expanded(child: _buildStatDetail("תכנון חודשי", planned, Colors.black87)), 
               Expanded(child: _buildDeltaDetail(delta)), 
-              Expanded(child: _buildStatDetail("ביצוע בפועל", actual, actual > anchor ? Colors.red : Colors.green)),
+              Expanded(child: _buildActualStatDetail(actual, actual > anchor ? Colors.red : Colors.green, provider)),
             ],
           ),
           const SizedBox(height: 12),
@@ -837,6 +837,54 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     );
   }
   
+  // תצוגת 'ביצוע בפועל' עם בורר חודשים דינמי
+  Widget _buildActualStatDetail(double value, Color color, ShoppingProvider provider) {
+    final now = DateTime.now();
+    final isCurrent = provider.targetMonth.year == now.year && provider.targetMonth.month == now.month;
+    final monthStr = "${provider.targetMonth.month.toString().padLeft(2, '0')}/${provider.targetMonth.year.toString().substring(2)}";
+
+    return Column(
+      children: [
+        PopupMenuButton<int>(
+          color: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          onSelected: (offset) {
+            provider.setTargetMonthOffset(offset);
+          },
+          itemBuilder: (context) {
+            return List.generate(12, (index) {
+              final m = DateTime(now.year, now.month - index, 1);
+              final isThisMonth = index == 0;
+              final label = isThisMonth ? "החודש הנוכחי" : "${m.month.toString().padLeft(2, '0')}/${m.year.toString().substring(2)}";
+              return PopupMenuItem(
+                value: index, // שולח כמה חודשים אחורה לקפוץ
+                child: Text(label, style: TextStyle(fontSize: 13 * _textScale, color: Colors.black87)),
+              );
+            });
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                isCurrent ? "ביצוע בפועל" : "בפועל ($monthStr)",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 10 * _textScale, 
+                  color: isCurrent ? Colors.grey : Colors.blue, 
+                  fontWeight: FontWeight.bold,
+                  decoration: isCurrent ? TextDecoration.none : TextDecoration.underline,
+                  decorationColor: Colors.blue.withAlpha(100)
+                )
+              ),
+              Icon(Icons.arrow_drop_down, size: 14 * _textScale, color: isCurrent ? Colors.grey : Colors.blue),
+            ],
+          ),
+        ),
+        FittedBox(fit: BoxFit.scaleDown, child: Text("₪${value.toStringAsFixed(0)}", style: TextStyle(fontSize: 15 * _textScale, fontWeight: FontWeight.bold, color: color)))
+      ]
+    );
+  }
+
   Widget _buildDeltaDetail(double delta) {
     final valueColor = delta >= 0 ? Colors.green : Colors.red;
     return Column(

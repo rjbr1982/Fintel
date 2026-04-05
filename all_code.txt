@@ -453,6 +453,91 @@ class PostLoginSplashScreen extends StatelessWidget {
 }
 
 
+FILE: C:\Projects\dohaham\lib\data\academy_content.dart
+-----------------------
+// 🔒 STATUS: EDITED (Updated Objective Mirror logic to include Passive Income / Freedom Engine calibration)
+
+enum BlockType { paragraph, bullet, boldSubtitle }
+
+class AcademyBlock {
+  final BlockType type;
+  final String text;
+  const AcademyBlock(this.type, this.text);
+}
+
+class AcademyChapter {
+  final String title;
+  final List<AcademyBlock> content;
+  const AcademyChapter(this.title, this.content);
+}
+
+const List<AcademyChapter> academyChapters = [
+  AcademyChapter(
+    'הקדמה: מרוץ העכברים והמראה המתמטית',
+    [
+      AcademyBlock(BlockType.paragraph, 'ברוך הבא לאקדמיית Fintel. השגת חירות פיננסית אינה קסם, אלא משוואה מתמטית. רוב האנשים חיים ב"מרוץ העכברים" – הם עובדים קשה, מרוויחים יותר, אבל ההוצאות (רמת החיים) גדלות בהתאם להכנסה, תופעה הידועה כ"חוק פרקינסון".'),
+      AcademyBlock(BlockType.bullet, 'המראה האובייקטיבית: האפליקציה נועדה לשמש עבורך כמראה מתמטית אובייקטיבית. אם שנת החירות הפיננסית שלך רחוקה מאוד או מוגדרת כ"אינסופית" (∞), זו אינה תקלה. תוצאה זו נובעת לרוב משילוב סינרגטי של שני גורמים: האחד הוא היעדר תזרים פנוי מספיק בתקציב השוטף, והשני הוא הגדרות מנוע החירות. לעיתים קרובות, התוצאה נובעת מהגדרות שמרניות מדי של אחוז התשואה המצופה או הצבת יעד הכנסה פסיבית גבוה במיוחד. כדי לייצב את התחזית ולהבין את התמונה המלאה, עליך לכייל את מנוע החירות דרך תפריט ההגדרות (הממוקם למעלה משמאל לשנת החירות במסך הראשי, או בלחיצה על שורת "תזרים לחירות פיננסית" במסך התזרים).'),
+      AcademyBlock(BlockType.bullet, 'סוף להפתעות ("אין יותר בלת"מים"): הכלל הראשון בשיטה שלנו הוא מחיקת המילה "בלת"ם" (בלתי מתוכנן) מהלקסיקון. אין דבר כזה. פנצ\'ר ברכב, טיפול שיניים, או אירוע משפחתי – הכל מתוכנן ברמת הקיום, רק חסר לנו התאריך המדויק. Fintel הופכת את ניהול המשברים לניהול חזוי באמצעות קופות צוברות.'),
+    ],
+  ),
+  AcademyChapter(
+    'פרק 1: "החומרה" – חוקי הברזל בבנק',
+    [
+      AcademyBlock(BlockType.paragraph, 'Fintel היא ה"תוכנה" (המוח החושב), אבל כדי שהיא תעבוד ותמנע ממך להיכנס לגירעון, אנחנו צריכים לסדר את ה"חומרה" – החשבונות הפיזיים שלך בבנק. זהו תנאי הכרחי להצלחה.'),
+      AcademyBlock(BlockType.bullet, 'חוק 1: היגיינת ארנק (מעבר לדיירקט). הוצא את כרטיסי האשראי (Credit) מהארנק הפיזי שלך. הם ישמשו אך ורק לתשלומים דיגיטליים של הוצאות קבועות (כמו חשמל או ביטוחים). בארנק הפיזי שלך יישאר רק כרטיס חיוב מיידי (דיירקט/Debit). כל קנייה בסופר, דלק או בילוי תרד מיידית מהעו"ש. היתרון? מחסום פיזי מוחלט מפני כניסה למינוס סמוי באשראי. נגמר הכסף בחשבון? הכרטיס לא עובר.'),
+      AcademyBlock(BlockType.bullet, 'חוק 2: ארכיטקטורת החשבונות ("שיטת המעטפות החדשה").'),
+      AcademyBlock(BlockType.paragraph, '  - חשבון האב (הראשי): החשבון שאליו נכנסות המשכורות. ממנו יורדות ההוצאות הקבועות (הוראות קבע), תקציב הסופר, והפרשות לקופות החיסכון.\n  - ארנקי בילוי אישיים: פתח חשבון בנק נוסף (או השתמש בכרטיס נטען) לכל אחד מבני הזוג. בכל 1 לחודש, חשבון האב יעביר בהוראת קבע את "תקציב הבילויים והביגוד" שהגדרת ב-Fintel ישירות לארנק האישי. זהו כסף "טיפש" – אפשר לבזבז אותו על מה שרוצים ללא רגשות אשמה, כי הוא תוקצב מראש.\n  - תקציב ילדים: אם הגדרת דמי כיס או תקציב בילוי לילדים, נהל זאת דרך כרטיסים נטענים ייעודיים.'),
+      AcademyBlock(BlockType.bullet, 'המטרה: ליצור הפרדה פיזית ופסיכולוגית בין הכסף שמיועד לקיום הבית, לכסף שמיועד ליהנות מהחיים. Fintel מחשבת, והבנק מבצע.'),
+    ],
+  ),
+  AcademyChapter(
+    'פרק 2: ייצוב התזרים – המוח מאחורי "מנוע השכר"',
+    [
+      AcademyBlock(BlockType.paragraph, 'אחת המלכודות המסוכנות ביותר לעובדי משמרות, עצמאיים או בעלי שכר מבוסס עמלות, היא תנודתיות בהכנסה. חודש אחד אתה מרוויח 12,000 ₪ וחודש לאחר מכן 8,500 ₪. הטעות הפסיכולוגית הנפוצה היא לבנות את רמת החיים (ההוצאות המשתנות) סביב חודשי השיא. כשהשכר יורד – נוצר גירעון סמוי שגורר אותך למינוס.'),
+      AcademyBlock(BlockType.bullet, 'הפתרון של Fintel: מנוע סטטיסטיקת השכר (Salary Engine). במקום לנחש, המערכת דורשת עובדות. במסך "ממוצע שכר" (תחת הכנסות), הזן את נתוני חודשי העבר שלך (נטו ושעות עבודה בפועל).'),
+      AcademyBlock(BlockType.bullet, 'המערכת תחשב אוטומטית את הממוצע האמיתי והמדויק שלך, ותנעל אותו כ"עוגן ההכנסה" בתזרים הראשי.'),
+      AcademyBlock(BlockType.bullet, 'התוצאה הלוגית: אתה חי את חייך על פי הממוצע הבטוח. בחודשים חלשים – התקציב שלך כבר מוגן ומחושב מראש. בחודשים חזקים – העודפים לא נשרפים על רמת חיים גבוהה מזויפת, אלא מוסטים אוטומטית ל"קופת הצלף" לחיסול חובות או להשקעות.'),
+    ],
+  ),
+  AcademyChapter(
+    'פרק 3: מערכת "אנטי-הפתעות" – שליטה מוחלטת בקופות הצבירה',
+    [
+      AcademyBlock(BlockType.paragraph, 'הפילוסופיה שלנו גורסת שאין הפתעות כלכליות, יש רק חוסר ודאות לגבי העיתוי. רכב דורש תחזוקה, טיפולי שיניים קורים, וחגים מגיעים כל שנה. כדי לנטרל את החרדה והכאוס בבנק, Fintel משתמשת ב"הוצאות צוברות" (Sinking Funds).'),
+      AcademyBlock(BlockType.bullet, 'הפרקטיקה הבנקאית הנכונה: בשום מצב לא פותחים פיקדון אחד גדול לכלל ההפרשות יחד – זו טעות שיוצרת כאוס. הכלל הוא פתיחת פיקדון נפרד וייעודי בבנק לכל הוצאה צוברת בנפרד, שבו מנהלים את הצבירה של אותה הוצאה ספציפית.'),
+      AcademyBlock(BlockType.bullet, 'חריגים (קופות מאוחדות): בהוצאות בעלות מכנה משותף מובהק, כמו כלל הוצאות ה"רכב" או קטגוריית ה"חגים", הפרקטיקה היא כן לאחד אותן לפיקדון בנקאי אחד. עם זאת, אם האדם מזהה קושי בניהול או חריגות בתקציב (למשל בחג מסוים), הוא תמיד יכול לפצל אותו בחזרה לקופות נפרדות בבנק ובאפליקציה לצורך מעקב הדוק ואישי יותר.'),
+      AcademyBlock(BlockType.bullet, 'שילוב מצבים (דוגמת ההורים): יישום חכם של קופות ספציפיות יחד עם קופות מאוחדות בא לידי ביטוי בהוצאות המשתנות של ההורים. בשלב הראשון, מפרישים את הסכום הכולל של ההוצאות מהחשבון המשותף הראשי לחשבונות האישיים (ניהול מאקרו). בשלב השני, בתוך החשבון האישי, פותחים חסכונות נפרדים לחלוטין עבור תתי-הסעיפים – כגון פיקדון ייעודי ל"בגדים אבא" ופיקדון נפרד ל"טיפוח אמא" – כדי לנהל את ההפרשות הפרטיות בדיוק מרבי (ניהול מיקרו).'),
+      AcademyBlock(BlockType.bullet, 'תחנת היציאה הבנקאית (מנהל המשיכות): כאשר הוצאת כסף ששייך לאחת הקופות, תעד זאת באפליקציה כ"משיכה". כדי להימנע מפעולות בנקאיות יומיומיות, קבע יום קבוע בחודש ("תחנת יציאה") שבו תבצע משיכה פיזית מרוכזת מהפיקדונות השונים לעו"ש, כנגד כל המשיכות שתיעדת באפליקציה.'),
+    ],
+  ),
+  AcademyChapter(
+    'פרק 4: רמת חיים מבוססת חוקים ("הקופסה הסגורה")',
+    [
+      AcademyBlock(BlockType.paragraph, 'במערכת שלנו, "רמת חיים" היא לא נגזרת של "כמה בא לי להוציא", אלא תוצאה מתמטית של מה שנשאר אחרי שדאגנו לבסיס, לעתיד ולחירות שלנו.'),
+      AcademyBlock(BlockType.bullet, 'עוגן הקניות (הסופרמרקט): הוצאת הקניות לבית מוגדרת במערכת כ"עוגן" בעל סכום קשיח. המערכת תפחית את סכום העוגן הזה ראשון מתוך סך תקציב רמת החיים שלך.'),
+      AcademyBlock(BlockType.bullet, 'חלוקת השארית (אחוזים): מה שנשאר אחרי הקניות, מתחלק אוטומטית לפי אחוזים (ולא סכומים) לקופות אישיות של ביגוד, טיפוח ובילויים לכל בן משפחה. אם ההכנסה הפנויה תרד - התקציב לבילויים יצטמצם אוטומטית. אם היא תעלה - תוכלו לבלות יותר.'),
+      AcademyBlock(BlockType.bullet, 'רמזור הבילויים: בדשבורד התזרים מופיעה קופת הבילויים שלכם. כדי למנוע אימפולסיביות, המערכת תציג צבעים (ירוק, כתום, אדום) לפי היתרה שנותרה. ניתן לכייל אישית מאיזה סכום תופיע התראת שפע (ירוק) ומאיזה סכום תופיע אזהרה (כתום). נגמר התקציב (אדום)? נשארים בבית.'),
+      AcademyBlock(BlockType.bullet, 'רשימת קניות מונעת-תדירות: כדי להגן על עוגן הקניות, בנינו את הרשימה החכמה. לכל מוצר מוגדרת תדירות. אם תסמן לקנייה מוצר מוקדם מדי – המערכת תתריע. מדד ה"דלתא" יראה לך תמיד את הפער בין מה שתכננת להוציא לעלות הרשימה בפועל.'),
+    ],
+  ),
+  AcademyChapter(
+    'פרק 5: "מכונת הזמן" – אסטרטגיית הצלף לחיסול חובות',
+    [
+      AcademyBlock(BlockType.paragraph, 'אם יש לכם חובות (הלוואות, תשלומים באשראי או מינוס כרוני), הם מוגדרים כמצב חירום. כל שקל שפנוי בתזרים מופנה אליהם לפני שהוא מופנה להשקעות.'),
+      AcademyBlock(BlockType.bullet, 'אפקט כדור השלג ("קופת הצלף"): הטעות הגדולה ביותר היא שכאשר הלוואה מסתיימת, אנשים בולעים את ההחזר החודשי שהתפנה לטובת שדרוג רמת החיים. ב-Fintel חל חוק הברזל: כל חוב שמסתיים, סכום ההחזר שלו מצטרף אוטומטית לכוח האש של "קופת הצלף", שתוקפת באופן אגרסיבי את החוב הבא בתור.'),
+      AcademyBlock(BlockType.bullet, 'מפת הדרכים לחיסול (המטריצה): המערכת בונה עבורך לוח סילוקין שמציג במדויק כמה זמן חיים תחסוך בזכות הפניית העודפים התזרימיים והפעלת שיטת כדור השלג, לעומת לוח הסילוקין המקורי של הבנק.'),
+    ],
+  ),
+  AcademyChapter(
+    'פרק 6: מנוע החירות – מהשלב התזרימי לשלב הפסיבי',
+    [
+      AcademyBlock(BlockType.paragraph, 'זהו היעד הסופי של המערכת. "חירות פיננסית" אינה סיסמה, היא משוואה מתמטית: הרגע שבו ההכנסות הפסיביות מהנכסים שלך גדולות מסך הוצאות הבסיס ורמת החיים שלך.'),
+      AcademyBlock(BlockType.bullet, 'איך מנוע החירות עובד? המערכת סוכמת את ההון העצמי שצברת בתיק הנכסים שלך, מפעילה עליו את "התשואה השנתית" שהגדרת, ומחשבת באיזו שנה ההון הזה ייצר מספיק ריבית כדי לשלם את כל ההוצאות שלך.'),
+      AcademyBlock(BlockType.bullet, 'עסקים כנכס פסיבי: אם הקמת עסק, והוא מייצר רווח נטו חיובי תוך דרישת זמן של *עד 4 שעות עבודה בשבוע* – המערכת תכיר בו כנכס פסיבי. הרווח מהעסק יקזז ישירות את "יעד המחייה" שלך במנוע החירות, ויקרב משמעותית את שנת השחרור שלך ממרוץ העכברים.'),
+    ],
+  ),
+];
+
+
 FILE: C:\Projects\dohaham\lib\data\asset_model.dart
 -----------------------
 class Asset {
@@ -526,7 +611,7 @@ class CheckingEntry {
 
 FILE: C:\Projects\dohaham\lib\data\database_helper.dart
 -----------------------
-// 🔒 STATUS: EDITED (Maintains full SaaS NoSQL compatibility for Business / Passive Income data)
+// 🔒 STATUS: EDITED (Added User Root Methods for Premium/Paywall Management)
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -550,6 +635,53 @@ class DatabaseHelper {
   }
 
   int _generateId() => DateTime.now().millisecondsSinceEpoch;
+
+  // ==========================================
+  // רשומת משתמש שורשית (Root User Document & Metrics)
+  // ==========================================
+  
+  Future<void> initializeUserRoot({required String email, String generation = 'Regular', String country = 'Unknown'}) async {
+    if (_uid == 'unauthenticated') return;
+    
+    await _db.collection('users').doc(_uid).set({
+      'email': email,
+      'generation': generation,
+      'country': country,
+      'lastActive': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> updateUserMetric(String metricKey, bool value) async {
+    if (_uid == 'unauthenticated') return;
+
+    await _db.collection('users').doc(_uid).set({
+      'metrics': {
+        metricKey: value
+      },
+      'lastActive': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  // ==========================================
+  // משיכת נתוני השורש (לצורכי חומת תשלום והרשאות)
+  // ==========================================
+  
+  Future<Map<String, dynamic>?> getUserRootData() async {
+    if (_uid == 'unauthenticated') return null;
+    try {
+      final doc = await _db.collection('users').doc(_uid).get();
+      return doc.data();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> setPremiumStatus(bool isPremium) async {
+    if (_uid == 'unauthenticated') return;
+    await _db.collection('users').doc(_uid).set({
+      'isPremium': isPremium,
+    }, SetOptions(merge: true));
+  }
 
   // ==========================================
   // 🔄 REAL-TIME STREAMS (SaaS Sync)
@@ -786,7 +918,6 @@ class DatabaseHelper {
           .get();
       
       final items = snap.docs.map((doc) => Withdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
-      // מיון מקומי פותר את שגיאת Firebase הקשורה לאינדקס מורכב חסר
       items.sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
       return items;
     } catch (e) {
@@ -3150,7 +3281,7 @@ class DebtProvider with ChangeNotifier {
 
 FILE: C:\Projects\dohaham\lib\providers\shopping_provider.dart
 -----------------------
-// 🔒 STATUS: EDITED (Added Auto-Seed for empty catalogs & Fixed Checkbox State Loss)
+// 🔒 STATUS: EDITED (Added Target Month selection for actual spending history & Fixed Checkbox State Loss)
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 import '../data/shopping_model.dart';
@@ -3164,6 +3295,16 @@ class ShoppingProvider with ChangeNotifier {
     final categories = _items.map((e) => e.category).toSet().toList();
     categories.sort();
     return ['הכל', ...categories];
+  }
+
+  // --- מנגנון בחירת חודש להיסטוריית ביצוע בפועל ---
+  DateTime _targetMonth = DateTime.now();
+  DateTime get targetMonth => _targetMonth;
+
+  void setTargetMonthOffset(int monthsBack) {
+    final now = DateTime.now();
+    _targetMonth = DateTime(now.year, now.month - monthsBack, 1);
+    notifyListeners();
   }
 
   // --- 1. תוכנית אסטרטגית (מה שאמור לעלות חודש ממוצע) ---
@@ -3183,15 +3324,14 @@ class ShoppingProvider with ChangeNotifier {
         .fold(0.0, (sum, item) => sum + (item.price * item.quantity));
   }
 
-  // --- 3. ביצוע בפועל החודש (מה שכבר נקנה ותועד) ---
+  // --- 3. ביצוע בפועל החודש (או בחודש היסטורי נבחר) ---
   double get actualMonthlySpent {
     double total = 0.0;
-    final now = DateTime.now();
     for (var item in _items) {
       final lastDate = item.lastPurchaseDateTime;
       if (lastDate != null && 
-          lastDate.month == now.month && 
-          lastDate.year == now.year) {
+          lastDate.month == _targetMonth.month && 
+          lastDate.year == _targetMonth.year) {
         total += (item.price * item.quantity);
       }
     }
@@ -3441,6 +3581,113 @@ class ShoppingProvider with ChangeNotifier {
 }
 
 
+FILE: C:\Projects\dohaham\lib\services\admin_service.dart
+-----------------------
+// 🔒 STATUS: EDITED (Admin God-Mode Engine - Rethrowing Errors for Debugging)
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+
+/// מודל נתונים רזה למשתמש (Metadata בלבד, ללא חשיפה פיננסית)
+class AdminUserRecord {
+  final String id;
+  final String email;
+  final DateTime? createdAt;
+  final DateTime? lastActive;
+  final String generation;
+  final String country;
+  final Map<String, dynamic> metrics;
+
+  AdminUserRecord({
+    required this.id,
+    required this.email,
+    this.createdAt,
+    this.lastActive,
+    required this.generation,
+    required this.country,
+    required this.metrics,
+  });
+
+  // פונקציית עזר לפענוח תאריכים בטוח מכל סוג של נתון ישן/חדש
+  static DateTime? _parseDateSafely(dynamic val) {
+    if (val == null) return null;
+    if (val is Timestamp) return val.toDate();
+    if (val is String) return DateTime.tryParse(val);
+    if (val is int) return DateTime.fromMillisecondsSinceEpoch(val);
+    return null;
+  }
+
+  factory AdminUserRecord.fromMap(String id, Map<String, dynamic> map) {
+    return AdminUserRecord(
+      id: id,
+      email: map['email']?.toString() ?? 'Unknown',
+      createdAt: _parseDateSafely(map['createdAt']),
+      lastActive: _parseDateSafely(map['lastActive']),
+      generation: map['generation']?.toString() ?? 'Alpha',
+      country: map['country']?.toString() ?? 'Unknown',
+      metrics: map['metrics'] is Map ? Map<String, dynamic>.from(map['metrics']) : {},
+    );
+  }
+}
+
+class AdminService {
+  static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // 1. אימות הרשאת מנהל מול השרת (מנעול כפול)
+  static Future<bool> isCurrentUserAdmin() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+
+    try {
+      final doc = await _db.collection('admins').doc(user.uid).get();
+      return doc.exists;
+    } catch (e) {
+      debugPrint('Error checking admin status: $e');
+      return false;
+    }
+  }
+
+  // 2. בדיקת סטטוס השקה מסחרית
+  static Future<bool> isCommercialLaunch() async {
+    try {
+      final doc = await _db.collection('system_settings').doc('global').get();
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['isCommercialLaunch'] as bool? ?? false;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error fetching commercial status: $e');
+      return false;
+    }
+  }
+
+  // 3. הפעלת השקה מסחרית (כפתור השמדה עצמית)
+  static Future<void> toggleCommercialLaunch() async {
+    try {
+      await _db.collection('system_settings').doc('global').set({
+        'isCommercialLaunch': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error updating commercial status: $e');
+      rethrow;
+    }
+  }
+
+  // 4. שאיבת כלל המשתמשים עבור מסנן המניות (Screener)
+  static Future<List<AdminUserRecord>> fetchAllUsers() async {
+    try {
+      final snapshot = await _db.collection('users').get();
+      return snapshot.docs.map((doc) => AdminUserRecord.fromMap(doc.id, doc.data())).toList();
+    } catch (e) {
+      debugPrint('🚨 CRITICAL ERROR FETCHING USERS: $e');
+      rethrow; // <--- התיקון: מעביר את השגיאה למסך כדי שהקובייה האדומה תתעורר!
+    }
+  }
+}
+
+
 FILE: C:\Projects\dohaham\lib\services\ai_export_service.dart
 -----------------------
 // 🔒 STATUS: EDITED (Fixed Debt model field name and removed unused import)
@@ -3547,61 +3794,205 @@ class AiExportService {
 
 FILE: C:\Projects\dohaham\lib\services\premium_service.dart
 -----------------------
+// 🔒 STATUS: EDITED (Fixed use_build_context_synchronously warnings)
 import 'package:flutter/material.dart';
+import '../data/database_helper.dart';
 
 class PremiumService {
   static bool _hasSeenFoundersGift = false;
 
-  /// עוטף פעולות הדורשות מנוי פרימיום. 
-  /// כרגע, מקפיץ הודעת "מתנת מייסדים" בפעם הראשונה ומאפשר גישה חינמית.
-  static void requirePremium(BuildContext context, VoidCallback onGranted) {
-    if (_hasSeenFoundersGift) {
+  /// עוטף פעולות הדורשות מנוי פרימיום.
+  /// בודק מול בסיס הנתונים: משלמים או מייסדים עוברים, רגילים מקבלים מסך חומת תשלום (Paywall).
+  static Future<void> requirePremium(BuildContext context, VoidCallback onGranted) async {
+    // משיכת נתוני סטטוס מהירה (שקופה)
+    final userData = await DatabaseHelper.instance.getUserRootData();
+    
+    // בדיקת תקינות הקשר (Context) לאחר המתנה לפעולה אסינכרונית
+    if (!context.mounted) return;
+
+    final generation = userData?['generation'] ?? 'Regular';
+    final isPremium = userData?['isPremium'] ?? false;
+
+    // אם המשתמש הוא משלם (או שלחץ על 'התחל ניסיון' בסימולציה)
+    if (isPremium) {
       onGranted();
       return;
     }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.workspace_premium, color: Colors.amber, size: 56),
-            SizedBox(height: 16),
-            Text(
-              "פיצ'ר פרימיום פתוח! 👑",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 20),
+    // ניווט לפי דורות:
+    if (generation == 'Alpha' || generation == 'Beta') {
+      if (_hasSeenFoundersGift) {
+        onGranted();
+        return;
+      }
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.workspace_premium, color: Colors.amber, size: 56),
+              SizedBox(height: 16),
+              Text(
+                "פיצ'ר פרימיום פתוח! 👑",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 20),
+              ),
+            ],
+          ),
+          content: const Text(
+            "זיהינו שאתה מהמשתמשים הראשונים של דוחכם.\n\nלאות תודה, כל פיצ'רי הפרימיום (מנוע החירות, מכונת הזמן לחובות וסטטיסטיקות שכר) פתוחים עבורך כרגע בחינם לחלוטין. תהנה!",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.blueGrey, fontSize: 15, height: 1.4),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00A3FF),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                elevation: 2,
+              ),
+              onPressed: () {
+                _hasSeenFoundersGift = true;
+                Navigator.pop(ctx);
+                onGranted();
+              },
+              child: const Text("תודה, המשך", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ],
         ),
-        content: const Text(
-          "זיהינו שאתה מהמשתמשים הראשונים של דוחכם.\n\nלאות תודה, כל פיצ'רי הפרימיום (מנוע החירות, מכונת הזמן לחובות וסטטיסטיקות שכר) פתוחים עבורך כרגע בחינם לחלוטין. תהנה!",
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.blueGrey, fontSize: 15, height: 1.4),
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00A3FF),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              elevation: 2,
+      );
+    } else {
+      // אם זה משתמש רגיל (Regular) ואינו משלם - הצג את חומת התשלום הממירה
+      _showPaywall(context, onGranted);
+    }
+  }
+
+  // =========================================================
+  // מסך חומת התשלום (Paywall) - UI שיווקי וממיר
+  // =========================================================
+  static void _showPaywall(BuildContext context, VoidCallback onGranted) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // מכריח אותו לקבל החלטה
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        contentPadding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header כהה ויוקרתי
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              decoration: const BoxDecoration(
+                color: Color(0xFF121212), // Deep Slate
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: const Column(
+                children: [
+                  Icon(Icons.workspace_premium, color: Colors.amber, size: 56),
+                  SizedBox(height: 12),
+                  Text(
+                    'Fintel Pro',
+                    style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                  ),
+                ],
+              ),
             ),
-            onPressed: () {
-              _hasSeenFoundersGift = true;
-              Navigator.pop(ctx);
-              onGranted();
-            },
-            child: const Text("תודה, המשך", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          ),
-        ],
+            
+            // תוכן שיווקי
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  const Text(
+                    "שדרג ל-Fintel Pro\nשליטה מוחלטת בתזרים",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  _buildBullet("ייצוב שכר תנודתי."),
+                  const SizedBox(height: 12),
+                  _buildBullet("מערכת 'אנטי-הפתעות' מתקדמת."),
+                  const SizedBox(height: 12),
+                  _buildBullet("בניית מפת דרכים מדויקת לחירות פיננסית."),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // כפתור הנעה לפעולה (Call to Action)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00A3FF), // Electric Blue
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      onPressed: () async {
+                        // סימולציית תשלום (Stripe Checkout)
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        
+                        // בדיקה נוספת לפני שימוש ב-context המקורי של המסך להצגת SnackBar
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('מצב פיתוח: המנוי הופעל בהצלחה. ברוך הבא ל-Pro! 👑'), 
+                              backgroundColor: Colors.green
+                            ),
+                          );
+                        }
+                        
+                        // עדכון שקוף בבסיס הנתונים שהוא הפך למשלם
+                        await DatabaseHelper.instance.setPremiumStatus(true);
+                        onGranted();
+                      },
+                      child: const Text("התחל 30 ימי ניסיון חינם", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // יציאה (Opt-out)
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text(
+                      "לא תודה, אמשיך בגרסה החינמית הבסיסית",
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  // רכיב ויזואלי להצגת היתרונות (V)
+  static Widget _buildBullet(String text) {
+    return Row(
+      children: [
+        const Icon(Icons.check_circle, color: Color(0xFF00FF85), size: 20), // Emerald Green
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(text, style: const TextStyle(fontSize: 15, color: Colors.black87)),
+        ),
+      ],
     );
   }
 }
@@ -3609,7 +4000,7 @@ class PremiumService {
 
 FILE: C:\Projects\dohaham\lib\services\seed_service.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed Housing/Utilities exclusion and expanded universal Shopping Seed List)
+// 🔒 STATUS: EDITED (Dynamic Shopping Seed Calculation + Anchor Synchronization)
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
 import '../data/shopping_model.dart';
@@ -3633,7 +4024,44 @@ class SeedService {
       return; 
     }
 
-    // --- לוגיקת קביעת שמות הישויות (State Machine) ---
+    // --- 1. בניית קטלוג קניות וחישוב עוגן דינמי ---
+    // אנו קובעים מכפילים כדי לייקר את הסל התיאורטי בהתאם למספר הנפשות
+    double baseMultiplier = 1.0;
+    if (maritalStatus == 'married') baseMultiplier += 0.8; // +80% לבן/בת זוג
+    baseMultiplier += (childrenCount * 0.3); // +30% לכל ילד
+
+    double shoppingMonthlyTotal = 0.0;
+    List<ShoppingItem> initialShoppingItems = [];
+
+    ShoppingItem addSeedShopping(String name, String category, double basePrice, int weeks) {
+      double adjustedPrice = (basePrice * baseMultiplier).roundToDouble();
+      // חישוב העלות החודשית האמיתית של המוצר לפי תדירותו
+      shoppingMonthlyTotal += (adjustedPrice * 1.0 * (4.0 / weeks));
+      return _createShopping(name, category, adjustedPrice, weeks);
+    }
+
+    initialShoppingItems.addAll([
+      addSeedShopping('ביצים', 'ביצים', 35.0, 1),
+      addSeedShopping('מוצרי חלב בסיסיים (חלב, גבינות, חמאה)', 'מוצרי חלב', 40.0, 1),
+      addSeedShopping('לחם ומאפים', 'לחמים', 20.0, 1),
+      addSeedShopping('ירקות בסיס (עגבניה, מלפפון, בצל, וכו\')', 'ירקות', 35.0, 1),
+      addSeedShopping('פירות העונה', 'פירות', 30.0, 1),
+      addSeedShopping('בשר ועוף מרכזי', 'בשר', 100.0, 1),
+      addSeedShopping('חטיפי בשר (שניצלונים/נקניקיות)', 'בשר', 45.0, 2),
+      addSeedShopping('דגים', 'דגים', 50.0, 2),
+      addSeedShopping('נייר טואלט', 'חומרי ניקוי', 40.0, 4),
+      addSeedShopping('חומרי ניקוי (כלים, כביסה, רצפה)', 'חומרי ניקוי', 50.0, 4),
+      addSeedShopping('טואלטיקה (שמפו, משחות)', 'טואלטיקה', 45.0, 4),
+      addSeedShopping('פחמימות בסיס (אורז, פסטה)', 'מזווה', 25.0, 2),
+      addSeedShopping('שמן', 'מזווה', 15.0, 4),
+      addSeedShopping('קפה ותה', 'מזווה', 25.0, 4),
+      addSeedShopping('סוכר, מלח ותבלינים', 'מזווה', 15.0, 4),
+    ]);
+
+    // קביעת עוגן הקניות הראשי כדלתא של +200 ש"ח בדיוק מעלות הסל התיאורטי המחושב
+    double shoppingAnchor = (shoppingMonthlyTotal + 200.0).roundToDouble();
+
+    // --- 2. לוגיקת קביעת שמות הישויות (State Machine) ---
     String parent1Name = '';
     String parent2Name = '';
 
@@ -3738,8 +4166,8 @@ class SeedService {
       _create('תספורת', 'קבועות', 'תספורת', 0),
       _create('קטנות לבית (פארם/שונות)', 'קבועות', 'קטנות לבית', 100, isSinking: true),
 
-      // === משתנות (קניות - עוגן) ===
-      _create('קניות', 'משתנות', 'קניות', 3500),
+      // === משתנות (קניות - עוגן דינמי מחושב מראש) ===
+      _create('קניות', 'משתנות', 'קניות', shoppingAnchor),
 
       // === משתנות (חלוקה דינמית לפי משפחה) ===
       if (maritalStatus == 'single' && childrenCount > 0) ...[
@@ -3786,27 +4214,9 @@ class SeedService {
       await db.insertExpense(expense);
     }
 
-    // --- רשימת האמת לקניות (Seed Data) חלופה אוניברסלית ---
+    // --- הזרקת רשימת הקניות החכמה והמחושבת ---
     final existingShopping = await db.getShoppingItems();
     if (existingShopping.isEmpty) {
-      final List<ShoppingItem> initialShoppingItems = [
-        _createShopping('ביצים', 'ביצים', 35.0, 1),
-        _createShopping('מוצרי חלב בסיסיים (חלב, גבינות, חמאה)', 'מוצרי חלב', 40.0, 1),
-        _createShopping('לחם ומאפים', 'לחמים', 20.0, 1),
-        _createShopping('ירקות בסיס (עגבניה, מלפפון, בצל, וכו\')', 'ירקות', 35.0, 1),
-        _createShopping('פירות העונה', 'פירות', 30.0, 1),
-        _createShopping('בשר ועוף מרכזי', 'בשר', 100.0, 1),
-        _createShopping('חטיפי בשר (שניצלונים/נקניקיות)', 'בשר', 45.0, 2),
-        _createShopping('דגים', 'דגים', 50.0, 2),
-        _createShopping('נייר טואלט', 'חומרי ניקוי', 40.0, 4),
-        _createShopping('חומרי ניקוי (כלים, כביסה, רצפה)', 'חומרי ניקוי', 50.0, 4),
-        _createShopping('טואלטיקה (שמפו, משחות)', 'טואלטיקה', 45.0, 4),
-        _createShopping('פחמימות בסיס (אורז, פסטה)', 'מזווה', 25.0, 2),
-        _createShopping('שמן', 'מזווה', 15.0, 4),
-        _createShopping('קפה ותה', 'מזווה', 25.0, 4),
-        _createShopping('סוכר, מלח ותבלינים', 'מזווה', 15.0, 4),
-      ];
-
       for (var item in initialShoppingItems) {
         await db.insertShoppingItem(item);
       }
@@ -3857,9 +4267,817 @@ class SeedService {
 }
 
 
+FILE: C:\Projects\dohaham\lib\ui\screens\academy_screen.dart
+-----------------------
+// 🔒 STATUS: EDITED (Active Content View & Horizontal Chips Implementation, fixed spread operator lint)
+import 'package:flutter/material.dart';
+import '../../data/academy_content.dart';
+
+class AcademyScreen extends StatefulWidget {
+  const AcademyScreen({super.key});
+
+  @override
+  State<AcademyScreen> createState() => _AcademyScreenState();
+}
+
+class _AcademyScreenState extends State<AcademyScreen> {
+  int _selectedIndex = 0;
+
+  Widget _buildBlock(AcademyBlock block) {
+    const textColor = Colors.black87;
+
+    switch (block.type) {
+      case BlockType.paragraph:
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: Text(
+            block.text,
+            style: const TextStyle(color: textColor, fontSize: 16, height: 1.6),
+          ),
+        );
+      case BlockType.bullet:
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12.0, right: 8.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('•', style: TextStyle(color: Color(0xFFFFB800), fontSize: 20, height: 1.2)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  block.text,
+                  style: const TextStyle(color: textColor, fontSize: 16, height: 1.6),
+                ),
+              ),
+            ],
+          ),
+        );
+      case BlockType.boldSubtitle:
+        return Padding(
+          padding: const EdgeInsets.only(top: 8.0, bottom: 12.0),
+          child: Text(
+            block.text,
+            style: const TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.bold, height: 1.5),
+          ),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const Color goldAccents = Color(0xFFFFB800);
+    final activeChapter = academyChapters[_selectedIndex];
+
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black87),
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.workspace_premium, color: goldAccents, size: 24),
+            SizedBox(width: 8),
+            Text(
+              'המדריך לחירות פיננסית',
+              style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          // Horizontal Chips Navigation
+          Container(
+            width: double.infinity,
+            color: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 12.0),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: List.generate(academyChapters.length, (index) {
+                  final isSelected = _selectedIndex == index;
+                  // Shorten title for chip if it's too long, or use full title
+                  final shortTitle = academyChapters[index].title.split(':').first;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: ChoiceChip(
+                      label: Text(
+                        shortTitle,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black87,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      selected: isSelected,
+                      selectedColor: Colors.amber.shade700,
+                      backgroundColor: Colors.grey.shade100,
+                      onSelected: (bool selected) {
+                        if (selected) {
+                          setState(() {
+                            _selectedIndex = index;
+                          });
+                        }
+                      },
+                      elevation: isSelected ? 2 : 0,
+                      pressElevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(
+                          color: isSelected ? Colors.amber.shade700 : Colors.grey.shade300,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
+          
+          // Separator line
+          Container(
+            height: 1,
+            color: Colors.grey.shade200,
+          ),
+
+          // Active Content Area
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: ListView(
+                key: ValueKey<int>(_selectedIndex),
+                padding: const EdgeInsets.all(20.0),
+                children: [
+                  // Full Chapter Title
+                  Text(
+                    activeChapter.title,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Blocks - Removed .toList() to fix unnecessary_to_list_in_spreads lint
+                  ...activeChapter.content.map((block) => _buildBlock(block)),
+                  
+                  const SizedBox(height: 40), // Bottom padding
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+FILE: C:\Projects\dohaham\lib\ui\screens\admin_dashboard_screen.dart
+-----------------------
+// 🔒 STATUS: FINAL (Admin God-Mode Dashboard - Fully Optimized & Zero Warnings & Localized & Hidden Screener & Brain Extractor)
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../services/admin_service.dart';
+
+class AdminDashboardScreen extends StatefulWidget {
+  const AdminDashboardScreen({super.key});
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  bool _isLoading = true;
+  bool _isCommercial = false;
+  List<AdminUserRecord> _users = [];
+  
+  // Advanced Screener Filters
+  bool _showScreenerResults = false;
+  String _filterGeneration = 'הכל';
+  String _filterCountry = 'הכל';
+  String _filterSalary = 'הכל';
+  String _filterSinking = 'הכל';
+  String _filterFreedom = 'הכל';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final isComm = await AdminService.isCommercialLaunch();
+      final users = await AdminService.fetchAllUsers();
+      
+      if (mounted) {
+        setState(() {
+          _isCommercial = isComm;
+          _users = users;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // --- Mailing Protocol (Section 13.5) ---
+  Future<void> _triggerMail(List<String> emails, String subject, String body) async {
+    if (emails.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('אין משתמשים בקבוצה זו')));
+      return;
+    }
+
+    final bcc = emails.join(',');
+    final uri = Uri.parse('mailto:?bcc=$bcc&subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}');
+    
+    try {
+      final launched = await launchUrl(uri);
+      if (!launched) throw Exception('Launch failed');
+    } catch (e) {
+      if (mounted) _showMailFallbackDialog(bcc, subject, body);
+    }
+  }
+
+  void _showMailFallbackDialog(String bcc, String subject, String body) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('דיוור ידני (עומס נמענים)', style: TextStyle(color: Colors.black87)),
+        backgroundColor: Colors.white,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildCopyField('נמענים (BCC)', bcc),
+              const SizedBox(height: 12),
+              _buildCopyField('נושא ההודעה', subject),
+              const SizedBox(height: 12),
+              _buildCopyField('גוף ההודעה', body),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('סגור', style: TextStyle(color: Colors.blueGrey))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCopyField(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blueGrey)),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+          child: Row(
+            children: [
+              Expanded(child: Text(value, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.black87))),
+              IconButton(
+                icon: const Icon(Icons.copy, size: 18, color: Colors.blue),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: value));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label הועתק ללוח')));
+                },
+              )
+            ],
+          ),
+        )
+      ],
+    );
+  }
+
+  // --- Master Switch Logic ---
+  void _confirmCommercialLaunch() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('⚠️ אזהרה: השקה מסחרית', style: TextStyle(color: Colors.black87)),
+        backgroundColor: Colors.white,
+        content: const Text('האם אתה בטוח? פעולה זו תגרום לכך שכל משתמש חדש מעתה יסומן כ-Regular וייתקל בחומת תשלום. לא ניתן לבטל פעולה זו.', style: TextStyle(color: Colors.black87)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול', style: TextStyle(color: Colors.blueGrey))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(() => _isLoading = true);
+              await AdminService.toggleCommercialLaunch();
+              await _loadData();
+            },
+            child: const Text('אשר השקה', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Fintel Brain Extractor ---
+  Future<void> _extractBrainCapsule(BuildContext context) async {
+    try {
+      final String capsuleData = await rootBundle.loadString('assets/fintel_brain_capsule.txt');
+      await Clipboard.setData(ClipboardData(text: capsuleData));
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ קפסולת הקוד הועתקה ללוח בהצלחה!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ שגיאה בחילוץ הקוד: $e\nהאם הרצת את pack_code.dart?'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showAdvancedScreener() {
+    final uniqueCountries = _users.map((e) => e.country).toSet().toList();
+    uniqueCountries.remove('Unknown');
+    uniqueCountries.insert(0, 'הכל');
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Flexible(child: Text('מסנן קהלים מתקדם', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87), overflow: TextOverflow.ellipsis)),
+                      IconButton(icon: const Icon(Icons.close, color: Colors.blueGrey), onPressed: () => Navigator.pop(ctx)),
+                    ],
+                  ),
+                  const Divider(),
+                  
+                  _buildDropdownRow('דור:', _filterGeneration, ['הכל', 'Alpha', 'Beta', 'Regular'], (v) {
+                    if (v != null) {
+                      setModalState(() => _filterGeneration = v);
+                      setState(() => _filterGeneration = v);
+                    }
+                  }),
+                  
+                  _buildDropdownRow('מדינה:', _filterCountry, uniqueCountries, (v) {
+                    if (v != null) {
+                      setModalState(() => _filterCountry = v);
+                      setState(() => _filterCountry = v);
+                    }
+                  }),
+
+                  _buildDropdownRow('שכר:', _filterSalary, ['הכל', 'כן', 'לא'], (v) {
+                    if (v != null) {
+                      setModalState(() => _filterSalary = v);
+                      setState(() => _filterSalary = v);
+                    }
+                  }),
+
+                  _buildDropdownRow('קופות:', _filterSinking, ['הכל', 'יש', 'אין'], (v) {
+                    if (v != null) {
+                      setModalState(() => _filterSinking = v);
+                      setState(() => _filterSinking = v);
+                    }
+                  }),
+
+                  _buildDropdownRow('חירות:', _filterFreedom, ['הכל', 'כן', 'לא'], (v) {
+                    if (v != null) {
+                      setModalState(() => _filterFreedom = v);
+                      setState(() => _filterFreedom = v);
+                    }
+                  }),
+
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black87,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _showScreenerResults = true; // הדלקת הרשימה התחתונה
+                      });
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('החל סינון', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            );
+          }
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdownRow(String label, String currentValue, List<String> items, ValueChanged<String?> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87), overflow: TextOverflow.ellipsis)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              value: items.contains(currentValue) ? currentValue : items.first,
+              dropdownColor: Colors.white,
+              style: const TextStyle(color: Colors.blue),
+              underline: Container(height: 1, color: Colors.blue.withValues(alpha: 0.3)),
+              items: items.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(color: Colors.black87), overflow: TextOverflow.ellipsis))).toList(),
+              onChanged: onChanged,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(backgroundColor: Color(0xFF121212), body: Center(child: CircularProgressIndicator(color: Colors.amber)));
+    }
+
+    final active7Days = _users.where((u) => u.lastActive != null && DateTime.now().difference(u.lastActive!).inDays <= 7).length;
+    final uniqueCountriesCount = _users.map((e) => e.country).where((c) => c != 'Unknown').toSet().length;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF121212),
+        title: const Text('פאנל ניהול - Fintel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.table_rows_outlined, color: Colors.grey),
+            tooltip: 'נתונים גולמיים',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminRawDataScreen(users: _users))),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // --- TOP DASHBOARD ---
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              alignment: WrapAlignment.spaceBetween,
+              children: [
+                _buildMacroStat('משתמשים', '${_users.length}'),
+                _buildMacroStat('פעילים', '$active7Days'),
+                _buildMacroStat('מדינות', '$uniqueCountriesCount'),
+                if (!_isCommercial)
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87, padding: const EdgeInsets.symmetric(horizontal: 12)),
+                    icon: const Icon(Icons.rocket_launch, size: 14),
+                    label: const Text('השקה', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    onPressed: _confirmCommercialLaunch,
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+                    child: const Text('סטטוס: Live', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // --- FINTEL BRAIN EXTRACTOR (Section 13.2.1) ---
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _extractBrainCapsule(context),
+                icon: const Icon(Icons.memory),
+                label: const Text('חילוץ קוד מערכת (Brain)', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple[800], 
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // --- SMART CTAs ---
+            const Text('טריגרים חכמים', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+            const SizedBox(height: 12),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.5,
+              children: [
+                _buildSmartCTA(
+                  title: 'צוואר בקבוק',
+                  desc: 'מעל 48 שעות, ללא שכר',
+                  color: Colors.orange,
+                  icon: Icons.hourglass_empty,
+                  onTap: () {
+                    final emails = _users.where((u) => u.createdAt != null && DateTime.now().difference(u.createdAt!).inHours > 48 && !(u.metrics['hasSalary'] ?? false)).map((u) => u.email).toList();
+                    _triggerMail(emails, 'צריכים עזרה עם השכר?', 'שמנו לב שנרשמתם אבל טרם הזנתם שכר. נשמח לעזור!');
+                  },
+                ),
+                _buildSmartCTA(
+                  title: 'נטישה',
+                  desc: 'לא פעילים מעל 7 ימים',
+                  color: Colors.redAccent,
+                  icon: Icons.person_off,
+                  onTap: () {
+                    final emails = _users.where((u) => u.lastActive != null && DateTime.now().difference(u.lastActive!).inDays > 7).map((u) => u.email).toList();
+                    _triggerMail(emails, 'התגעגענו אליכם!', 'חלף שבוע מאז שבדקתם את התזרים. בואו נחזור למסלול.');
+                  },
+                ),
+                _buildSmartCTA(
+                  title: 'הצלחה א\'',
+                  desc: 'פתחו קופה צוברת',
+                  color: Colors.green,
+                  icon: Icons.savings,
+                  onTap: () {
+                    final emails = _users.where((u) => (u.metrics['hasSinkingFunds'] ?? false)).map((u) => u.email).toList();
+                    _triggerMail(emails, 'כל הכבוד על הקופה החדשה!', 'צעד ראשון בניהול אנטי-הפתעות. מעולה!');
+                  },
+                ),
+                _buildSmartCTA(
+                  title: 'הצלחה ב\'',
+                  desc: 'הגיעו למסך החירות',
+                  color: Colors.teal,
+                  icon: Icons.flag,
+                  onTap: () {
+                    final emails = _users.where((u) => (u.metrics['hasViewedFreedom'] ?? false)).map((u) => u.email).toList();
+                    _triggerMail(emails, 'איך החוויה שלכם?', 'ראיתם את שנת החירות שלכם! נשמח לפידבק על האפליקציה.');
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+
+            // --- THE SCREENER ---
+            const Text('מסנן קהלים חכם', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.black87, side: const BorderSide(color: Colors.blueGrey),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.tune, size: 20),
+                    label: const Text('הגדרות סינון מתקדם', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: _showAdvancedScreener,
+                  ),
+                ),
+                if (_showScreenerResults) ...[
+                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.redAccent, side: const BorderSide(color: Colors.redAccent),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.close, size: 20),
+                    label: const Text('סגור', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: () {
+                      setState(() {
+                        _showScreenerResults = false;
+                        _filterGeneration = 'הכל';
+                        _filterCountry = 'הכל';
+                        _filterSalary = 'הכל';
+                        _filterSinking = 'הכל';
+                        _filterFreedom = 'הכל';
+                      });
+                    },
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_showScreenerResults) _buildScreenerResults(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMacroStat(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+      ],
+    );
+  }
+
+  Widget _buildSmartCTA({required String title, required String desc, required Color color, required IconData icon, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: color.withValues(alpha: 0.3)), boxShadow: [BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(children: [
+              Icon(icon, size: 16, color: color), 
+              const SizedBox(width: 6), 
+              Expanded(child: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 12), overflow: TextOverflow.ellipsis))
+            ]),
+            const SizedBox(height: 4),
+            Text(desc, style: const TextStyle(fontSize: 10, color: Colors.blueGrey), maxLines: 2, overflow: TextOverflow.ellipsis),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScreenerResults() {
+    List<AdminUserRecord> filtered = _users.where((u) {
+      if (_filterGeneration != 'הכל' && u.generation != _filterGeneration) return false;
+      if (_filterCountry != 'הכל' && u.country != _filterCountry) return false;
+      if (_filterSalary != 'הכל') {
+        final hasVal = u.metrics['hasSalary'] ?? false;
+        if (_filterSalary == 'כן' && !hasVal) return false;
+        if (_filterSalary == 'לא' && hasVal) return false;
+      }
+      if (_filterSinking != 'הכל') {
+        final hasVal = u.metrics['hasSinkingFunds'] ?? false;
+        if (_filterSinking == 'יש' && !hasVal) return false;
+        if (_filterSinking == 'אין' && hasVal) return false;
+      }
+      if (_filterFreedom != 'הכל') {
+        final hasVal = u.metrics['hasViewedFreedom'] ?? false;
+        if (_filterFreedom == 'כן' && !hasVal) return false;
+        if (_filterFreedom == 'לא' && hasVal) return false;
+      }
+      return true;
+    }).toList();
+
+    if (filtered.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24), 
+        child: Center(child: Text('לא נמצאו משתמשים התואמים להגדרות הסינון', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)))
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (_filterGeneration != 'הכל') _buildFilterChip('דור: $_filterGeneration'),
+            if (_filterCountry != 'הכל') _buildFilterChip('מדינה: $_filterCountry'),
+            if (_filterSalary != 'הכל') _buildFilterChip('שכר: ${_filterSalary == 'כן' ? 'הוזן' : 'לא הוזן'}'),
+            if (_filterSinking != 'הכל') _buildFilterChip('קופות: ${_filterSinking == 'יש' ? 'נפתחו' : 'אין'}'),
+            if (_filterFreedom != 'הכל') _buildFilterChip('חירות: ${_filterFreedom == 'כן' ? 'ראו' : 'לא ראו'}'),
+          ],
+        ),
+        if (_filterGeneration != 'הכל' || _filterCountry != 'הכל' || _filterSalary != 'הכל' || _filterSinking != 'הכל' || _filterFreedom != 'הכל')
+          const SizedBox(height: 12),
+
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey.shade900, foregroundColor: Colors.white),
+          icon: const Icon(Icons.copy, size: 16),
+          label: Text('העתק רשימת תפוצה (${filtered.length})', overflow: TextOverflow.ellipsis),
+          onPressed: () {
+            if (filtered.isEmpty) return;
+            final emails = filtered.map((e) => e.email).join(',');
+            Clipboard.setData(ClipboardData(text: emails));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('הרשימה הועתקה ללוח')));
+          },
+        ),
+        const SizedBox(height: 12),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: filtered.length,
+          itemBuilder: (context, index) {
+            final u = filtered[index];
+            return Card(
+              color: Colors.white,
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                title: Text(u.email, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87), overflow: TextOverflow.ellipsis),
+                subtitle: Text('${u.country} | ${u.lastActive != null ? u.lastActive!.toString().split(' ')[0] : 'טרם'}', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (u.generation != 'Regular') const Icon(Icons.workspace_premium, color: Colors.amber, size: 16),
+                    const SizedBox(width: 4),
+                    Text(u.generation, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                  ],
+                ),
+              ),
+            );
+          },
+        )
+      ],
+    );
+  }
+
+  Widget _buildFilterChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.blue.withValues(alpha: 0.3))),
+      child: Text(label, style: const TextStyle(fontSize: 11, color: Colors.blue, fontWeight: FontWeight.bold)),
+    );
+  }
+}
+
+// ----------------------------------------------------------------------
+// HIDDEN MATRIX SCREEN (Raw Data)
+// ----------------------------------------------------------------------
+class AdminRawDataScreen extends StatelessWidget {
+  final List<AdminUserRecord> users;
+  const AdminRawDataScreen({super.key, required this.users});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('טבלת נתונים גולמיים (Audit)', style: TextStyle(color: Colors.white, fontSize: 16)), backgroundColor: Colors.black, iconTheme: const IconThemeData(color: Colors.white)),
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SingleChildScrollView(
+          child: DataTable(
+            columnSpacing: 16,
+            columns: const [
+              DataColumn(label: Text('אימייל', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
+              DataColumn(label: Text('דור', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
+              DataColumn(label: Text('מדינה', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
+              DataColumn(label: Text('שכר', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
+              DataColumn(label: Text('קופות', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
+              DataColumn(label: Text('חירות', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
+              DataColumn(label: Text('פעילות אחרונה', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
+            ],
+            rows: users.map((u) => DataRow(cells: [
+              DataCell(Text(u.email, style: const TextStyle(color: Colors.black87, fontSize: 12))),
+              DataCell(Text(u.generation, style: const TextStyle(color: Colors.black87, fontSize: 12))),
+              DataCell(Text(u.country == 'Unknown' ? 'לא ידוע' : u.country, style: const TextStyle(color: Colors.black87, fontSize: 12))),
+              DataCell(Icon(u.metrics['hasSalary'] == true ? Icons.check : Icons.close, color: u.metrics['hasSalary'] == true ? Colors.green : Colors.red, size: 16)),
+              DataCell(Icon(u.metrics['hasSinkingFunds'] == true ? Icons.check : Icons.close, color: u.metrics['hasSinkingFunds'] == true ? Colors.green : Colors.red, size: 16)),
+              DataCell(Icon(u.metrics['hasViewedFreedom'] == true ? Icons.check : Icons.close, color: u.metrics['hasViewedFreedom'] == true ? Colors.green : Colors.red, size: 16)),
+              DataCell(Text(u.lastActive?.toString().split(' ')[0] ?? 'טרם', style: const TextStyle(color: Colors.black87, fontSize: 12))),
+            ])).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
 FILE: C:\Projects\dohaham\lib\ui\screens\assets_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed Asset deletion - added Dismissible wrapper and safe ID checks)
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/asset_provider.dart';
@@ -3887,6 +5105,33 @@ class _AssetsScreenState extends State<AssetsScreen> {
     });
   }
 
+  void _showInfoDialog(String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
@@ -3903,34 +5148,9 @@ class _AssetsScreenState extends State<AssetsScreen> {
         builder: (context, provider, child) {
           return Column(
             children: [
-              // באנר הדרכה - תמיד בראש המסך (Contextual Onboarding)
               Container(
                 width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.lightbulb, color: Colors.blue[800], size: 22),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "חישוב המאקרו: מנוע החירות סוכם את שווי הנכסים ומפעיל עליהם את התשואה הכללית מהדשבורד. התשואות הפרטניות כאן נועדו למעקב אישי בלבד.",
-                        style: TextStyle(color: Colors.blueGrey[900], fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.green.withValues(alpha: 0.05),
@@ -3939,9 +5159,19 @@ class _AssetsScreenState extends State<AssetsScreen> {
                 ),
                 child: Column(
                   children: [
-                    Text(
-                      loc.get('net_worth'),
-                      style: TextStyle(fontSize: 16, color: Colors.green[800], fontWeight: FontWeight.w500),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          loc.get('net_worth'),
+                          style: TextStyle(fontSize: 16, color: Colors.green[800], fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () => _showInfoDialog('חישוב נכסים', 'חישוב המאקרו: מנוע החירות סוכם את שווי הנכסים ומפעיל עליהם את התשואה הכללית מהדשבורד. התשואות הפרטניות כאן נועדו למעקב אישי בלבד.'),
+                          child: Icon(Icons.info_outline, size: 18, color: Colors.green[800]),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -4110,7 +5340,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\category_drilldown_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (PRO MODE: Complete cleanup of duplicates, fixed context.mounted checks. Zero Linter warnings)
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -4186,6 +5416,34 @@ void _showUnifiedModeDialog(BuildContext context, BudgetProvider provider, Strin
         );
       }
     )
+  );
+}
+
+// === פונקציית עזר לתמרורי הדרכה ===
+void _showInfoDialog(BuildContext context, String title, String content) {
+  showDialog(
+    context: context,
+    builder: (ctx) => Theme(
+      data: ThemeData.light(),
+      child: AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline, color: Colors.blue),
+            const SizedBox(width: 8),
+            Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+          ],
+        ),
+        content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    ),
   );
 }
 
@@ -4436,7 +5694,16 @@ class CategoryDrilldownScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('$boxTitle: ₪${totalBalance.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color == Colors.orange ? Colors.orange[900] : color)),
+                Row(
+                  children: [
+                    Text('$boxTitle: ₪${totalBalance.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color == Colors.orange ? Colors.orange[900] : color)),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: () => _showInfoDialog(context, 'רמזור הבילויים', 'המערכת מנתחת את יתרת הבילויים ומתריעה בצבעים. לחץ על סמל העיפרון כדי לכייל מאיזה סכום תופיע אזהרת תקציב (כתום) ומאיזה סכום תוצג הודעת שפע (ירוק).'),
+                      child: Icon(Icons.info_outline, size: 16, color: color == Colors.orange ? Colors.orange[900] : color),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 4),
                 Text(message, style: TextStyle(fontSize: 12, color: Colors.blueGrey[800], fontWeight: FontWeight.w500)),
               ],
@@ -4564,7 +5831,22 @@ class CategoryDrilldownScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     
-                    const Align(alignment: Alignment.centerRight, child: Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                            const SizedBox(width: 6),
+                            InkWell(
+                              onTap: () => _showInfoDialog(context, 'נוסחת הפסיביות', 'כדי שעסק יוכר כ"נכס פסיבי" שיקזז את יעד המחייה שלך, עליו לעמוד בשני תנאים מתמטיים: ייצור רווח נטו חיובי, ודרישת עבודה של מקסימום 4 שעות בשבוע.'),
+                              child: const Icon(Icons.info_outline, size: 16, color: Colors.blueGrey),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -4807,28 +6089,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
       body: Column(
         children: [
           if (mainCategory == 'משתנות') ...[
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.lightbulb_outline, color: Colors.blue[700], size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "עוגנים מול אחוזים: הוצאת ה'קניות' מוגדרת כעוגן קבוע. היא מופחתת תחילה, והיתרה מתחלקת אוטומטית לשאר הסעיפים לפי האחוזים שהוגדרו.",
-                      style: TextStyle(color: Colors.blueGrey[800], fontSize: 13, height: 1.4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
             if (provider.variableDeficit > 0)
               Container(
                 width: double.infinity,
@@ -5601,7 +6861,22 @@ class SpecificExpensesScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     
-                    const Align(alignment: Alignment.centerRight, child: Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('כמה זמן העסק הזה דורש ממך?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                            const SizedBox(width: 6),
+                            InkWell(
+                              onTap: () => _showInfoDialog(context, 'נוסחת הפסיביות', 'כדי שעסק יוכר כ"נכס פסיבי" שיקזז את יעד המחייה שלך, עליו לעמוד בשני תנאים מתמטיים: ייצור רווח נטו חיובי, ודרישת עבודה של מקסימום 4 שעות בשבוע.'),
+                              child: const Icon(Icons.info_outline, size: 16, color: Colors.blueGrey),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -5905,7 +7180,18 @@ class SpecificExpensesScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('סה"כ תזרים חודשי:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                    Row(
+                      children: [
+                        const Text('סה"כ תזרים חודשי:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                        if (mainCategory == 'משתנות') ...[
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _showInfoDialog(context, 'מודל העוגן', "עוגנים מול אחוזים: הוצאת ה'קניות' מוגדרת כעוגן קבוע. היא מופחתת תחילה, והיתרה מתחלקת אוטומטית לשאר הסעיפים לפי האחוזים שהוגדרו."),
+                            child: const Icon(Icons.info_outline, size: 20, color: Colors.blue),
+                          )
+                        ]
+                      ],
+                    ),
                     Row(
                       children: [
                         Column(
@@ -6646,9 +7932,16 @@ class _UnifiedFundBottomSheetState extends State<_UnifiedFundBottomSheet> {
         ),
 
         const SizedBox(height: 20),
-        const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
-        const SizedBox(height: 4),
-        const Align(alignment: Alignment.centerRight, child: Text("הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף.", style: TextStyle(fontSize: 12, color: Colors.black54))),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+            InkWell(
+              onTap: () => _showInfoDialog(context, 'משיכה חדשה', "הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף."),
+              child: const Icon(Icons.info_outline, size: 20, color: Colors.blue),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         Row(
           children: [
@@ -7021,9 +8314,16 @@ class _SinkingFundBottomSheetState extends State<_SinkingFundBottomSheet> {
 
               const SizedBox(height: 20),
               
-              const Align(alignment: Alignment.centerRight, child: Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
-              const SizedBox(height: 4),
-              const Align(alignment: Alignment.centerRight, child: Text("הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף.", style: TextStyle(fontSize: 12, color: Colors.black54))),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('משיכה חדשה מהקופה', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                  InkWell(
+                    onTap: () => _showInfoDialog(context, 'משיכה חדשה', "הוצאת כסף עבור סעיף זה? רשום 'משיכה'. הסכום ירד מהיתרה הצבורה מבלי לעוות את התזרים השוטף."),
+                    child: const Icon(Icons.info_outline, size: 20, color: Colors.blue),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -7324,9 +8624,11 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
 
 FILE: C:\Projects\dohaham\lib\ui\screens\checking_history_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed Light Theme Contrast and Disappearing Text)
+// 🔒 STATUS: EDITED (Fixed TextDirection intl collision)
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:math';
+import 'dart:ui' as ui;
 import '../../data/database_helper.dart';
 import '../../data/checking_model.dart';
 import '../widgets/global_header.dart';
@@ -7460,9 +8762,9 @@ class CheckingHistoryScreen extends StatelessWidget {
       ..sort((a, b) => DateTime.parse(a.date).compareTo(DateTime.parse(b.date)));
     
     return Container(
-      height: 220,
+      height: 240,
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
@@ -7476,7 +8778,7 @@ class CheckingHistoryScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('מגמת יתרת העו"ש', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Expanded(
             child: CustomPaint(
               size: Size.infinite,
@@ -7496,7 +8798,6 @@ class CheckingHistoryScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setState) {
-          // עטיפה ב-ThemeData.light() כדי למנוע התנגשות עם עיצוב כהה גלובלי
           return Theme(
             data: ThemeData.light(),
             child: AlertDialog(
@@ -7582,19 +8883,16 @@ class _CheckingGraphPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (entries.isEmpty) return;
-    if (entries.length == 1) {
-      final paint = Paint()..color = const Color(0xFF00A3FF)..strokeWidth = 4;
-      canvas.drawCircle(Offset(size.width / 2, size.height / 2), 6, paint);
-      return;
-    }
 
+    // אילוץ קו ה-0: מוודאים ש-minAmt הוא לכל היותר 0, ו-maxAmt הוא לפחות 0.
     double maxAmt = entries.map((e) => e.amount).reduce((a, b) => a > b ? a : b);
     double minAmt = entries.map((e) => e.amount).reduce((a, b) => a < b ? a : b);
+    
+    maxAmt = max(maxAmt, 0.0);
+    minAmt = min(minAmt, 0.0);
 
-    if (maxAmt == minAmt) {
-      maxAmt += 1000;
-      minAmt -= 1000;
-    }
+    double heightRange = maxAmt - minAmt;
+    if (heightRange == 0) heightRange = 1000;
 
     final path = Path();
     final paintLine = Paint()
@@ -7607,16 +8905,34 @@ class _CheckingGraphPainter extends CustomPainter {
       ..color = Colors.white
       ..style = PaintingStyle.fill;
 
-    final widthStep = size.width / (entries.length - 1);
-    final heightRange = maxAmt - minAmt;
+    // מרווחים למעלה ולמטה עבור הטקסט
+    const double paddingY = 24.0;
+    final double usableHeight = size.height - (paddingY * 2);
+    final double widthStep = entries.length > 1 ? size.width / (entries.length - 1) : size.width;
 
+    // ציור קו ה-0 (Zero-Line)
+    final zeroNormalized = (0 - minAmt) / heightRange;
+    final zeroY = usableHeight - (zeroNormalized * usableHeight) + paddingY;
+    
+    final zeroPaint = Paint()
+      ..color = Colors.white24
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(0, zeroY), Offset(size.width, zeroY), zeroPaint);
+    
+    final tpZero = TextPainter(
+      text: const TextSpan(text: '0', style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold)),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    tpZero.paint(canvas, Offset(0, zeroY - 14));
+
+    // שרטוט הגרף (משמאל לימין)
     List<Offset> points = [];
-
     for (int i = 0; i < entries.length; i++) {
       final entry = entries[i];
-      final x = i * widthStep;
+      final x = entries.length > 1 ? i * widthStep : size.width / 2;
       final normalizedY = (entry.amount - minAmt) / heightRange;
-      final y = size.height - (normalizedY * size.height); 
+      final y = usableHeight - (normalizedY * usableHeight) + paddingY; 
       points.add(Offset(x, y));
       
       if (i == 0) {
@@ -7631,11 +8947,28 @@ class _CheckingGraphPainter extends CustomPainter {
       }
     }
 
-    canvas.drawPath(path, paintLine);
+    if (entries.length > 1) {
+      canvas.drawPath(path, paintLine);
+    }
 
-    for (var point in points) {
-      canvas.drawCircle(point, 5, paintLine..style = PaintingStyle.fill);
-      canvas.drawCircle(point, 3, paintDot);
+    // ציור נקודות ותוויות נתונים
+    final textPainter = TextPainter(textDirection: ui.TextDirection.ltr);
+    for (int i = 0; i < points.length; i++) {
+      canvas.drawCircle(points[i], 5, paintLine..style = PaintingStyle.fill);
+      canvas.drawCircle(points[i], 3, paintDot);
+
+      // תווית סכום (מעל הנקודה)
+      final amt = '₪${entries[i].amount.toStringAsFixed(0)}';
+      textPainter.text = TextSpan(text: amt, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold));
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(points[i].dx - (textPainter.width / 2), points[i].dy - 20));
+
+      // תווית תאריך (מתחת לנקודה)
+      final dateObj = DateTime.parse(entries[i].date);
+      final dateStr = '${dateObj.day.toString().padLeft(2,'0')}/${dateObj.month.toString().padLeft(2,'0')}';
+      textPainter.text = TextSpan(text: dateStr, style: const TextStyle(color: Colors.white54, fontSize: 10));
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(points[i].dx - (textPainter.width / 2), points[i].dy + 8));
     }
   }
 
@@ -8046,7 +9379,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\main_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed unnecessary_const Linter Warnings)
+// 🔒 STATUS: EDITED (Fixed const Linter Warnings in Infinity Animation)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -8330,7 +9663,19 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                   elevation: 8,
                 ),
-                onPressed: () => setState(() => _currentState = RevealState.reveal),
+                onPressed: () {
+                  setState(() => _currentState = RevealState.reveal);
+                  
+                  // אם הגענו למצב נצח/אין יעד אפשרי - מחשבים מראש שחרור לדשבורד
+                  if (targetYear == null) {
+                    Future.delayed(const Duration(seconds: 4), () {
+                      if (mounted && _currentState == RevealState.reveal) {
+                        setState(() => _currentState = RevealState.dashboard);
+                        budget.completeGrandReveal();
+                      }
+                    });
+                  }
+                },
                 child: const Text('חשב את שנת החירות שלי', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ],
@@ -8343,45 +9688,79 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       return Material(
         color: const Color(0xFF121212),
         child: Center(
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: DateTime.now().year.toDouble(), end: (targetYear ?? DateTime.now().year + 10).toDouble()),
-            duration: const Duration(seconds: 3),
-            builder: (animContext, value, child) {
-              if (value.toInt() == targetYear && !_isRevealCompleting) {
-                _isRevealCompleting = true;
-                Future.delayed(const Duration(seconds: 2), () {
-                  if (mounted && _currentState == RevealState.reveal) {
-                    setState(() => _currentState = RevealState.dashboard);
-                    budget.completeGrandReveal();
+          child: targetYear == null
+            // === מצב נצח (Infinity) ===
+            ? TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(seconds: 2),
+                builder: (animContext, opacity, child) {
+                  return Opacity(
+                    opacity: opacity,
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('שנת החירות שלך היא:', style: TextStyle(color: Colors.white70, fontSize: 18)),
+                        SizedBox(height: 10),
+                        Text(
+                          '∞', 
+                          style: TextStyle(
+                            color: Color(0xFF00FF85), 
+                            fontSize: 110, 
+                            fontWeight: FontWeight.w300,
+                            shadows: [
+                              Shadow(color: Color(0xFF00FF85), blurRadius: 30),
+                            ]
+                          )
+                        ),
+                        SizedBox(height: 20),
+                        Text('התזרים הנוכחי דורש כיול.', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 10),
+                        Text('המסע מתחיל עכשיו.', style: TextStyle(color: Colors.white54, fontSize: 18)),
+                      ],
+                    ),
+                  );
+                },
+              )
+            // === מצב תקין (ספירת שנים) ===
+            : TweenAnimationBuilder<double>(
+                tween: Tween(begin: DateTime.now().year.toDouble(), end: targetYear.toDouble()),
+                duration: const Duration(seconds: 3),
+                builder: (animContext, value, child) {
+                  if (value.toInt() == targetYear && !_isRevealCompleting) {
+                    _isRevealCompleting = true;
+                    Future.delayed(const Duration(seconds: 2), () {
+                      if (mounted && _currentState == RevealState.reveal) {
+                        setState(() => _currentState = RevealState.dashboard);
+                        budget.completeGrandReveal();
+                      }
+                    });
                   }
-                });
-              }
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('שנת החירות שלך היא:', style: TextStyle(color: Colors.white70, fontSize: 18)),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${value.toInt()}', 
-                    style: TextStyle(
-                      color: const Color(0xFF00FF85), 
-                      fontSize: 90, 
-                      fontWeight: FontWeight.w900,
-                      shadows: [
-                        Shadow(color: const Color(0xFF00FF85).withValues(alpha: 0.5), blurRadius: 30),
-                      ]
-                    )
-                  ),
-                  const SizedBox(height: 30),
-                  AnimatedOpacity(
-                    opacity: _isRevealCompleting ? 1.0 : 0.0,
-                    duration: const Duration(seconds: 1),
-                    child: const Text('כעת, בוא ננהל את זה.', style: TextStyle(color: Colors.white54, fontSize: 18)),
-                  ),
-                ],
-              );
-            },
-          ),
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('שנת החירות שלך היא:', style: TextStyle(color: Colors.white70, fontSize: 18)),
+                      const SizedBox(height: 10),
+                      Text(
+                        '${value.toInt()}', 
+                        style: TextStyle(
+                          color: const Color(0xFF00FF85), 
+                          fontSize: 90, 
+                          fontWeight: FontWeight.w900,
+                          shadows: [
+                            Shadow(color: const Color(0xFF00FF85).withValues(alpha: 0.5), blurRadius: 30),
+                          ]
+                        )
+                      ),
+                      const SizedBox(height: 30),
+                      AnimatedOpacity(
+                        opacity: _isRevealCompleting ? 1.0 : 0.0,
+                        duration: const Duration(seconds: 1),
+                        child: const Text('כעת, בוא ננהל את זה.', style: TextStyle(color: Colors.white54, fontSize: 18)),
+                      ),
+                    ],
+                  );
+                },
+              ),
         ),
       );
     }
@@ -8413,7 +9792,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         Scaffold(
           backgroundColor: Colors.white,
           appBar: const GlobalHeader(),
-          // ה-FloatingActionButton הוסר למניעת כפילות
           body: Center(
             child: SingleChildScrollView(
               child: Padding(
@@ -8566,9 +9944,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\onboarding_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed SegmentedButton UI, Marital Status & Gender DB Saving, and Auto Parent/Child Logic + Freedom Gate Routing)
+// 🔒 STATUS: EDITED (Fixed Reveal Animation Timing Bug - Memory Sync)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../providers/budget_provider.dart';
 import '../../services/seed_service.dart';
 import '../../data/expense_model.dart';
@@ -8660,6 +10039,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (!mounted) return;
 
+    // --- אתחול מסמך שורש של המשתמש ב-Firestore (SaaS Metrics) ---
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await DatabaseHelper.instance.initializeUserRoot(
+        email: user.email ?? 'unknown_email@fintel.com',
+      );
+    }
+    // -------------------------------------------------------------
+
+    if (!mounted) return;
+
     final budget = Provider.of<BudgetProvider>(context, listen: false);
     
     // שמירת הסטטוס המשפחתי כדי שלא יאופס למצב ברירת מחדל
@@ -8691,10 +10081,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       budget.updateHasActiveDebts(true);
     }
 
-    await budget.loadData();
-
-    // אתחול דגל חשיפה למצב "לא הושלם" כדי להפעיל את שער החירות
+    // אתחול דגל חשיפה למצב "לא הושלם" - מבוצע *לפני* הטעינה לזיכרון כדי למנוע את באג דילוג האנימציה
     await DatabaseHelper.instance.saveSetting('has_completed_reveal', 0.0);
+
+    // טעינת הנתונים לזיכרון המערכת כולל הדגל המעודכן
+    await budget.loadData();
 
     if (mounted) {
       Navigator.of(context).pushReplacement(
@@ -8706,6 +10097,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     bool isMale = _gender == 'male';
+    bool isSingle = _maritalStatus == 'single';
     String welcomeText = isMale ? 'ברוך הבא לדוחכם' : 'ברוכה הבאה לדוחכם';
     String continueText = isMale ? 'המשך' : 'המשכי';
     String finishText = isMale ? 'מוכן! צור לי תקציב' : 'מוכנה! צור לי תקציב';
@@ -8714,13 +10106,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final segmentedStyle = SegmentedButton.styleFrom(
       selectedForegroundColor: Colors.blue[900],
       selectedBackgroundColor: Colors.blue[100],
-      foregroundColor: Colors.grey[400],
+      foregroundColor: Colors.blueGrey,
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text(welcomeText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+        title: Text(welcomeText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black87)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -8733,7 +10125,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               const SizedBox(height: 20),
               Text(
                 isMale ? 'בונה את התקציב החכם שלך...' : 'בונה את התקציב החכם שלך...',
-                style: const TextStyle(color: Colors.white, fontSize: 16)
+                style: const TextStyle(color: Colors.black87, fontSize: 16)
               )
             ],
           ))
@@ -8774,7 +10166,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     if (_currentStep > 0)
                       TextButton(
                         onPressed: details.onStepCancel,
-                        child: const Text('חזור', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                        child: const Text('חזור', style: TextStyle(color: Colors.blueGrey, fontSize: 16)),
                       ),
                   ],
                 ),
@@ -8783,11 +10175,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             steps: [
               // --- שלב 1 ---
               Step(
-                title: const Text('היכרות וסטטוס', style: TextStyle(fontSize: 18, color: Colors.white)),
+                title: const Text('היכרות וסטטוס', style: TextStyle(fontSize: 18, color: Colors.black87)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('איך תעדיף/י שאפנה אליך?', style: TextStyle(color: Colors.grey)),
+                    const Text('איך תעדיף/י שאפנה אליך?', style: TextStyle(color: Colors.blueGrey)),
                     const SizedBox(height: 12),
                     SegmentedButton<String>(
                       style: segmentedStyle,
@@ -8799,7 +10191,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       onSelectionChanged: (val) => setState(() => _gender = val.first),
                     ),
                     const SizedBox(height: 30),
-                    Text(isMale ? 'מה הסטטוס האישי שלך?' : 'מה הסטטוס האישי שלך?', style: const TextStyle(color: Colors.grey)),
+                    Text(isMale ? 'מה הסטטוס האישי שלך?' : 'מה הסטטוס האישי שלך?', style: const TextStyle(color: Colors.blueGrey)),
                     const SizedBox(height: 12),
                     SegmentedButton<String>(
                       style: segmentedStyle,
@@ -8817,7 +10209,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
               // --- שלב 2 ---
               Step(
-                title: const Text('הרכב משפחתי', style: TextStyle(fontSize: 18, color: Colors.white)),
+                title: const Text('הרכב משפחתי', style: TextStyle(fontSize: 18, color: Colors.black87)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -8829,7 +10221,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       'השם שלך', 
                       showDelete: false
                     ),
-                    if (_maritalStatus == 'married') ...[
+                    if (!isSingle) ...[
                       const SizedBox(height: 12),
                       _buildFamilyRow(
                         _adults[1]['name']!, 
@@ -8840,7 +10232,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ],
                     const SizedBox(height: 30),
                     
-                    Text(isMale ? 'האם יש לכם ילדים?' : 'האם יש לכם ילדים?', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                    Text(isSingle ? 'האם יש לך ילדים?' : 'האם יש לכם ילדים?', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
                     const SizedBox(height: 12),
                     SegmentedButton<bool>(
                       style: segmentedStyle,
@@ -8886,13 +10278,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
               // --- שלב 3 ---
               Step(
-                title: const Text('מקורות הכנסה', style: TextStyle(fontSize: 18, color: Colors.white)),
+                title: const Text('מקורות הכנסה', style: TextStyle(fontSize: 18, color: Colors.black87)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('כדי שהתקציב יהיה מציאותי, נצטרך הערכה גסה של ההכנסות. אפשר לתקן זאת תמיד.', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                    const Text('כדי שהתקציב יהיה מציאותי, נצטרך הערכה גסה של ההכנסות. אפשר לתקן זאת תמיד.', style: TextStyle(color: Colors.blueGrey, fontSize: 13)),
                     const SizedBox(height: 20),
-                    if (_maritalStatus == 'single') ...[
+                    if (isSingle) ...[
                       _buildSetupField('משכורת / הכנסה אישית (משוער)', _income1Ctrl),
                     ] else ...[
                       _buildSetupField('הכנסה שלך (משוער לחודש)', _income1Ctrl),
@@ -8906,19 +10298,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
               // --- שלב 4 ---
               Step(
-                title: const Text('מגורים וניידות', style: TextStyle(fontSize: 18, color: Colors.white)),
+                title: const Text('מגורים וניידות', style: TextStyle(fontSize: 18, color: Colors.black87)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('מה מצב המגורים שלכם?', style: TextStyle(color: Colors.grey)),
+                    Text(isSingle ? 'מה מצב המגורים שלך?' : 'מה מצב המגורים שלכם?', style: const TextStyle(color: Colors.blueGrey)),
                     const SizedBox(height: 12),
                     InputDecorator(
-                      decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(), 
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
+                      ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _housingType,
-                          dropdownColor: Colors.grey[900],
-                          style: const TextStyle(color: Colors.white),
+                          dropdownColor: Colors.white,
+                          style: const TextStyle(color: Colors.black87),
                           isExpanded: true,
                           items: const [
                             DropdownMenuItem(value: 'rent', child: Text('שכירות')),
@@ -8930,15 +10326,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text('איך אתם מתניידים ביומיום?', style: TextStyle(color: Colors.grey)),
+                    Text(
+                      isSingle 
+                        ? (isMale ? 'איך אתה מתנייד ביומיום?' : 'איך את מתניידת ביומיום?') 
+                        : 'איך אתם מתניידים ביומיום?', 
+                      style: const TextStyle(color: Colors.blueGrey)
+                    ),
                     const SizedBox(height: 12),
                     InputDecorator(
-                      decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(), 
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
+                      ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _vehicleType,
-                          dropdownColor: Colors.grey[900],
-                          style: const TextStyle(color: Colors.white),
+                          dropdownColor: Colors.white,
+                          style: const TextStyle(color: Colors.black87),
                           isExpanded: true,
                           items: const [
                             DropdownMenuItem(value: 'car', child: Text('רכב פרטי אחד')),
@@ -8957,12 +10362,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
               // --- שלב 5 ---
               Step(
-                title: const Text('הגדרות מאקרו', style: TextStyle(fontSize: 18, color: Colors.white)),
+                title: const Text('הגדרות מאקרו', style: TextStyle(fontSize: 18, color: Colors.black87)),
                 content: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('האם יש לכם כיום חובות פעילים?', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
-                    const Text('(הלוואות, מינוס עמוק, או תשלומים באשראי)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text(isSingle ? 'האם יש לך כיום חובות פעילים?' : 'האם יש לכם כיום חובות פעילים?', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                    const Text('(הלוואות, מינוס עמוק, או תשלומים באשראי)', style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
                     const SizedBox(height: 12),
                     SegmentedButton<bool>(
                       style: segmentedStyle,
@@ -8975,7 +10380,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     const SizedBox(height: 30),
                     const Text('האם לכלול הוצאות מסורת וחגי ישראל?', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
-                    const Text('(חגים ומועדים יוזנו אוטומטית לקופות חסכון שוטפות)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    const Text('(חגים ומועדים יוזנו אוטומטית לקופות חסכון שוטפות)', style: TextStyle(color: Colors.blueGrey, fontSize: 12)),
                     const SizedBox(height: 12),
                     SegmentedButton<bool>(
                       style: segmentedStyle,
@@ -9001,15 +10406,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: TextField(
         controller: controller,
         keyboardType: TextInputType.number,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: Colors.black87),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Colors.grey),
+          labelStyle: const TextStyle(color: Colors.blueGrey),
           border: const OutlineInputBorder(),
-          enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+          enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
           isDense: true,
           suffixText: '₪',
-          suffixStyle: const TextStyle(color: Colors.white),
+          suffixStyle: const TextStyle(color: Colors.black87),
         ),
       ),
     );
@@ -9022,8 +10427,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           flex: 3,
           child: TextField(
             controller: nameCtrl,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(labelText: nameLabel, labelStyle: const TextStyle(color: Colors.grey), isDense: true, border: const OutlineInputBorder(), enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24))),
+            style: const TextStyle(color: Colors.black87),
+            decoration: InputDecoration(
+              labelText: nameLabel, 
+              labelStyle: const TextStyle(color: Colors.blueGrey), 
+              isDense: true, 
+              border: const OutlineInputBorder(), 
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300))
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -9032,8 +10443,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: TextField(
             controller: yearCtrl,
             keyboardType: TextInputType.number,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(labelText: 'שנת לידה', labelStyle: TextStyle(color: Colors.grey), isDense: true, border: OutlineInputBorder(), enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24))),
+            style: const TextStyle(color: Colors.black87),
+            decoration: InputDecoration(
+              labelText: 'שנת לידה', 
+              labelStyle: const TextStyle(color: Colors.blueGrey), 
+              isDense: true, 
+              border: const OutlineInputBorder(), 
+              enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300))
+            ),
           ),
         ),
         if (showDelete) ...[
@@ -9052,7 +10469,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\pnl_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Added Passive Income Reduction UI Indicator on Freedom Card)
+// 🔒 STATUS: EDITED (Fixed Navigation Routing to assure clean Dashboard launch)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -9062,11 +10479,40 @@ import 'category_drilldown_screen.dart';
 import 'reducing_screen.dart'; 
 import 'assets_screen.dart'; 
 import 'main_screen.dart'; 
+import '../../data/database_helper.dart';
 
 class PnLScreen extends StatelessWidget {
   final bool isCalibrationMode; 
   
   const PnLScreen({super.key, this.isCalibrationMode = false});
+
+  // === פונקציית עזר לתמרורי הדרכה ===
+  void _showInfoDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -9094,8 +10540,18 @@ class PnLScreen extends StatelessWidget {
       ),
       floatingActionButton: isCalibrationMode ? FloatingActionButton.extended(
         backgroundColor: const Color(0xFF00C853),
-        onPressed: () {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainScreen()));
+        onPressed: () async {
+          // --- הזרקת המדד ל-Admin Dashboard ---
+          await DatabaseHelper.instance.updateUserMetric('hasViewedFreedom', true);
+          
+          if (context.mounted) {
+            // ניקוי עמוק של הערימה (Stack) כדי להבטיח הופעה חלקה של האנימציה בדשבורד הראשי
+            Navigator.pushAndRemoveUntil(
+              context, 
+              MaterialPageRoute(builder: (_) => const MainScreen()),
+              (route) => false
+            );
+          }
         },
         label: const Text('התקציב שלי מוכן!', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
         icon: const Icon(Icons.check_circle, color: Colors.white),
@@ -9135,7 +10591,8 @@ class PnLScreen extends StatelessWidget {
                   'משתנות', 
                   displayVariableAmount, 
                   variableDeficit > 0 ? Colors.red[900]! : Colors.black, 
-                  onLongPress: () => _showRatioDialog(context, budget, isVariable: true)
+                  onLongPress: () => _showRatioDialog(context, budget, isVariable: true),
+                  onInfoTap: () => _showInfoDialog(context, 'שליטת מאקרו', "התקציב המשתנה הוא 'קופסה סגורה'. כדי להגדיל את התזרים לחירות פיננסית, עליך לשנות את חלוקת האחוזים הראשית על ידי לחיצה ארוכה על שורת ה'משתנות'.")
                 ),
                 
                 if (variableDeficit > 0)
@@ -9226,7 +10683,7 @@ class PnLScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRow(BuildContext context, String title, double amount, Color color, {bool isHeader = false, VoidCallback? onLongPress}) {
+  Widget _buildRow(BuildContext context, String title, double amount, Color color, {bool isHeader = false, VoidCallback? onLongPress, VoidCallback? onInfoTap}) {
     return InkWell(
       onTap: () {
         Navigator.push(context, MaterialPageRoute(
@@ -9239,7 +10696,18 @@ class PnLScreen extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(title, style: TextStyle(fontSize: isHeader ? 22 : 17, fontWeight: isHeader ? FontWeight.bold : FontWeight.w600, color: Colors.black)),
+            Row(
+              children: [
+                Text(title, style: TextStyle(fontSize: isHeader ? 22 : 17, fontWeight: isHeader ? FontWeight.bold : FontWeight.w600, color: Colors.black)),
+                if (onInfoTap != null) ...[
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: onInfoTap,
+                    child: const Icon(Icons.info_outline, size: 18, color: Colors.blue),
+                  ),
+                ]
+              ],
+            ),
             Row(
               children: [
                 Text('₪${amount.toStringAsFixed(0)}', style: TextStyle(fontSize: isHeader ? 22 : 17, fontWeight: FontWeight.bold, color: color)),
@@ -9608,7 +11076,7 @@ class _PulsingCalibrationBannerState extends State<_PulsingCalibrationBanner> wi
 
 FILE: C:\Projects\dohaham\lib\ui\screens\reducing_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed Target Debt Accelerated Payment UI rendering)
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/debt_provider.dart';
@@ -9620,6 +11088,34 @@ import 'debt_schedule_screen.dart';
 
 class ReducingScreen extends StatelessWidget {
   const ReducingScreen({super.key});
+
+  // === פונקציית עזר לתמרורי הדרכה ===
+  void _showInfoDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -9654,34 +11150,10 @@ class ReducingScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // הדרכה שקטה - תמיד בראש המסך
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.history, color: Colors.blue[800], size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    "מכונת הזמן: כל חוב שתסיים לשלם לא ייבלע בשוטף, אלא יופנה אוטומטית כ'כוח אש' לחיסול מואץ של החוב הבא.",
-                    style: TextStyle(color: Colors.blueGrey[900], fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           if (!hasActiveDebts) 
             Expanded(child: _buildVictoryState()) 
           else ...[
+            const SizedBox(height: 8),
             _buildMissionCard(actualMissionAmount, targetDebt),
             _buildTimeMachineHeader(context, originalFinalDate, acceleratedFinalDate),
             
@@ -9843,9 +11315,19 @@ class ReducingScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text(
-            'תחזית לסיום כל החובות',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0066FF)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'תחזית לסיום כל החובות',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0066FF)),
+              ),
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: () => _showInfoDialog(context, 'מכונת הזמן', "כל חוב שתסיים לשלם לא ייבלע בשוטף, אלא יופנה אוטומטית כ'כוח אש' לחיסול מואץ של החוב הבא."),
+                child: const Icon(Icons.info_outline, size: 18, color: Color(0xFF0066FF)),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           Row(
@@ -10207,7 +11689,7 @@ class ReducingScreen extends StatelessWidget {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\salary_engine_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed AppBar Title to 'ממוצע שכר')
+// 🔒 STATUS: EDITED (Fixed if-statement curlies & TextDirection)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui' as ui;
@@ -10226,6 +11708,33 @@ class SalaryEngineScreen extends StatefulWidget {
 class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
   int? _selectedExpenseId;
   int _selectedRange = 6; // 3, 6, 12, 0 (0 means All)
+
+  void _showInfoDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   String _formatMonthYear(String isoDate) {
     try {
@@ -10299,6 +11808,9 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                       hours: hours,
                     );
                     await DatabaseHelper.instance.insertSalaryRecord(record);
+                    
+                    await DatabaseHelper.instance.updateUserMetric('hasSalary', true);
+
                     if (ctx.mounted) Navigator.pop(ctx);
                   }
                 },
@@ -10314,11 +11826,9 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
   Widget _buildMountainChart(List<SalaryRecord> records, bool isHourly) {
     if (records.isEmpty) return const SizedBox.shrink();
     
-    // סידור מהישן לחדש (כדי לחשב את הממוצעים לאורך ציר הזמן)
     var sortedRecords = List<SalaryRecord>.from(records);
     sortedRecords.sort((a, b) => DateTime.parse(a.monthYear).compareTo(DateTime.parse(b.monthYear)));
     
-    // חישוב הממוצע המצטבר (Cumulative Average) לכל נקודת זמן
     List<double> cumulativeValues = [];
     double runningNet = 0;
     double runningHours = 0;
@@ -10331,12 +11841,11 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
       if (isHourly) {
         val = runningHours > 0 ? runningNet / runningHours : 0;
       } else {
-        val = runningNet / (i + 1); // הממוצע חלקי כמות החודשים שהיו עד כה
+        val = runningNet / (i + 1); 
       }
       cumulativeValues.add(val);
     }
 
-    // סינון לפי הטווח שנבחר (למשל רק 6 אחרונים)
     List<SalaryRecord> displayRecords = sortedRecords;
     List<double> displayValues = cumulativeValues;
 
@@ -10345,11 +11854,20 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
       displayValues = cumulativeValues.sublist(cumulativeValues.length - _selectedRange);
     }
 
-    // הגרף נמתח או מתכווץ לרוחב המסך הקיים, ללא גלילה
-    return SizedBox(
-      height: 200,
+    return Container(
+      height: 240,
       width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
       child: CustomPaint(
+        size: Size.infinite,
         painter: _MountainChartPainter(displayRecords, displayValues, isHourly),
       ),
     );
@@ -10373,7 +11891,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
 
     final selectedExpense = incomeExpenses.firstWhere((e) => e.id == _selectedExpenseId);
     
-    // רשימה הפוכה (מהחדש לישן) עבור רשימת ההיסטוריה ההגיונית
     final myRecords = provider.salaryRecords.where((r) => r.expenseId == _selectedExpenseId).toList();
     myRecords.sort((a, b) => DateTime.parse(b.monthYear).compareTo(DateTime.parse(a.monthYear)));
 
@@ -10405,33 +11922,17 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
-              // CONTEXTUAL ONBOARDING - תמיד מוצג בראש המסך
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 20),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.insights, color: Colors.blue[800], size: 22),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "ייצוב התזרים: הזן משכורות עבר כדי שהמנוע יחשב ממוצע אמיתי וימנע גירעון סמוי עקב תנודות שכר.",
-                        style: TextStyle(color: Colors.blueGrey[900], fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  ],
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('מקור הכנסה לחישוב:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
+                  InkWell(
+                    onTap: () => _showInfoDialog(context, 'ייצוב התזרים', 'הזן נתוני שכר כדי לייצב את התזרים ולהימנע מגירעון סמוי עקב תנודות שכר.'),
+                    child: const Icon(Icons.info_outline, size: 20, color: Colors.blue),
+                  ),
+                ],
               ),
-
-              // בורר מקור הכנסה
+              const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[300]!)),
@@ -10455,7 +11956,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
               Row(
                 children: [
                   Expanded(
@@ -10501,7 +12001,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 30),
 
               if (myRecords.isNotEmpty) ...[
@@ -10509,7 +12008,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('מגמות וסטטיסטיקה', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                    // סרגל טווחים (Toggles)
                     ToggleButtons(
                       borderRadius: BorderRadius.circular(8),
                       constraints: const BoxConstraints(minHeight: 30, minWidth: 50),
@@ -10539,23 +12037,15 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                 
                 const Text('גרף ממוצע שכר נטו', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.fromLTRB(16, 30, 16, 16),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
-                  child: _buildMountainChart(myRecords, false),
-                ),
+                _buildMountainChart(myRecords, false),
+                
                 const SizedBox(height: 24),
                 const Text('גרף ממוצע תעריף שעתי', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.fromLTRB(16, 30, 16, 16),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
-                  child: _buildMountainChart(myRecords, true),
-                ),
+                _buildMountainChart(myRecords, true),
                 const SizedBox(height: 30),
               ],
 
-              // חלונית ההיסטוריה הנסתרת (אקורדיון)
               Card(
                 elevation: 0,
                 margin: EdgeInsets.zero,
@@ -10647,7 +12137,7 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
 }
 
 // ============================================================================
-// ציור גרף ההרים (Area Chart)
+// ציור הגרף בתצורה אחידה (Dark Mode & LTR)
 // ============================================================================
 class _MountainChartPainter extends CustomPainter {
   final List<SalaryRecord> records;
@@ -10660,89 +12150,78 @@ class _MountainChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (records.isEmpty) return;
 
-    final primaryColor = isHourly ? Colors.purple : Colors.blue;
+    final primaryColor = isHourly ? Colors.purpleAccent : const Color(0xFF00A3FF);
 
     final paintLine = Paint()
       ..color = primaryColor
       ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
 
-    final fillPaint = Paint()
-      ..shader = ui.Gradient.linear(
-        const Offset(0, 0),
-        Offset(0, size.height),
-        [
-          primaryColor.withValues(alpha: 0.4),
-          primaryColor.withValues(alpha: 0.0),
-        ],
-      )
+    final paintDot = Paint()
+      ..color = Colors.white
       ..style = PaintingStyle.fill;
 
-    double maxVal = 0;
-    double minVal = double.infinity;
-    for (var v in values) {
-      if (v > maxVal) maxVal = v;
-      if (v < minVal) minVal = v;
+    double maxVal = values.reduce((a, b) => a > b ? a : b);
+    double minVal = values.reduce((a, b) => a < b ? a : b);
+    if (maxVal == minVal) {
+      maxVal += 1000;
+      minVal -= 1000;
     }
-    if (maxVal == 0) maxVal = 1;
-    // נשאיר קצת אוויר מתחת למינימום
-    double bottomBase = (minVal * 0.8).clamp(0.0, double.infinity); 
-    double range = maxVal - bottomBase;
+
+    double range = maxVal - minVal;
     if (range <= 0) range = 1;
 
     final path = Path();
-    final fillPath = Path();
     
-    // רווח בין הנקודות - מתפרס על כל הרוחב
-    double stepX = size.width / (records.length > 1 ? records.length - 1 : 1);
-    
+    const double paddingY = 24.0;
+    final double usableHeight = size.height - (paddingY * 2);
+    final double widthStep = records.length > 1 ? size.width / (records.length - 1) : size.width;
+
     List<Offset> points = [];
     for (int i = 0; i < records.length; i++) {
       double v = values[i]; 
-      double x = size.width - (i * stepX); // משמאל לימין
-      double y = size.height - 30 - (((v - bottomBase) / range) * (size.height - 60));
+      double x = records.length > 1 ? i * widthStep : size.width / 2; // משמאל לימין (LTR)
+      double normalizedY = (v - minVal) / range;
+      double y = usableHeight - (normalizedY * usableHeight) + paddingY;
       points.add(Offset(x, y));
-    }
 
-    if (points.length == 1) {
-      path.moveTo(0, points[0].dy);
-      path.lineTo(size.width, points[0].dy);
-      fillPath.moveTo(0, points[0].dy);
-      fillPath.lineTo(size.width, points[0].dy);
-      fillPath.lineTo(size.width, size.height);
-      fillPath.lineTo(0, size.height);
-    } else {
-      path.moveTo(points[0].dx, points[0].dy);
-      fillPath.moveTo(points[0].dx, size.height);
-      fillPath.lineTo(points[0].dx, points[0].dy);
-      
-      for (int i = 1; i < points.length; i++) {
-        path.lineTo(points[i].dx, points[i].dy);
-        fillPath.lineTo(points[i].dx, points[i].dy);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        final prevX = points[i - 1].dx;
+        final prevY = points[i - 1].dy;
+        path.quadraticBezierTo(
+          prevX + (x - prevX) / 2, prevY, 
+          x, y
+        );
       }
-      fillPath.lineTo(points.last.dx, size.height);
     }
 
-    canvas.drawPath(fillPath, fillPaint);
-    canvas.drawPath(path, paintLine);
+    if (records.length > 1) {
+      canvas.drawPath(path, paintLine);
+    }
 
-    final textPainter = TextPainter(textDirection: TextDirection.ltr);
+    // ציור נקודות ותוויות נתונים
+    final textPainter = TextPainter(textDirection: ui.TextDirection.ltr);
     for (int i = 0; i < points.length; i++) {
-      canvas.drawCircle(points[i], 4, Paint()..color = Colors.white);
-      canvas.drawCircle(points[i], 4, paintLine..style = PaintingStyle.stroke);
+      canvas.drawCircle(points[i], 5, paintLine..style = PaintingStyle.fill);
+      canvas.drawCircle(points[i], 3, paintDot);
 
+      // תווית סכום
       double v = values[i];
-      String label = isHourly ? '₪${v.toStringAsFixed(1)}' : '${(v / 1000).toStringAsFixed(1)}k';
+      String valLabel = '₪${v.toStringAsFixed(isHourly ? 1 : 0)}';
       
-      textPainter.text = TextSpan(text: label, style: const TextStyle(color: Colors.black87, fontSize: 10, fontWeight: FontWeight.bold));
+      textPainter.text = TextSpan(text: valLabel, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold));
       textPainter.layout();
       textPainter.paint(canvas, Offset(points[i].dx - textPainter.width / 2, points[i].dy - 20));
       
+      // תווית תאריך
       DateTime d = DateTime.parse(records[i].monthYear);
       String dateLabel = '${d.month.toString().padLeft(2,'0')}/${d.year.toString().substring(2)}';
-      textPainter.text = TextSpan(text: dateLabel, style: const TextStyle(color: Colors.grey, fontSize: 10));
+      textPainter.text = TextSpan(text: dateLabel, style: const TextStyle(color: Colors.white54, fontSize: 10));
       textPainter.layout();
-      textPainter.paint(canvas, Offset(points[i].dx - textPainter.width / 2, size.height - 15));
+      textPainter.paint(canvas, Offset(points[i].dx - textPainter.width / 2, points[i].dy + 8));
     }
   }
 
@@ -10753,13 +12232,15 @@ class _MountainChartPainter extends CustomPainter {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\shopping_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed curly_braces_in_flow_control_structures linter warnings)
+// 🔒 STATUS: EDITED (Enhanced Search Bar UI Contrast, Visibility & Historical Spent View)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/shopping_provider.dart';
 import '../../providers/budget_provider.dart'; 
 import '../../data/shopping_model.dart';
 import '../../data/expense_model.dart';
+import '../widgets/global_header.dart';
 
 class ShoppingScreen extends StatefulWidget {
   const ShoppingScreen({super.key});
@@ -10778,14 +12259,78 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   double _textScale = 1.0;
   bool _showOnlyChecked = false;
 
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
+    _loadSortPreferences();
+    
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
+
     Future.microtask(() {
       if (mounted) {
         context.read<ShoppingProvider>().loadItems();
       }
     });
+  }
+
+  Future<void> _loadSortPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedActive = prefs.getStringList('shopping_active_sorts');
+    final savedAll = prefs.getStringList('shopping_all_sorts');
+    
+    if (savedActive != null && savedActive.isNotEmpty && savedAll != null && savedAll.isNotEmpty) {
+      setState(() {
+        _activeSorts = savedActive;
+        _allSortOptions = savedAll;
+      });
+    }
+  }
+
+  Future<void> _saveSortPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('shopping_active_sorts', _activeSorts);
+    await prefs.setStringList('shopping_all_sorts', _allSortOptions);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // === פונקציית עזר לתמרורי הדרכה ===
+  void _showInfoDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _zoomIn() {
@@ -10805,11 +12350,13 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   }
 
   bool _wasItemPurchasedInWeek(ShoppingItem item, int offset) {
-    if (item.lastPurchaseDateTime == null || offset == 0) {
+    if (item.lastPurchaseDateTime == null) {
       return false;
     }
     final now = DateTime.now();
-    final startOfCurrentWeek = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday % 7));
+    int daysToSubtract = now.weekday == 7 ? 0 : now.weekday;
+    final startOfCurrentWeek = DateTime(now.year, now.month, now.day).subtract(Duration(days: daysToSubtract));
+    
     final startOfTargetWeek = startOfCurrentWeek.add(Duration(days: offset * 7));
     final endOfTargetWeek = startOfTargetWeek.add(const Duration(days: 7));
 
@@ -10873,6 +12420,10 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       displayedItems = displayedItems.where((i) => shoppingProvider.isChecked(i.id ?? -1)).toList();
     }
 
+    if (_searchQuery.isNotEmpty) {
+      displayedItems = displayedItems.where((i) => i.name.toLowerCase().contains(_searchQuery)).toList();
+    }
+
     displayedItems.sort((a, b) {
       for (String sort in _activeSorts) {
         int result = 0;
@@ -10904,45 +12455,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.blueGrey, size: 20),
-          onPressed: () {
-            Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
-          },
-        ),
-        title: const Text('רשימת קניות', style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _showOnlyChecked ? Icons.shopping_cart : Icons.shopping_cart_outlined,
-              color: _showOnlyChecked ? Colors.blue : Colors.blueGrey,
-              size: 24,
-            ),
-            tooltip: _showOnlyChecked ? 'הצג את כל הרשימה' : 'הצג רק מוצרים שסומנו',
-            onPressed: () {
-              setState(() {
-                _showOnlyChecked = !_showOnlyChecked;
-              });
-            },
-          ),
-          Container(height: 24, width: 1, color: Colors.grey[300], margin: const EdgeInsets.symmetric(horizontal: 4)),
-          IconButton(
-            icon: const Text('A-', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold, fontSize: 16)),
-            tooltip: 'הקטן טקסט',
-            onPressed: _zoomOut,
-          ),
-          IconButton(
-            icon: const Text('A+', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 18)),
-            tooltip: 'הגדל טקסט',
-            onPressed: _zoomIn,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: const GlobalHeader(title: 'רשימת קניות'),
       floatingActionButton: currentBasket > 0 
           ? null 
           : FloatingActionButton(
@@ -10952,7 +12465,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
             ),
       body: Column(
         children: [
-          _buildEnhancedBudgetCard(budgetLimit, plannedMonthly, actualMonthly),
+          _buildEnhancedBudgetCard(budgetLimit, plannedMonthly, actualMonthly, shoppingProvider),
+          _buildSearchBarAndActions(),
           _buildComparisonNavigator(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -10988,7 +12502,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                           final bool wasPurchased = _wasItemPurchasedInWeek(item, _comparisonOffset);
                           Widget tile = _buildComparisonTile(item, shoppingProvider, wasPurchased);
 
-                          if (_activeSorts.isNotEmpty && _activeSorts.first == 'סיווג' && _selectedCategory == 'הכל') {
+                          if (_activeSorts.isNotEmpty && _activeSorts.first == 'סיווג' && _selectedCategory == 'הכל' && _searchQuery.isEmpty) {
                             bool isFirst = index == 0;
                             bool isNewCat = isFirst || displayedItems[index - 1].category != item.category;
                             
@@ -11014,6 +12528,104 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                       ),
                 if (currentBasket > 0) _buildActiveBasketBar(currentBasket, shoppingProvider),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBarAndActions() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 46 * _textScale, 
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(10), 
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _searchController,
+                style: TextStyle(fontSize: 14 * _textScale, color: Colors.black87),
+                decoration: InputDecoration(
+                  hintText: 'חיפוש מוצר...',
+                  hintStyle: TextStyle(fontSize: 14 * _textScale, color: Colors.blueGrey.shade400, fontWeight: FontWeight.w500),
+                  prefixIcon: Icon(Icons.search, size: 22 * _textScale, color: Colors.blue), 
+                  suffixIcon: _searchQuery.isNotEmpty 
+                    ? IconButton(icon: Icon(Icons.clear, size: 20 * _textScale, color: Colors.blueGrey), onPressed: () => _searchController.clear()) 
+                    : null,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12), 
+                    borderSide: BorderSide(color: Colors.blueGrey.shade200, width: 1.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.blueGrey.shade200, width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.blue, width: 2.0),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: () => setState(() => _showOnlyChecked = !_showOnlyChecked),
+            child: Container(
+              height: 46 * _textScale,
+              width: 46 * _textScale,
+              decoration: BoxDecoration(
+                color: _showOnlyChecked ? Colors.blue.shade50 : Colors.white,
+                border: Border.all(color: _showOnlyChecked ? Colors.blue.shade300 : Colors.blueGrey.shade200, width: 1.5),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)],
+              ),
+              child: Icon(_showOnlyChecked ? Icons.shopping_cart : Icons.shopping_cart_outlined, color: _showOnlyChecked ? Colors.blue : Colors.blueGrey, size: 22 * _textScale),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: _zoomOut,
+            child: Container(
+              height: 46 * _textScale,
+              width: 46 * _textScale,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white, 
+                border: Border.all(color: Colors.blueGrey.shade200, width: 1.5), 
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)],
+              ),
+              child: Text('A-', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold, fontSize: 14 * _textScale)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: _zoomIn,
+            child: Container(
+              height: 46 * _textScale,
+              width: 46 * _textScale,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white, 
+                border: Border.all(color: Colors.blueGrey.shade200, width: 1.5), 
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)],
+              ),
+              child: Text('A+', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 15 * _textScale)),
             ),
           ),
         ],
@@ -11127,7 +12739,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                 ),
               ),
             ),
-            if (_comparisonOffset != 0)
+            if (wasPurchasedInHistory || _comparisonOffset != 0)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -11408,6 +13020,10 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                           _activeSorts = newSorts;
                           _allSortOptions = List.from(currentOrder); 
                         });
+                        
+                        // שמירת הבחירה בזיכרון המקומי
+                        _saveSortPreferences();
+                        
                         Navigator.pop(ctx);
                       },
                       child: Text("החל מיון", style: TextStyle(fontSize: 14 * _textScale)),
@@ -11422,7 +13038,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     );
   }
 
-  Widget _buildEnhancedBudgetCard(double anchor, double planned, double actual) {
+  Widget _buildEnhancedBudgetCard(double anchor, double planned, double actual, ShoppingProvider provider) {
     double delta = anchor - planned;
     
     return Container(
@@ -11436,7 +13052,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
               Expanded(child: _buildStatDetail("תקציב עוגן", anchor, Colors.blueGrey)), 
               Expanded(child: _buildStatDetail("תכנון חודשי", planned, Colors.black87)), 
               Expanded(child: _buildDeltaDetail(delta)), 
-              Expanded(child: _buildStatDetail("ביצוע בפועל", actual, actual > anchor ? Colors.red : Colors.green)),
+              Expanded(child: _buildActualStatDetail(actual, actual > anchor ? Colors.red : Colors.green, provider)),
             ],
           ),
           const SizedBox(height: 12),
@@ -11455,6 +13071,54 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     );
   }
   
+  // תצוגת 'ביצוע בפועל' עם בורר חודשים דינמי
+  Widget _buildActualStatDetail(double value, Color color, ShoppingProvider provider) {
+    final now = DateTime.now();
+    final isCurrent = provider.targetMonth.year == now.year && provider.targetMonth.month == now.month;
+    final monthStr = "${provider.targetMonth.month.toString().padLeft(2, '0')}/${provider.targetMonth.year.toString().substring(2)}";
+
+    return Column(
+      children: [
+        PopupMenuButton<int>(
+          color: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          onSelected: (offset) {
+            provider.setTargetMonthOffset(offset);
+          },
+          itemBuilder: (context) {
+            return List.generate(12, (index) {
+              final m = DateTime(now.year, now.month - index, 1);
+              final isThisMonth = index == 0;
+              final label = isThisMonth ? "החודש הנוכחי" : "${m.month.toString().padLeft(2, '0')}/${m.year.toString().substring(2)}";
+              return PopupMenuItem(
+                value: index, // שולח כמה חודשים אחורה לקפוץ
+                child: Text(label, style: TextStyle(fontSize: 13 * _textScale, color: Colors.black87)),
+              );
+            });
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                isCurrent ? "ביצוע בפועל" : "בפועל ($monthStr)",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 10 * _textScale, 
+                  color: isCurrent ? Colors.grey : Colors.blue, 
+                  fontWeight: FontWeight.bold,
+                  decoration: isCurrent ? TextDecoration.none : TextDecoration.underline,
+                  decorationColor: Colors.blue.withAlpha(100)
+                )
+              ),
+              Icon(Icons.arrow_drop_down, size: 14 * _textScale, color: isCurrent ? Colors.grey : Colors.blue),
+            ],
+          ),
+        ),
+        FittedBox(fit: BoxFit.scaleDown, child: Text("₪${value.toStringAsFixed(0)}", style: TextStyle(fontSize: 15 * _textScale, fontWeight: FontWeight.bold, color: color)))
+      ]
+    );
+  }
+
   Widget _buildDeltaDetail(double delta) {
     final valueColor = delta >= 0 ? Colors.green : Colors.red;
     return Column(
@@ -11463,15 +13127,11 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text("הפרש (דלתא)", textAlign: TextAlign.center, style: TextStyle(fontSize: 10 * _textScale, color: Colors.grey, fontWeight: FontWeight.bold)),
-            const SizedBox(width: 2),
-            Tooltip(
-              message: "הדלתא מחשבת את הפער בין תקציב ה'עוגן' לעלות החודשית התיאורטית של הרשימה.",
-              triggerMode: TooltipTriggerMode.tap,
-              child: Padding(
-                padding: const EdgeInsets.all(4.0),
-                child: Icon(Icons.info, size: 16 * _textScale, color: Colors.blue),
-              ),
-            )
+            const SizedBox(width: 4),
+            InkWell(
+              onTap: () => _showInfoDialog(context, 'הפרש (דלתא)', "הדלתא מחשבת את הפער בין תקציב ה'עוגן' שהגדרת, לעלות החודשית התיאורטית של הרשימה. שמור עליה ירוקה."),
+              child: Icon(Icons.info_outline, size: 14 * _textScale, color: Colors.blue),
+            ),
           ],
         ),
         FittedBox(fit: BoxFit.scaleDown, child: Text("₪${delta.abs().toStringAsFixed(0)}", style: TextStyle(fontSize: 15 * _textScale, fontWeight: FontWeight.bold, color: valueColor)))
@@ -11505,13 +13165,15 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.warning_amber_rounded, size: 14 * _textScale, color: Colors.orange[800]),
-                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      "שים לב: סימנת מוצרים מוקדם מדי מתדירות הקנייה שהגדרת להם.",
+                      "שים לב: חריגת תדירות",
                       style: TextStyle(fontSize: 11 * _textScale, color: Colors.orange[900], fontWeight: FontWeight.w600),
                     ),
+                  ),
+                  InkWell(
+                    onTap: () => _showInfoDialog(context, 'תדירות קנייה', 'לכל מוצר יש תדירות מוגדרת. סימון מוצר מוקדם מדי יציג אזהרה למניעת חריגה.'),
+                    child: Icon(Icons.info_outline, size: 16 * _textScale, color: Colors.orange[900]),
                   ),
                 ],
               ),
@@ -11809,11 +13471,12 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\sinking_funds_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Removed unused DatabaseHelper import)
+// 🔒 STATUS: EDITED (Fix dialog pop after async gap via try-finally + Root Metrics Sync)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
+import '../../data/database_helper.dart';
 import '../widgets/global_header.dart';
 import 'smart_withdrawals_screen.dart'; 
 
@@ -12131,6 +13794,7 @@ class _UnifiedFundBottomSheetFromCenterState extends State<_UnifiedFundBottomShe
         finalNote = '[$childName] $finalNote'; 
       }
       await provider.addWithdrawal(widget.originalExpenses.first.id!, amt, finalNote);
+      await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
       _amountController.clear();
       _noteController.clear();
       _loadWithdrawals();
@@ -12351,6 +14015,7 @@ class _SinkingFundBottomSheetFromCenterState extends State<_SinkingFundBottomShe
     final amt = double.tryParse(_amountController.text);
     if (amt != null && amt > 0) {
       await provider.addWithdrawal(widget.expense.id!, amt, _noteController.text.trim());
+      await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
       _amountController.clear();
       _noteController.clear();
       _loadWithdrawals();
@@ -12564,9 +14229,13 @@ class _EditIndividualBalanceDialogState extends State<_EditIndividualBalanceDial
             onPressed: () async {
               final val = double.tryParse(_ctrl.text);
               if (val != null) {
-                await Provider.of<BudgetProvider>(context, listen: false).setExpenseCurrentBalance(widget.expense.id!, val);
-                if (!context.mounted) return;
-                Navigator.pop(context);
+                final nav = Navigator.of(context);
+                try {
+                  await Provider.of<BudgetProvider>(context, listen: false).setExpenseCurrentBalance(widget.expense.id!, val);
+                  await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
+                } finally {
+                  nav.pop();
+                }
               }
             },
             child: const Text('שמור'),
@@ -12628,16 +14297,20 @@ class _EditUnifiedBalancesDialogState extends State<_EditUnifiedBalancesDialog> 
             onPressed: () async {
               final val = double.tryParse(_ctrl.text);
               if (val != null) {
-                final provider = Provider.of<BudgetProvider>(context, listen: false);
-                for (int i = 0; i < widget.expenses.length; i++) {
-                  if (i == 0) {
-                    await provider.setExpenseCurrentBalance(widget.expenses[i].id!, val);
-                  } else {
-                    await provider.setExpenseCurrentBalance(widget.expenses[i].id!, 0);
+                final nav = Navigator.of(context);
+                try {
+                  final provider = Provider.of<BudgetProvider>(context, listen: false);
+                  for (int i = 0; i < widget.expenses.length; i++) {
+                    if (i == 0) {
+                      await provider.setExpenseCurrentBalance(widget.expenses[i].id!, val);
+                    } else {
+                      await provider.setExpenseCurrentBalance(widget.expenses[i].id!, 0);
+                    }
                   }
+                  await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
+                } finally {
+                  nav.pop();
                 }
-                if (!context.mounted) return;
-                Navigator.pop(context);
               }
             },
             child: const Text('שמור'),
@@ -12699,9 +14372,13 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
             onPressed: () async {
               final val = double.tryParse(_ctrl.text);
               if (val != null) {
-                await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
-                if (!context.mounted) return;
-                Navigator.pop(context);
+                final nav = Navigator.of(context);
+                try {
+                  await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
+                  await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
+                } finally {
+                  nav.pop();
+                }
               }
             },
             child: const Text('שמור'),
@@ -12764,16 +14441,20 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
             onPressed: () async {
               final val = double.tryParse(_ctrl.text);
               if (val != null && widget.expenses.isNotEmpty) {
-                final provider = Provider.of<BudgetProvider>(context, listen: false);
-                for (int i = 0; i < widget.expenses.length; i++) {
-                  if (i == 0) {
-                    await provider.updateBankDeposit(widget.expenses[i].id!, val);
-                  } else {
-                    await provider.updateBankDeposit(widget.expenses[i].id!, 0);
+                final nav = Navigator.of(context);
+                try {
+                  final provider = Provider.of<BudgetProvider>(context, listen: false);
+                  for (int i = 0; i < widget.expenses.length; i++) {
+                    if (i == 0) {
+                      await provider.updateBankDeposit(widget.expenses[i].id!, val);
+                    } else {
+                      await provider.updateBankDeposit(widget.expenses[i].id!, 0);
+                    }
                   }
+                  await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
+                } finally {
+                  nav.pop();
                 }
-                if (!context.mounted) return;
-                Navigator.pop(context);
               }
             },
             child: const Text('שמור'),
@@ -12787,7 +14468,7 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
 
 FILE: C:\Projects\dohaham\lib\ui\screens\smart_withdrawals_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Forced explicit border colors and fill for TextFields in Dialog)
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -12828,6 +14509,34 @@ class SmartWithdrawalsScreen extends StatelessWidget {
     return buckets.toList()..sort();
   }
 
+  // === פונקציית עזר לתמרורי הדרכה ===
+  void _showInfoDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showAddPlannedWithdrawalDialog(BuildContext context, BudgetProvider provider) {
     final nameCtrl = TextEditingController();
     final amountCtrl = TextEditingController();
@@ -12841,13 +14550,20 @@ class SmartWithdrawalsScreen extends StatelessWidget {
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('תכנון הוצאה עתידית', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Flexible(child: Text('תכנון הוצאה עתידית', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18))),
+              InkWell(
+                onTap: () => _showInfoDialog(context, 'תכנון הוצאה', 'בחר מאיזו קופה תרצה למשוך, ומנהל המשיכות יאגד אותה לתחנת היציאה הבאה.'),
+                child: const Icon(Icons.info_outline, size: 22, color: Colors.blue),
+              ),
+            ],
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('בחר מאיזו קופה תרצה למשוך, ומנהל המשיכות יאגד אותה לתחנת היציאה הבאה.', style: TextStyle(fontSize: 13, color: Colors.blueGrey)),
-                const SizedBox(height: 20),
                 if (buckets.isEmpty)
                   const Text('אין קופות צוברות זמינות.', style: TextStyle(color: Colors.red))
                 else
@@ -12958,7 +14674,15 @@ class SmartWithdrawalsScreen extends StatelessWidget {
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('תחנת יציאה: $bucketName', style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+          title: Row(
+            children: [
+              Expanded(child: Text('תחנת יציאה: $bucketName', style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18))),
+              InkWell(
+                onTap: () => _showInfoDialog(context, 'תחנת יציאה בנקאית', 'קבע את היום הקבוע בחודש שבו תבצע משיכה פיזית מרוכזת מהפיקדון לעו"ש. המערכת תאגור את כל המשיכות המתוכננות שלך בדיוק לתאריך זה, כדי לחסוך עמלות ולשמור על סדר בבנק.'),
+                child: const Icon(Icons.info_outline, size: 22, color: Colors.blueGrey),
+              ),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -13199,7 +14923,8 @@ class SmartWithdrawalsScreen extends StatelessWidget {
 
 FILE: C:\Projects\dohaham\lib\ui\widgets\global_header.dart
 -----------------------
-// 🔒 STATUS: EDITED (Reorganized Hamburger Menu for Logical Flow)
+// 🔒 STATUS: EDITED (Admin God-Mode Trigger + Sealed Freedom Gate + Premium Crown)
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart'; 
@@ -13218,6 +14943,8 @@ import '../screens/checking_history_screen.dart';
 import '../screens/salary_engine_screen.dart';
 import '../screens/shopping_screen.dart';
 import '../screens/pnl_screen.dart';
+import '../screens/academy_screen.dart'; 
+import '../screens/admin_dashboard_screen.dart';
 import '../../main.dart'; 
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -13239,7 +14966,10 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final budget = context.watch<BudgetProvider>();
     final loc = AppLocalizations.of(context);
-    final canPop = Navigator.of(context).canPop();
+    
+    // נעילת ניווט אם המשתמש טרם סיים את חשיפת שער החירות
+    final isRevealed = budget.hasCompletedGrandReveal;
+    final canPop = Navigator.of(context).canPop() && isRevealed;
 
     const brandBlue = Color(0xFF00A3FF);
 
@@ -13270,10 +15000,23 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
           const SizedBox(width: 8),
           Flexible(
-            child: title != null 
-              ? Text(title!, style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)
-              : Text(loc?.get('appTitle') ?? 'דוחכם', 
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400])),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    title ?? (loc?.get('appTitle') ?? 'דוחכם'),
+                    style: title != null 
+                      ? const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)
+                      : TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400]),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // אייקון כתר פרימיום קבוע לציון סטטוס
+                const Icon(Icons.workspace_premium, color: Colors.amber, size: 18),
+              ],
+            ),
           ),
         ],
       ),
@@ -13288,11 +15031,12 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
             },
           ),
         
-        IconButton(
-          icon: const Icon(Icons.menu, color: brandBlue, size: 28),
-          tooltip: 'תפריט ראשי',
-          onPressed: () => _showMainMenuBottomSheet(context, budget, showSavingsIcon),
-        ),
+        if (isRevealed) // תפריט ההמבורגר מוסתר בזמן כיול ראשוני
+          IconButton(
+            icon: const Icon(Icons.menu, color: brandBlue, size: 28),
+            tooltip: 'תפריט ראשי',
+            onPressed: () => _showMainMenuBottomSheet(context, budget, showSavingsIcon),
+          ),
         const SizedBox(width: 4),
       ],
     );
@@ -13329,6 +15073,102 @@ Widget _buildBottomSheetHeader(BuildContext context, String title, VoidCallback?
   );
 }
 
+// ----------------------------------------------------------------------
+// ADMIN TRIGGER LOGIC (Sandbox Doctrine: Section 13.1.1)
+// ----------------------------------------------------------------------
+int _adminTapCount = 0;
+Timer? _adminTapTimer;
+const String _masterPin = "0511820511"; // Hardcoded complex PIN
+
+void _handleAdminTap(BuildContext context) {
+  _adminTapCount++;
+  
+  if (_adminTapTimer?.isActive ?? false) {
+    _adminTapTimer!.cancel();
+  }
+  
+  // Reset counter after 2 seconds of inactivity
+  _adminTapTimer = Timer(const Duration(seconds: 2), () {
+    _adminTapCount = 0;
+  });
+
+  if (_adminTapCount >= 5) {
+    _adminTapCount = 0;
+    _adminTapTimer?.cancel();
+    Navigator.pop(context); // Close the bottom sheet
+    _showAdminPinDialog(context);
+  }
+}
+
+void _showAdminPinDialog(BuildContext context) {
+  final TextEditingController pinController = TextEditingController();
+  final ValueNotifier<bool> hasError = ValueNotifier(false);
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
+      title: const Center(child: Text('Fintel Admin', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('הזן קוד מאסטר:', style: TextStyle(color: Colors.blueGrey)),
+          const SizedBox(height: 16),
+          ValueListenableBuilder<bool>(
+            valueListenable: hasError,
+            builder: (context, error, child) {
+              return TextField(
+                controller: pinController,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                style: const TextStyle(letterSpacing: 8, fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  errorText: error ? 'קוד שגוי' : null,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+                onChanged: (_) => hasError.value = false,
+              );
+            }
+          ),
+        ],
+      ),
+      actionsAlignment: MainAxisAlignment.spaceEvenly,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('ביטול', style: TextStyle(color: Colors.blueGrey)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.black87,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+          ),
+          onPressed: () {
+            if (pinController.text == _masterPin) {
+              Navigator.pop(ctx);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminDashboardScreen()));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('קוד מאושר. מתחבר לשרת...'), backgroundColor: Colors.green),
+              );
+            } else {
+              hasError.value = true;
+              pinController.clear();
+            }
+          },
+          child: const Text('התחבר', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      ],
+    ),
+  );
+}
+// ----------------------------------------------------------------------
+
 void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
   showModalBottomSheet(
     context: context,
@@ -13344,19 +15184,19 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Column(
               children: [
-                // --- קבוצה 1: פעולות שוטפות ---
-                _buildMenuTile(
-                  icon: Icons.shopping_cart_outlined, color: Colors.blueGrey[900]!, title: 'רשימת קניות',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ShoppingScreen()));
-                  },
-                ),
+                // --- קבוצה 1: פעולות וליבה ---
                 _buildMenuTile(
                   icon: Icons.account_balance_wallet, color: Colors.blue, title: 'תזרים פיננסי (PnL)',
                   onTap: () {
                     Navigator.pop(ctx);
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const PnLScreen()));
+                  },
+                ),
+                _buildMenuTile(
+                  icon: Icons.shopping_cart_outlined, color: Colors.blueGrey[900]!, title: 'רשימת קניות',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ShoppingScreen()));
                   },
                 ),
                 if (showSavings)
@@ -13367,10 +15207,6 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                       Navigator.push(context, MaterialPageRoute(builder: (_) => const SinkingFundsScreen()));
                     },
                   ),
-                
-                const Divider(), // מפריד קבוצות
-
-                // --- קבוצה 2: בקרה וניתוח ---
                 _buildMenuTile(
                   icon: Icons.account_balance_wallet_outlined, color: Colors.blueGrey, title: 'מעקב עו"ש',
                   onTap: () {
@@ -13387,6 +15223,27 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     });
                   },
                 ),
+
+                const Divider(), // מפריד כלי עזר
+
+                // --- קבוצה 2: עזרים והגדרות ---
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber.shade200),
+                  ),
+                  child: _buildMenuTile(
+                    icon: Icons.school, color: Colors.amber[800]!, title: 'אקדמיית Fintel (השיטה)', isPremium: true,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      PremiumService.requirePremium(context, () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const AcademyScreen()));
+                      });
+                    },
+                  ),
+                ),
                 _buildMenuTile(
                   icon: Icons.psychology, color: Colors.deepPurple, title: 'ייצוא נתונים ל-AI', isPremium: true,
                   onTap: () {
@@ -13401,10 +15258,6 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     });
                   },
                 ),
-
-                const Divider(), // מפריד קבוצות
-
-                // --- קבוצה 3: הגדרות ושונות ---
                 _buildMenuTile(
                   icon: Icons.settings, color: Colors.grey.shade700, title: 'הגדרות מערכת',
                   onTap: () {
@@ -13421,7 +15274,29 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                 ),
 
                 const SizedBox(height: 16),
-                const Text('© 2026 Fintel - כל הזכויות שמורות\nv1.0.0', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: Colors.grey, height: 1.5)),
+                
+                // Admin God-Mode Secret Trigger Area (Fixed Centering via Stack)
+                SizedBox(
+                  height: 40,
+                  width: double.infinity,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Text('© 2026 Fintel - כל הזכויות שמורות\nv1.0.0', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: Colors.grey, height: 1.5)),
+                      Positioned(
+                        right: 20,
+                        top: 0,
+                        bottom: 0,
+                        width: 60,
+                        child: GestureDetector(
+                          onTap: () => _handleAdminTap(context),
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(color: Colors.transparent),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 8),
               ],
             ),
@@ -13432,7 +15307,7 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
   );
 }
 
-Widget _buildMenuTile({required IconData icon, required Color color, required String title, required VoidCallback onTap, bool isPremium = false}) {
+Widget _buildMenuTile({required IconData icon, required Color color, required String title, required VoidCallback onTap, bool isPremium = false, Widget? trailing}) {
   return ListTile(
     contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
     leading: CircleAvatar(backgroundColor: color.withValues(alpha: 0.1), child: Icon(icon, color: color, size: 22)),
@@ -13445,6 +15320,7 @@ Widget _buildMenuTile({required IconData icon, required Color color, required St
         ]
       ],
     ),
+    trailing: trailing,
     onTap: onTap,
   );
 }
@@ -13462,6 +15338,29 @@ void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool s
             padding: const EdgeInsets.symmetric(vertical: 20),
             child: Column(
               children: [
+                ListTile(
+                  leading: const CircleAvatar(backgroundColor: Color(0xFFE8F5E9), child: Icon(Icons.chat_bubble_outline, color: Colors.green)),
+                  title: const Text('פנו אלינו ב-WhatsApp', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    const String waUrl = 'https://wa.me/972559323615';
+                    try {
+                      await launchUrl(Uri.parse(waUrl), mode: LaunchMode.externalApplication);
+                    } catch (e) {
+                      Clipboard.setData(const ClipboardData(text: '+972-55-932-3615'));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('לא הצלחנו לפתוח את WhatsApp, המספר הועתק ללוח!'),
+                            backgroundColor: Colors.blueGrey, duration: Duration(seconds: 4),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                ),
+                const Divider(height: 1, indent: 70),
+
                 ListTile(
                   leading: const CircleAvatar(backgroundColor: Color(0xFFE3F2FD), child: Icon(Icons.mail_outline, color: Colors.blue)),
                   title: const Text('פנו אלינו באימייל', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
@@ -13571,50 +15470,64 @@ void _showMainSettingsBottomSheet(BuildContext context, BudgetProvider budget, b
           _buildBottomSheetHeader(ctx, 'הגדרות מערכת', () => _showMainMenuBottomSheet(context, budget, showSavings)),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
+              padding: const EdgeInsets.symmetric(vertical: 20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (user != null) _buildUserProfileCard(context, user),
+                  if (user != null) 
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _buildUserProfileCard(context, user),
+                    ),
 
                   if (!kIsWeb)
                     Consumer<BudgetProvider>(
                       builder: (context, budgetProv, child) {
-                        return Card(
-                          elevation: 0, color: Colors.teal.withValues(alpha: 0.05), margin: const EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.teal.withValues(alpha: 0.1))),
-                          child: SwitchListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                            title: Text('כניסה ביומטרית', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey[900])),
-                            secondary: CircleAvatar(backgroundColor: Colors.teal.withValues(alpha: 0.15), radius: 18, child: const Icon(Icons.fingerprint, color: Colors.teal, size: 20)),
-                            value: budgetProv.useBiometric, activeThumbColor: Colors.teal, 
+                        return _buildMenuTile(
+                          icon: Icons.fingerprint, color: Colors.teal, title: 'כניסה ביומטרית',
+                          trailing: Switch(
+                            value: budgetProv.useBiometric,
+                            activeThumbColor: Colors.teal,
                             onChanged: (val) { budgetProv.toggleBiometric(val); },
                           ),
+                          onTap: () { budgetProv.toggleBiometric(!budgetProv.useBiometric); }
                         );
                       }
                     ),
 
-                  _buildSettingsCard(ctx, Icons.family_restroom_rounded, 'הגדרות משפחה וסטטוס', () {
+                  _buildMenuTile(
+                    icon: Icons.family_restroom_rounded, color: Colors.blue, title: 'הגדרות משפחה וסטטוס',
+                    onTap: () {
                       Navigator.pop(ctx);
                       _showFamilySettingsBottomSheet(context, budget, showSavings);
-                  }, Colors.blue),
-              
-                  _buildSettingsCard(ctx, Icons.pie_chart_outline, 'אחוז משתנות (רמת חיים)', () {
+                    }
+                  ),
+                
+                  _buildMenuTile(
+                    icon: Icons.pie_chart_outline, color: Colors.orange, title: 'אחוז משתנות (רמת חיים)',
+                    onTap: () {
                       Navigator.pop(ctx);
                       _showRatioSettingsBottomSheet(context, budget, showSavings);
-                  }, Colors.orange),
+                    }
+                  ),
                   
-                  _buildSettingsCard(ctx, Icons.balance, 'חלוקת שארית (עתידיות/פיננסיות)', () {
+                  _buildMenuTile(
+                    icon: Icons.balance, color: Colors.purple, title: 'חלוקת שארית (עתידיות/פיננסיות)',
+                    onTap: () {
                       Navigator.pop(ctx);
                       _showFutureVsFinancialBottomSheet(context, budget, showSavings);
-                  }, Colors.purple),
+                    }
+                  ),
                   
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1)),
+                  const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1)),
                   
-                  _buildSettingsCard(ctx, Icons.restore, 'איפוס כל הנתונים', () {
+                  _buildMenuTile(
+                    icon: Icons.restore, color: Colors.red, title: 'איפוס כל הנתונים',
+                    onTap: () {
                       Navigator.pop(ctx);
                       _showFactoryResetConfirm(context, budget); 
-                  }, Colors.red),
+                    }
+                  ),
                 ],
               ),
             ),
@@ -13672,28 +15585,6 @@ Widget _buildUserProfileCard(BuildContext context, User user) {
           ),
         )
       ],
-    ),
-  );
-}
-
-Widget _buildSettingsCard(BuildContext ctx, IconData icon, String text, VoidCallback onTap, Color iconColor) {
-  return Card(
-    elevation: 0, color: iconColor.withValues(alpha: 0.05), margin: const EdgeInsets.only(bottom: 12),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: iconColor.withValues(alpha: 0.1))),
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        child: Row(
-          children: [
-            CircleAvatar(backgroundColor: iconColor.withValues(alpha: 0.15), radius: 18, child: Icon(icon, color: iconColor, size: 20)),
-            const SizedBox(width: 16),
-            Expanded(child: Text(text, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blueGrey[900]))),
-            Icon(Icons.arrow_forward_ios, size: 14, color: Colors.blueGrey[300]),
-          ],
-        ),
-      ),
     ),
   );
 }
