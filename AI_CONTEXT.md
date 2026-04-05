@@ -1,4 +1,4 @@
-***1:   **Current Phase:** Gamma Phase Infrastructure & Sandbox Development (Playground)
-**Status:** Completed critical UX bug fixes in 'dohaham' (Freedom Gate locked routing, Memory Sync on DB writes, Academy Content alignment, Premium Crown UI). Ready to resume Gamma Phase transition into 'fintel_playground' to build live payment architecture, Flavors, and Grandfathering logic.
-**Next Task:** 1. Initialize 'fintel_playground' sandbox. 2. Setup Firebase 'fintel-staging'. 3. Configure Flutter Flavors. 4. Upgrade PremiumService for RevenueCat (Android) & Cloud Function (Web) integration with `createdAt` Grandfathering logic.
-**Constitution Status:** Compliant (Version 12.85). Sandbox Doctrine (Sec 12.7) is ACTIVE. 0 Bugs, 0 Warnings.      ***2:   # Project Status - Dohaham (Fintel)
+**Current Phase:** Gamma Phase Infrastructure & Sandbox Development (Playground)
+**Status:** Completed extensive UX/UI polishing in 'dohaham' main app (Shopping historical actuals, Academy content accuracy, Freedom Engine Infinity CTA, PnL Premium button split, and dynamic versioning via package_info_plus). Ready to resume Gamma Phase transition into 'fintel_playground' to build live payment architecture and Flavors.
+**Next Task:** 1. Initialize 'fintel_playground' sandbox. 2. Setup Firebase 'fintel-staging'. 3. Configure Flutter Flavors. 4. Hybrid Billing Integration.
+**Constitution Status:** Compliant (Version 12.85). Sandbox Doctrine (Sec 12.7) is ACTIVE. 0 Bugs, 0 Warnings.

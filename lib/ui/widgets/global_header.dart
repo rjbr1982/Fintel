@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Dynamic Version Tracking via package_info_plus)
+// 🔒 STATUS: EDITED (Updated Academy Menu Title)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -311,7 +311,7 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     border: Border.all(color: Colors.amber.shade200),
                   ),
                   child: _buildMenuTile(
-                    icon: Icons.school, color: Colors.amber[800]!, title: 'אקדמיית Fintel (השיטה)', isPremium: true,
+                    icon: Icons.school, color: Colors.amber[800]!, title: 'אקדמיית Fintel - פרקטיקת השימוש', isPremium: true,
                     onTap: () {
                       Navigator.pop(ctx);
                       PremiumService.requirePremium(context, () {
@@ -490,7 +490,7 @@ void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool s
                     _showLegalBottomSheet(
                       context: context, budget: budget, showSavings: showSavings,
                       title: 'מדיניות פרטיות', icon: Icons.lock_outline, iconColor: Colors.green.shade700,
-                      content: 'הנתונים שלך, בשליטתך: כל הנתונים הפיננסיים מוזנים מרצונך ומיועדים אך ורק לחישוב התזרים שלך באפליקציה. המידע נשמר בענן המאובטח של Google (Firebase). איש מצוות המפתחים אינו קורא או מנתח את נתוניך האישיים. אנו מתחייבים לא למכור, להעביר או לשתף את הנתונים עם שום צד שלישי. ניתן למחוק את כל המידע בכל עת דרך תפריט ההגדרות.',
+                      content: 'הנתונים שלך, בשליטתך: כל הנתונים הפיננסיים מוזנים מרצונך ומיועדים אך ורק לחישוב התזרים שלך באפליקציה. המידע נשמר בענן מאובטח של Google (Firebase). איש מצוות המפתחים אינו קורא או מנתח את נתוניך האישיים. אנו מתחייבים לא למכור, להעביר או לשתף את הנתונים עם שום צד שלישי. ניתן למחוק את כל המידע בכל עת דרך תפריט ההגדרות.',
                     );
                   },
                 ),
