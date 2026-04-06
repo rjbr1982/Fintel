@@ -1,4 +1,4 @@
-// 🔒 STATUS: FINAL (Admin God-Mode Dashboard - Fully Optimized & Zero Warnings & Localized & Hidden Screener & Brain Extractor)
+// 🔒 STATUS: FINAL (Admin God-Mode Dashboard - Fully Optimized with Smart CTA Drill-downs)
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -172,6 +172,100 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  // --- Smart CTA Drilldown ---
+  void _showSmartCTADrilldown({required String title, required List<String> emails, required String defaultSubject, required String defaultBody, required Color themeColor}) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(backgroundColor: themeColor.withValues(alpha: 0.1), radius: 16, child: Text('${emails.length}', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14))),
+                      const SizedBox(width: 12),
+                      Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    ],
+                  ),
+                  IconButton(icon: const Icon(Icons.close, color: Colors.blueGrey), onPressed: () => Navigator.pop(ctx)),
+                ],
+              ),
+              const Divider(),
+              const SizedBox(height: 8),
+              if (emails.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: Text('אין משתמשים בסטטוס זה כרגע', style: TextStyle(color: Colors.blueGrey))),
+                )
+              else
+                Flexible(
+                  child: Container(
+                    constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: emails.length,
+                      separatorBuilder: (context, index) => const Divider(height: 1),
+                      itemBuilder: (context, index) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text(emails[index], style: const TextStyle(fontSize: 14, color: Colors.black87)),
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.black87, side: const BorderSide(color: Colors.black26),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.copy, size: 18),
+                      label: const Text('העתק רשימה', style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: () {
+                        if (emails.isEmpty) return;
+                        Clipboard.setData(ClipboardData(text: emails.join(',')));
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('רשימת המיילים הועתקה ללוח')));
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: themeColor, foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.mail, size: 18),
+                      label: const Text('דיוור מיידי', style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _triggerMail(emails, defaultSubject, defaultBody);
+                      },
+                    ),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showAdvancedScreener() {
     final uniqueCountries = _users.map((e) => e.country).toSet().toList();
     uniqueCountries.remove('Unknown');
@@ -293,6 +387,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final active7Days = _users.where((u) => u.lastActive != null && DateTime.now().difference(u.lastActive!).inDays <= 7).length;
     final uniqueCountriesCount = _users.map((e) => e.country).where((c) => c != 'Unknown').toSet().length;
 
+    // חישוב הרשימות עבור הטריגרים החכמים
+    final bottleneckUsers = _users.where((u) => u.createdAt != null && DateTime.now().difference(u.createdAt!).inHours > 48 && !(u.metrics['hasSalary'] ?? false)).map((u) => u.email).toList();
+    final churnUsers = _users.where((u) => u.lastActive != null && DateTime.now().difference(u.lastActive!).inDays > 7).map((u) => u.email).toList();
+    final successAUsers = _users.where((u) => (u.metrics['hasSinkingFunds'] ?? false)).map((u) => u.email).toList();
+    final successBUsers = _users.where((u) => (u.metrics['hasViewedFreedom'] ?? false)).map((u) => u.email).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
@@ -368,43 +468,47 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               children: [
                 _buildSmartCTA(
                   title: 'צוואר בקבוק',
-                  desc: 'מעל 48 שעות, ללא שכר',
+                  desc: 'ללא שכר > 48 שעות',
+                  count: bottleneckUsers.length,
                   color: Colors.orange,
                   icon: Icons.hourglass_empty,
-                  onTap: () {
-                    final emails = _users.where((u) => u.createdAt != null && DateTime.now().difference(u.createdAt!).inHours > 48 && !(u.metrics['hasSalary'] ?? false)).map((u) => u.email).toList();
-                    _triggerMail(emails, 'צריכים עזרה עם השכר?', 'שמנו לב שנרשמתם אבל טרם הזנתם שכר. נשמח לעזור!');
-                  },
+                  onTap: () => _showSmartCTADrilldown(
+                    title: 'צוואר בקבוק', emails: bottleneckUsers, themeColor: Colors.orange,
+                    defaultSubject: 'צריכים עזרה עם השכר?', defaultBody: 'שמנו לב שנרשמתם אבל טרם הזנתם שכר. נשמח לעזור!'
+                  ),
                 ),
                 _buildSmartCTA(
                   title: 'נטישה',
-                  desc: 'לא פעילים מעל 7 ימים',
+                  desc: 'לא פעילים > 7 ימים',
+                  count: churnUsers.length,
                   color: Colors.redAccent,
                   icon: Icons.person_off,
-                  onTap: () {
-                    final emails = _users.where((u) => u.lastActive != null && DateTime.now().difference(u.lastActive!).inDays > 7).map((u) => u.email).toList();
-                    _triggerMail(emails, 'התגעגענו אליכם!', 'חלף שבוע מאז שבדקתם את התזרים. בואו נחזור למסלול.');
-                  },
+                  onTap: () => _showSmartCTADrilldown(
+                    title: 'נטישה', emails: churnUsers, themeColor: Colors.redAccent,
+                    defaultSubject: 'התגעגענו אליכם!', defaultBody: 'חלף שבוע מאז שבדקתם את התזרים. בואו נחזור למסלול.'
+                  ),
                 ),
                 _buildSmartCTA(
                   title: 'הצלחה א\'',
                   desc: 'פתחו קופה צוברת',
+                  count: successAUsers.length,
                   color: Colors.green,
                   icon: Icons.savings,
-                  onTap: () {
-                    final emails = _users.where((u) => (u.metrics['hasSinkingFunds'] ?? false)).map((u) => u.email).toList();
-                    _triggerMail(emails, 'כל הכבוד על הקופה החדשה!', 'צעד ראשון בניהול אנטי-הפתעות. מעולה!');
-                  },
+                  onTap: () => _showSmartCTADrilldown(
+                    title: 'פתחו קופה צוברת', emails: successAUsers, themeColor: Colors.green,
+                    defaultSubject: 'כל הכבוד על הקופה החדשה!', defaultBody: 'צעד ראשון בניהול אנטי-הפתעות. מעולה!'
+                  ),
                 ),
                 _buildSmartCTA(
                   title: 'הצלחה ב\'',
                   desc: 'הגיעו למסך החירות',
+                  count: successBUsers.length,
                   color: Colors.teal,
                   icon: Icons.flag,
-                  onTap: () {
-                    final emails = _users.where((u) => (u.metrics['hasViewedFreedom'] ?? false)).map((u) => u.email).toList();
-                    _triggerMail(emails, 'איך החוויה שלכם?', 'ראיתם את שנת החירות שלכם! נשמח לפידבק על האפליקציה.');
-                  },
+                  onTap: () => _showSmartCTADrilldown(
+                    title: 'נחשפו למנוע החירות', emails: successBUsers, themeColor: Colors.teal,
+                    defaultSubject: 'איך החוויה שלכם?', defaultBody: 'ראיתם את שנת החירות שלכם! נשמח לפידבק על האפליקציה.'
+                  ),
                 ),
               ],
             ),
@@ -470,24 +574,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildSmartCTA({required String title, required String desc, required Color color, required IconData icon, required VoidCallback onTap}) {
+  Widget _buildSmartCTA({required String title, required String desc, required int count, required Color color, required IconData icon, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: color.withValues(alpha: 0.3)), boxShadow: [BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))]),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(children: [
-              Icon(icon, size: 16, color: color), 
-              const SizedBox(width: 6), 
-              Expanded(child: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 12), overflow: TextOverflow.ellipsis))
-            ]),
-            const SizedBox(height: 4),
-            Text(desc, style: const TextStyle(fontSize: 10, color: Colors.blueGrey), maxLines: 2, overflow: TextOverflow.ellipsis),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, size: 20, color: color),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                  child: Text('$count', style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13)),
+                ),
+              ]
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 13), overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 2),
+                Text(desc, style: const TextStyle(fontSize: 10, color: Colors.blueGrey), maxLines: 2, overflow: TextOverflow.ellipsis),
+              ],
+            ),
           ],
         ),
       ),
