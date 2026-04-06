@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Upgraded PnL Menu to ExpansionTile for deep linking)
+// 🔒 STATUS: EDITED (Upgraded PnL Menu & Updated/Split Detailed Legal Onboarding Texts)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -21,9 +21,9 @@ import '../screens/shopping_screen.dart';
 import '../screens/pnl_screen.dart';
 import '../screens/academy_screen.dart'; 
 import '../screens/admin_dashboard_screen.dart';
-import '../screens/category_drilldown_screen.dart'; // הוסף עבור צלילה מהירה
-import '../screens/reducing_screen.dart'; // הוסף עבור צלילה למנמיכות
-import '../screens/assets_screen.dart'; // הוסף עבור צלילה לפיננסיות
+import '../screens/category_drilldown_screen.dart';
+import '../screens/reducing_screen.dart';
+import '../screens/assets_screen.dart';
 import '../../main.dart'; 
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -516,6 +516,7 @@ void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool s
                 ),
                 const Divider(height: 1, indent: 70),
                 
+                // הזרקת הטקסט המורחב מה-Login: תנאי שימוש
                 ListTile(
                   leading: CircleAvatar(backgroundColor: Colors.orange.shade50, child: Icon(Icons.description_outlined, color: Colors.orange.shade700)),
                   title: const Text('תנאי שימוש', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
@@ -524,12 +525,17 @@ void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool s
                     _showLegalBottomSheet(
                       context: context, budget: budget, showSavings: showSavings,
                       title: 'תנאי שימוש', icon: Icons.description_outlined, iconColor: Colors.orange.shade700,
-                      content: 'האפליקציה מהווה כלי עזר חישובי בלבד לניהול תקציב אישי. המידע, התחזיות והחישובים (כולל מנוע החירות וחיסול החובות) אינם מהווים ייעוץ פנסיוני, ייעוץ השקעות או ייעוץ מס. קבלת החלטות פיננסיות על בסיס האפליקציה היא על אחריות המשתמש בלבד. האפליקציה מסופקת (As-Is) בגרסת הרצה (Beta).',
+                      content: '''1. הסכמה לתנאים: השימוש באפליקציית Fintel ("האפליקציה") מהווה את הסכמתך המלאה לתנאים המפורטים להלן ולמדיניות הפרטיות. 
+2. מהות השירות ואי-תלות (Disclaimer): האפליקציה מהווה כלי טכנולוגי לניהול תקציב, תכנון תזרים ומעקב אחר נכסים. המידע, הנתונים והתחזיות המופקים על ידי "מנוע החירות" או כל רכיב אחר במערכת ניתנים כמות שהם (AS IS). אין באמור באפליקציה משום ייעוץ פיננסי, פנסיוני, השקעות או מס, ואין בו כדי להחליף ייעוץ מקצועי ואישי. האחריות על כל החלטה כלכלית או השקעה חלה על המשתמש בלבד.
+3. הגבלת אחריות: מפתחי האפליקציה אינם אחראים לכל נזק, הפסד או אובדן כספי, ישיר או עקיף, העלול להיגרם כתוצאה מהסתמכות על חישובי המערכת, שיבושים בקווי תקשורת, הפסקות זמניות בשירותי הענן (Firebase), או תקלות במערכת ההפעלה של המכשיר.
+4. אבטחה אישית: על המשתמש לנקוט בכל האמצעים לשמירת אבטחת מכשירו (נעילת מסך, ביומטריה). מפתחי האפליקציה לא יהיו אחראים לחשיפת מידע פיננסי שנגרמה עקב מסירת פרטי ההזדהות (Google Auth) לצד ג' או גישה פיזית למכשיר פתוח.
+5. קניין רוחני: מתודולוגיית "דוחכם", שפת המותג, אלגוריתם ה"צלף", ומנוע "הזרימה" הינם קניין רוחני בלעדי. אין להעתיק, לשכפל או להפיץ רכיבים אלו ללא אישור מראש ובכתב.''',
                     );
                   },
                 ),
                 const Divider(height: 1, indent: 70),
                 
+                // הזרקת הטקסט המורחב מה-Login: מדיניות פרטיות
                 ListTile(
                   leading: CircleAvatar(backgroundColor: Colors.green.shade50, child: Icon(Icons.lock_outline, color: Colors.green.shade700)),
                   title: const Text('מדיניות פרטיות', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
@@ -538,7 +544,11 @@ void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool s
                     _showLegalBottomSheet(
                       context: context, budget: budget, showSavings: showSavings,
                       title: 'מדיניות פרטיות', icon: Icons.lock_outline, iconColor: Colors.green.shade700,
-                      content: 'הנתונים שלך, בשליטתך: כל הנתונים הפיננסיים מוזנים מרצונך ומיועדים אך ורק לחישוב התזרים שלך באפליקציה. המידע נשמר בענן מאובטח של Google (Firebase). איש מצוות המפתחים אינו קורא או מנתח את נתוניך האישיים. אנו מתחייבים לא למכור, להעביר או לשתף את הנתונים עם שום צד שלישי. ניתן למחוק את כל המידע בכל עת דרך תפריט ההגדרות.',
+                      content: '''1. איסוף מידע וסנכרון ענן: המערכת פועלת באמצעות טכנולוגיית סנכרון ענן בזמן אמת (Firebase של חברת Google). המידע הפיננסי המוזן על ידך (הכנסות, הוצאות, נכסים) נשמר תחת מזהה המשתמש שלך, במטרה לאפשר סנכרון רציף בין מכשירים וגיבוי מלא.
+2. הזדהות ללא סיסמאות: למען ביטחונך, האפליקציה אינה שומרת או מנהלת מאגר סיסמאות מקומי. ההזדהות מבוצעת באמצעות שרתי Google (OAuth), כך שפרטי ההתחברות שלך לעולם אינם חשופים למפתחי האפליקציה.
+3. שימוש במידע אישי: האפליקציה אוספת את כתובת הדואר האלקטרוני, השם המלא ותמונת הפרופיל שלך המשויכים לחשבון ה-Google. נתונים אלו נועדו לזיהוי בעלי המידע ולמתן שירות אישי, וכן לצורך שליחת עדכונים מערכתיים או הצעות רלוונטיות, הניתנים להסרה בכל עת. המידע הפיננסי שלך פרטי ולעולם לא יימכר לצדדים שלישיים.
+4. גלישה בטוחה והצפנה: התקשורת בין האפליקציה לשרתי הענן מאובטחת ומוצפנת בסטנדרטים בינלאומיים מתקדמים (HTTPS/TLS). הגישה למסד הנתונים חסומה ברמת השרת (Security Rules) ומורשית אך ורק לבעל החשבון המאומת.
+5. הגנת המכשיר המקומי: האפליקציה מציעה מנגנון נעילה ביומטרית (טביעת אצבע/זיהוי פנים) כשכבת הגנה נוספת. באחריות המשתמש להפעיל מנגנון זה דרך מסך ההגדרות למניעת גישה לא מורשית.''',
                     );
                   },
                 ),
@@ -566,7 +576,7 @@ void _showLegalBottomSheet({
           Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
                   children: [
@@ -576,7 +586,12 @@ void _showLegalBottomSheet({
                   ],
                 ),
                 const SizedBox(height: 16),
-                Text(content, style: const TextStyle(height: 1.6, fontSize: 15, color: Colors.black87)),
+                Text(
+                  content, 
+                  style: const TextStyle(height: 1.6, fontSize: 14, color: Colors.black87),
+                  textAlign: TextAlign.right,
+                  textDirection: TextDirection.rtl,
+                ),
                 const SizedBox(height: 32),
                 const Center(child: Text('© 2026 Fintel - כל הזכויות שמורות.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
               ],

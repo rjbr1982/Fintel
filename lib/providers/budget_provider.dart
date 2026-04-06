@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Bank Deposit Nullification Logic & Added Sinking-Growth Rollover)
+// 🔒 STATUS: EDITED (Added Global Sorting Engine & Fixed Sinking-Growth Rollover)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -154,18 +154,58 @@ class BudgetProvider with ChangeNotifier {
       return n;
     }).toList();
 
-    _expenses.sort((a, b) {
-      bool aIsKid = a.parentCategory == 'ילדים - משתנות' || a.parentCategory == 'ילדים - קבועות';
-      bool bIsKid = b.parentCategory == 'ילדים - משתנות' || b.parentCategory == 'ילדים - קבועות';
-      
-      if (aIsKid && bIsKid && a.parentCategory == b.parentCategory) {
-        int idxA = kidNames.indexWhere((n) => a.name.contains(n));
-        int idxB = kidNames.indexWhere((n) => b.name.contains(n));
-        
-        if (idxA != -1 && idxB != -1 && idxA != idxB) {
-          return idxA.compareTo(idxB);
-        }
+    int getCategoryWeight(String category) {
+      switch (category) {
+        case 'הכנסות': return 1;
+        case 'קבועות': return 2;
+        case 'מנמיכות': return 3;
+        case 'משתנות': return 4;
+        case 'עתידיות': return 5;
+        case 'פיננסיות': return 6;
+        default: return 99;
       }
+    }
+
+    int getPersonWeight(String searchString) {
+      if (searchString.contains('אבא') || searchString.contains('בעל') || searchString.contains('אישי')) return 1;
+      if (searchString.contains('אמא') || searchString.contains('אישה')) return 2;
+      for (int i = 0; i < kidNames.length; i++) {
+         if (searchString.contains(kidNames[i])) return 10 + i;
+      }
+      return 99;
+    }
+
+    int getTypeWeight(String name) {
+      if (name.contains('בגדים')) return 1;
+      if (name.contains('בילויים')) return 2;
+      if (name.contains('טיפוח')) return 3;
+      return 99;
+    }
+
+    _expenses.sort((a, b) {
+      // 1. מיון לפי קטגוריית על (קבועות, משתנות וכו')
+      int catA = getCategoryWeight(a.category);
+      int catB = getCategoryWeight(b.category);
+      if (catA != catB) return catA.compareTo(catB);
+
+      String searchA = "${a.parentCategory} ${a.name}";
+      String searchB = "${b.parentCategory} ${b.name}";
+
+      // 2. מיון לפי היררכיה משפחתית (אבא -> אמא -> ילדים לפי גיל)
+      int pA = getPersonWeight(searchA);
+      int pB = getPersonWeight(searchB);
+      if (pA != pB) return pA.compareTo(pB);
+
+      // 3. מיון לפי סוג ההוצאה הפנימי (בגדים -> בילויים -> טיפוח)
+      int tA = getTypeWeight(a.name);
+      int tB = getTypeWeight(b.name);
+      if (tA != tB) return tA.compareTo(tB);
+      
+      // 4. מיון אלפביתי מקבץ עבור קטגוריות אב רגילות (למשל רכב, דיור)
+      int parentCmp = (a.parentCategory).compareTo(b.parentCategory);
+      if (parentCmp != 0) return parentCmp;
+
+      // 5. מיון רגיל על פי מזהה (למניעת קפיצות)
       return (a.id ?? 0).compareTo(b.id ?? 0);
     });
   }

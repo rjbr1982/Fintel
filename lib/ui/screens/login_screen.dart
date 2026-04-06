@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Robust Google Auth, Deep Clean Session & Legal Onboarding)
+// 🔒 STATUS: EDITED (Robust Google Auth, Deep Clean Session & Legal Onboarding - Checkbox Visibility Fix)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -248,7 +248,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 40),
 
-                    // רכיב אישור תנאי השימוש (Legal Onboarding)
+                    // רכיב אישור תנאי השימוש (Legal Onboarding) הבהרה וצבע כהה
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -261,6 +261,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Checkbox(
                             value: _termsAccepted,
                             activeColor: const Color(0xFF00A3FF),
+                            side: const BorderSide(color: Colors.black87, width: 2.0), // עיבוי וצביעה לכהה לבולטות
                             onChanged: (bool? value) {
                               setState(() => _termsAccepted = value ?? false);
                             },
