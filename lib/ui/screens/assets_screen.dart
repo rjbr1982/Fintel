@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Standardized Info Dialogs & Sinking-Growth Asset Toggle)
+// 🔒 STATUS: EDITED (Fixed deprecated activeColor to activeThumbColor)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/asset_provider.dart';
@@ -232,7 +232,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
                     title: const Text('נכס צובר תזרים (חיסגור)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     subtitle: const Text('התזרים הפנוי החודשי יתווסף אוטומטית ליתרת נכס זה.', style: TextStyle(fontSize: 12)),
                     value: isPcfAccumulator,
-                    activeColor: const Color(0xFF00A3FF),
+                    activeThumbColor: const Color(0xFF00A3FF),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                     onChanged: (val) => setState(() => isPcfAccumulator = val),
                   ),

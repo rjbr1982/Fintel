@@ -1,4 +1,4 @@
 ***1:   **Current Phase:** Gamma Phase Infrastructure & Sandbox Development (Playground)
-**Status:** Finalized strategic design and legal text for "Legal Onboarding" (Terms & Privacy) and the "Sinking-Growth Asset" (חיסגור). Constitution updated to 12.87 to reflect these changes. Ready to begin physical coding in 'fintel_playground'.
-**Next Task:** 1. Initialize 'fintel_playground' sandbox. 2. Implement Legal Onboarding (Checkbox & Modal). 3. Build 'Sinking-Growth Asset' toggle in Asset Settings and integrate with Auto-Rollover. 4. Setup Firebase 'fintel-staging' & Flavors.
+**Status:** Successfully implemented Legal Onboarding (Terms & Privacy checkbox/modal) and the Sinking-Growth Asset (חיסגור - PCF Auto-Rollover to Assets) in the main project. Code is clean (0 warnings). Ready to transition to 'fintel_playground' for the critical Hybrid Billing phase.
+**Next Task:** 1. Initialize 'fintel_playground' sandbox. 2. Install and configure `purchases_flutter` and `url_launcher`. 3. Build Hybrid Billing Engine logic (RevenueCat for Native, Custom Gateway for Web). 4. Setup Firebase 'fintel-staging' & Flavors.
 **Constitution Status:** Compliant (Version 12.87). Sandbox Doctrine (Sec 12.7) is ACTIVE. 0 Bugs, 0 Warnings.      ***2:

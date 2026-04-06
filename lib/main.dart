@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Removed aggressive session reset from StreamBuilder)
+// 🔒 STATUS: EDITED (Removed aggressive session reset from StreamBuilder & Added Hybrid Billing Init)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb; 
 import 'package:local_auth/local_auth.dart'; 
@@ -19,6 +19,7 @@ import 'ui/screens/login_screen.dart';
 import 'ui/screens/onboarding_screen.dart'; 
 import 'data/database_helper.dart'; 
 import 'utils/app_localizations.dart';
+import 'services/premium_service.dart'; // הזרקת שירות הפרימיום ואתחול מנוע החיוב
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +27,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // אתחול מנוע החיוב ההיברידי (Web/Native)
+  await HybridBillingEngine.init();
 
   runApp(
     MultiProvider(
