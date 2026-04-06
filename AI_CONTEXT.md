@@ -1,4 +1,4 @@
-**Current Phase:** Gamma Phase Infrastructure & Sandbox Development (Playground)
-**Status:** Completed extensive UX/UI polishing in 'dohaham' main app (Shopping historical actuals, Academy content accuracy, Freedom Engine Infinity CTA, PnL Premium button split, and dynamic versioning via package_info_plus). Ready to resume Gamma Phase transition into 'fintel_playground' to build live payment architecture and Flavors.
-**Next Task:** 1. Initialize 'fintel_playground' sandbox. 2. Setup Firebase 'fintel-staging'. 3. Configure Flutter Flavors. 4. Hybrid Billing Integration.
-**Constitution Status:** Compliant (Version 12.85). Sandbox Doctrine (Sec 12.7) is ACTIVE. 0 Bugs, 0 Warnings.
+***1:   **Current Phase:** Gamma Phase Infrastructure & Sandbox Development (Playground)
+**Status:** Finalized strategic design and legal text for "Legal Onboarding" (Terms & Privacy) and the "Sinking-Growth Asset" (חיסגור). Constitution updated to 12.87 to reflect these changes. Ready to begin physical coding in 'fintel_playground'.
+**Next Task:** 1. Initialize 'fintel_playground' sandbox. 2. Implement Legal Onboarding (Checkbox & Modal). 3. Build 'Sinking-Growth Asset' toggle in Asset Settings and integrate with Auto-Rollover. 4. Setup Firebase 'fintel-staging' & Flavors.
+**Constitution Status:** Compliant (Version 12.87). Sandbox Doctrine (Sec 12.7) is ACTIVE. 0 Bugs, 0 Warnings.      ***2:

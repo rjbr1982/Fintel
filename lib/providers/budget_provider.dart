@@ -1,9 +1,10 @@
-// 🔒 STATUS: EDITED (Fixed Bank Deposit Nullification Logic)
+// 🔒 STATUS: EDITED (Fixed Bank Deposit Nullification Logic & Added Sinking-Growth Rollover)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
+import '../data/asset_model.dart';
 
 class BudgetProvider with ChangeNotifier {
   List<Expense> _expenses = [];
@@ -17,7 +18,7 @@ class BudgetProvider with ChangeNotifier {
   double _variableDeficit = 0.0;
 
   static const double defaultVariableRatio = 0.833; 
-  static const double defaultFutureRatio = 0.85;    
+  static const double defaultFutureRatio = 0.85;   
 
   String _maritalStatus = 'married'; 
   String _gender = 'male'; 
@@ -26,7 +27,7 @@ class BudgetProvider with ChangeNotifier {
   double? _customEntSuccess;
 
   double _variableAllocationRatio = defaultVariableRatio; 
-  double _futureAllocationRatio = defaultFutureRatio;    
+  double _futureAllocationRatio = defaultFutureRatio;   
 
   double _initialCapital = 0.0;
   double _expectedYield = 4.0;
@@ -847,6 +848,8 @@ class BudgetProvider with ChangeNotifier {
   Future<void> _performAutoRollover() async {
     bool wasUpdated = false;
     final now = DateTime.now();
+    
+    // 1. הוצאות צוברות
     for (int i = 0; i < _expenses.length; i++) {
       final e = _expenses[i];
       if (e.isSinking && e.lastUpdateDate != null) {
@@ -874,6 +877,48 @@ class BudgetProvider with ChangeNotifier {
         }
       }
     }
+
+    // 2. נכסים צוברי תזרים (חיסגור) - סעיף 10.4.4
+    final assets = await DatabaseHelper.instance.getAssets();
+    for (var a in assets) {
+      if (a.isPcfAccumulator && a.lastUpdateDate != null) {
+        DateTime lastUpdate = DateTime.parse(a.lastUpdateDate!);
+        int monthsDiff = (now.year - lastUpdate.year) * 12 + now.month - lastUpdate.month;
+        if (monthsDiff > 0) {
+          // משיכת התזרים הפנוי הנוכחי (PCF)
+          double monthlyPcf = totalFinancialExpenses; 
+          
+          if (monthlyPcf > 0) {
+            double addedAmount = monthlyPcf * monthsDiff;
+            final updatedAsset = Asset(
+              id: a.id, 
+              name: a.name, 
+              value: a.value + addedAmount, 
+              type: a.type, 
+              yieldPercentage: a.yieldPercentage,
+              isPcfAccumulator: true,
+              lastUpdateDate: now.toIso8601String(),
+            );
+            await DatabaseHelper.instance.updateAsset(updatedAsset);
+            wasUpdated = true;
+          } else {
+            // התזרים שלילי או אפס: רק מעדכנים תאריך כדי למנוע חריגות חישוב עתידיות
+            final updatedAsset = Asset(
+              id: a.id, 
+              name: a.name, 
+              value: a.value, 
+              type: a.type, 
+              yieldPercentage: a.yieldPercentage,
+              isPcfAccumulator: true,
+              lastUpdateDate: now.toIso8601String(),
+            );
+            await DatabaseHelper.instance.updateAsset(updatedAsset);
+            wasUpdated = true;
+          }
+        }
+      }
+    }
+
     if (wasUpdated) notifyListeners();
   }
 

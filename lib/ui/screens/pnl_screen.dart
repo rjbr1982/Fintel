@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Premium Crown Logic & Unified Freedom Settings Dialog UI)
+// 🔒 STATUS: EDITED (Fixed Premium Crown Logic & Unified Freedom Settings Dialog UI, Added Info Icons)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -121,7 +121,7 @@ class PnLScreen extends StatelessWidget {
                   displayVariableAmount, 
                   variableDeficit > 0 ? Colors.red[900]! : Colors.black, 
                   onLongPress: () => _showRatioDialog(context, budget, isVariable: true),
-                  onInfoTap: () => _showInfoDialog(context, 'שליטת מאקרו', "התקציב המשתנה הוא 'קופסה סגורה'. כדי להגדיל את התזרים לחירות פיננסית, עליך לשנות את חלוקת האחוזים הראשית על ידי לחיצה ארוכה על שורת ה'משתנות'.")
+                  onInfoTap: () => _showInfoDialog(context, 'שליטת מאקרו (משתנות)', "התקציב המשתנה הוא 'קופסה סגורה'. לחיצה ארוכה כאן תאפשר לך לקבוע איזה אחוז מתוך ה'תזרים לרמת חיים' (היתרה שלאחר הבסיס) יוקצה למשתנות.")
                 ),
                 
                 if (variableDeficit > 0)
@@ -139,8 +139,14 @@ class PnLScreen extends StatelessWidget {
                     ),
                   ),
                   
-                _buildRow(context, 'עתידיות', futureAllocated, Colors.black, 
-                  onLongPress: () => _showRatioDialog(context, budget, isVariable: false)),
+                _buildRow(
+                  context, 
+                  'עתידיות', 
+                  futureAllocated, 
+                  Colors.black, 
+                  onLongPress: () => _showRatioDialog(context, budget, isVariable: false),
+                  onInfoTap: () => _showInfoDialog(context, 'מודל המפל (עתידיות)', "שים לב: אחוז ההקצאה לעתידיות (הניתן לשינוי בלחיצה ארוכה) מחושב אך ורק מתוך היתרה שנותרה לאחר הפחתת התקציב המשתנה, ולא מהסכום הכולל. שאר היתרה תופנה לחירות פיננסית.")
+                ),
 
                 const SizedBox(height: 25),
                 
