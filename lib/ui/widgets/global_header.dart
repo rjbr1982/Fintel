@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Upgraded PnL Menu & Updated/Split Detailed Legal Onboarding Texts)
+// 🔒 STATUS: EDITED (Fixed Legal BottomSheet Scroll Clipping Issue)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -569,35 +569,40 @@ void _showLegalBottomSheet({
     context: context, backgroundColor: Colors.white, isScrollControlled: true,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
     builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildBottomSheetHeader(ctx, title, () => _showSupportBottomSheet(context, budget, showSavings)),
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85), // הגבלת גובה שתאפשר גלילה במקום חיתוך
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildBottomSheetHeader(ctx, title, () => _showSupportBottomSheet(context, budget, showSavings)),
+            Flexible( // רכיב פלקסיבל שמאפשר ל-ScrollView לקחת את השטח הנותר ולא לחרוג
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(icon, color: iconColor, size: 28),
-                    const SizedBox(width: 12),
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black87)),
+                    Row(
+                      children: [
+                        Icon(icon, color: iconColor, size: 28),
+                        const SizedBox(width: 12),
+                        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black87)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      content, 
+                      style: const TextStyle(height: 1.6, fontSize: 14, color: Colors.black87),
+                      textAlign: TextAlign.right,
+                      textDirection: TextDirection.rtl,
+                    ),
+                    const SizedBox(height: 32),
+                    const Center(child: Text('© 2026 Fintel - כל הזכויות שמורות.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  content, 
-                  style: const TextStyle(height: 1.6, fontSize: 14, color: Colors.black87),
-                  textAlign: TextAlign.right,
-                  textDirection: TextDirection.rtl,
-                ),
-                const SizedBox(height: 32),
-                const Center(child: Text('© 2026 Fintel - כל הזכויות שמורות.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54))),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     ),
   );
