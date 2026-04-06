@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Updated Academy Menu Title)
+// 🔒 STATUS: EDITED (Upgraded PnL Menu to ExpansionTile for deep linking)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -21,6 +21,9 @@ import '../screens/shopping_screen.dart';
 import '../screens/pnl_screen.dart';
 import '../screens/academy_screen.dart'; 
 import '../screens/admin_dashboard_screen.dart';
+import '../screens/category_drilldown_screen.dart'; // הוסף עבור צלילה מהירה
+import '../screens/reducing_screen.dart'; // הוסף עבור צלילה למנמיכות
+import '../screens/assets_screen.dart'; // הוסף עבור צלילה לפיננסיות
 import '../../main.dart'; 
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -261,13 +264,21 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
             child: Column(
               children: [
                 // --- קבוצה 1: פעולות וליבה ---
-                _buildMenuTile(
+                
+                // רכיב ניווט תזרים עם רשימה נפתחת
+                _buildExpansionMenuTile(
                   icon: Icons.account_balance_wallet, color: Colors.blue, title: 'תזרים פיננסי (PnL)',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const PnLScreen()));
-                  },
+                  children: [
+                    _buildSubMenuTile('מסך תזרים ראשי', Icons.dashboard, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const PnLScreen())); }),
+                    _buildSubMenuTile('הכנסות', Icons.arrow_downward, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'הכנסות', displayTitle: 'הכנסות'))); }),
+                    _buildSubMenuTile('קבועות', Icons.push_pin, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'קבועות', displayTitle: 'קבועות'))); }),
+                    _buildSubMenuTile('מנמיכות', Icons.trending_down, () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const ReducingScreen())); }); }, isPremium: true),
+                    _buildSubMenuTile('משתנות', Icons.shopping_bag_outlined, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'משתנות', displayTitle: 'משתנות'))); }),
+                    _buildSubMenuTile('עתידיות', Icons.savings_outlined, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'עתידיות', displayTitle: 'עתידיות'))); }),
+                    _buildSubMenuTile('פיננסיות', Icons.trending_up, () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const AssetsScreen())); }); }, isPremium: true),
+                  ]
                 ),
+                
                 _buildMenuTile(
                   icon: Icons.shopping_cart_outlined, color: Colors.blueGrey[900]!, title: 'רשימת קניות',
                   onTap: () {
@@ -390,6 +401,8 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
   );
 }
 
+// === פונקציות עזר לייצור פריטי התפריט ===
+
 Widget _buildMenuTile({required IconData icon, required Color color, required String title, required VoidCallback onTap, bool isPremium = false, Widget? trailing}) {
   return ListTile(
     contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
@@ -407,6 +420,41 @@ Widget _buildMenuTile({required IconData icon, required Color color, required St
     onTap: onTap,
   );
 }
+
+Widget _buildExpansionMenuTile({required IconData icon, required Color color, required String title, required List<Widget> children}) {
+  return Theme(
+    data: ThemeData(dividerColor: Colors.transparent), // מונע את הופעת הקווים סביב ההרחבה
+    child: ExpansionTile(
+      tilePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
+      leading: CircleAvatar(backgroundColor: color.withValues(alpha: 0.1), child: Icon(icon, color: color, size: 22)),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87)),
+      childrenPadding: const EdgeInsets.only(right: 56, left: 24, bottom: 8),
+      children: children,
+    ),
+  );
+}
+
+Widget _buildSubMenuTile(String title, IconData icon, VoidCallback onTap, {bool isPremium = false}) {
+  return InkWell(
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.blueGrey[600]),
+          const SizedBox(width: 12),
+          Text(title, style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w500)),
+          if (isPremium) ...[
+            const SizedBox(width: 8),
+            const Icon(Icons.workspace_premium, color: Colors.amber, size: 16),
+          ]
+        ],
+      ),
+    ),
+  );
+}
+
+// ======================================================================
 
 void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
   showModalBottomSheet(
@@ -585,7 +633,7 @@ void _showMainSettingsBottomSheet(BuildContext context, BudgetProvider budget, b
                       _showFamilySettingsBottomSheet(context, budget, showSavings);
                     }
                   ),
-                
+                  
                   _buildMenuTile(
                     icon: Icons.pie_chart_outline, color: Colors.orange, title: 'אחוז משתנות (רמת חיים)',
                     onTap: () {

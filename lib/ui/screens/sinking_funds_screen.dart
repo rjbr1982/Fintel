@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fix dialog pop after async gap via try-finally + Root Metrics Sync)
+// 🔒 STATUS: EDITED (Fixed Unified Sinking Funds Mode Logic to respect user settings)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -36,6 +36,7 @@ class SinkingFundsScreen extends StatelessWidget {
             totalAccumulatedBalance += (e.currentBalance ?? 0);
 
             String groupName = '';
+            String modeCategory = e.parentCategory; // משמש לבדיקת מצב התצוגה מול הפרובידר
             
             if (e.parentCategory == 'רכב') {
               groupName = 'רכב';
@@ -43,16 +44,29 @@ class SinkingFundsScreen extends StatelessWidget {
             else if (e.parentCategory == 'ילדים - משתנות') {
               String kName = e.name.replaceAll('בגדים', '').replaceAll('בילויים', '').trim();
               groupName = 'ילדים: $kName';
+              modeCategory = 'ילדים - משתנות';
             } 
             else if (['ילדים - קבועות', 'אבא', 'אמא', 'אישי', 'חגים'].contains(e.parentCategory)) {
               groupName = e.parentCategory;
             }
 
             if (groupName.isNotEmpty) {
-              if (!dynamicFunds.containsKey(groupName)) {
-                dynamicFunds[groupName] = [];
+              int mode = provider.getCategoryUnifiedMode(modeCategory);
+              
+              if (mode == 0) { // מצב 0: נפרד בלבד
+                individualFunds.add(e);
+              } else if (mode == 1) { // מצב 1: מאוחד בלבד
+                if (!dynamicFunds.containsKey(groupName)) {
+                  dynamicFunds[groupName] = [];
+                }
+                dynamicFunds[groupName]!.add(e);
+              } else if (mode == 2) { // מצב 2: משולב (גם וגם)
+                if (!dynamicFunds.containsKey(groupName)) {
+                  dynamicFunds[groupName] = [];
+                }
+                dynamicFunds[groupName]!.add(e);
+                individualFunds.add(e);
               }
-              dynamicFunds[groupName]!.add(e);
             } else {
               individualFunds.add(e);
             }
