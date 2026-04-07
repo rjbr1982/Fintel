@@ -1,7 +1,8 @@
-// 🔒 STATUS: EDITED (Added Target Month selection for actual spending history & Fixed Checkbox State Loss)
+// 🔒 STATUS: EDITED (Integrated Smart Notification Reminder for Weekly Shopping)
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 import '../data/shopping_model.dart';
+import '../services/notification_service.dart'; // 🔔 הזרקת שירות ההתראות
 
 class ShoppingProvider with ChangeNotifier {
   List<ShoppingItem> _items = [];
@@ -71,6 +72,7 @@ class ShoppingProvider with ChangeNotifier {
   Future<void> finalizePurchase() async {
     final db = DatabaseHelper.instance;
     final nowStr = DateTime.now().toIso8601String();
+    bool performedAny = false;
 
     for (int i = 0; i < _items.length; i++) {
       if (_items[i].isChecked) {
@@ -79,9 +81,20 @@ class ShoppingProvider with ChangeNotifier {
           isChecked: false,
         );
         await db.updateShoppingItem(_items[i]);
+        performedAny = true;
       }
     }
+    
     notifyListeners();
+
+    // 🔔 חיווט למנוע ההתראות: אם בוצעה קנייה, תזמן התראה לעוד 6 ימים לקנייה הבאה
+    if (performedAny) {
+      try {
+        await NotificationService.instance.scheduleShoppingReminder();
+      } catch (e) {
+        debugPrint('Error scheduling shopping reminder: $e');
+      }
+    }
   }
 
   Future<void> loadItems() async {

@@ -1,10 +1,11 @@
-// 🔒 STATUS: EDITED (Fixed Real-Time UI Update for Withdrawals and Balance Changes)
+// 🔒 STATUS: EDITED (Integrated Notification Triggers for Load and Withdrawal Limits)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
 import '../data/asset_model.dart';
+import '../services/notification_service.dart'; // 🔔 הזרקת שירות ההתראות
 
 class BudgetProvider with ChangeNotifier {
   List<Expense> _expenses = [];
@@ -123,6 +124,13 @@ class BudgetProvider with ChangeNotifier {
     _bucketWithdrawalDays[bucketName] = day;
     await DatabaseHelper.instance.saveSetting('bucket_day_$bucketName', day.toDouble());
     notifyListeners();
+    
+    // 🔔 חיווט למנוע ההתראות: תזמון "יום המשיכות"
+    try {
+      await NotificationService.instance.scheduleWithdrawalDay(day);
+    } catch (e) {
+      debugPrint('Error scheduling withdrawal day: $e');
+    }
   }
 
   @override
@@ -273,6 +281,15 @@ class BudgetProvider with ChangeNotifier {
       await _performAutoRollover();
       _recalculateAll();
       notifyListeners();
+      
+      // 🔔 חיווט למנוע ההתראות: בדיקת פרימיום וארגון הטיזרים השיווקיים
+      final userRoot = await DatabaseHelper.instance.getUserRootData();
+      final bool isPremium = userRoot?['isPremium'] == true;
+      try {
+        await NotificationService.instance.setupPremiumTeasers(isPremium);
+      } catch (e) {
+        debugPrint('Error setting up premium teasers: $e');
+      }
 
       if (!_isListening) {
         _setupStreams();

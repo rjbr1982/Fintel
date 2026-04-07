@@ -1,27 +1,28 @@
-# Project Status - Dohaham (Fintel)
-**Version:** Constitution 12.87
-**Last Updated:** April 6, 2026
+# Fintel (דוחכם) - Project Status
+**Last Updated:** April 2026
 
-## ✅ What is Working Perfectly (in 'dohaham' main project)
-* **Legal Onboarding:** Mandatory Terms of Use and Privacy Policy acceptance flow integrated into Login via a secure Checkbox and scrollable Modal.
-* **Sinking-Growth Asset (חיסגור):** PCF Auto-Rollover engine now successfully detects assets marked as "Accumulators" (⚡) and directly deposits the monthly free cash flow into them.
-* **Fintel Brain Extractor (Admin):** Local pre-build script (`pack_code.dart`) bundles the entire system codebase into a text asset.
-* **Premium Gating & UI:** Full UI infrastructure for feature locking. Persistent "Founders Gift" logic implemented via Firebase Metrics.
-* **Freedom Gate Flow & UX:** Graceful handling of zero/negative PCF, explicit CTA for Infinity state (∞).
-* **Dynamic Versioning:** Global Header and Admin Dashboard pull live app version directly from `pubspec.yaml` using `package_info_plus`.
-* **Shopping Actuals History:** Users can view historical actual spending per month via a dynamic dropdown.
+## 🚀 Current Phase
+Finalizing Core App Experience (UX/Flows), Freemium Strategy, and Local Notifications. Transitioning to Premium Billing Integration (Sandbox).
 
-## 🚧 Work In Progress (Gamma Phase Transition)
-* **Sandbox Environment Setup:** Enforcing Section 12.7. Transitioning to `fintel_playground` to build the payment gateways and flavors safely.
-* **Hybrid Billing Integration:** Preparing to implement RevenueCat for Native Android IAP, and Web Custom Gateway.
+## ✅ Recent Accomplishments (Latest Session)
+* **Legal Onboarding Post-Auth:** Moved the Terms & Conditions consent to *after* Google Auth. The system now checks `hasAcceptedTerms` in the user's Firebase document, creating a seamless login for returning users while strictly blocking new/unconsented users.
+* **Global Sorting Engine:** Completely rewrote the sorting logic in `BudgetProvider`. Implemented a strict internal hierarchy for Fixed Expenses (Charity -> Housing -> Living -> Vehicle -> Kids -> Holidays -> Media -> Health -> Travel -> Haircut -> Household -> Others), alongside the existing Person and Item Type sorting.
+* **Admin God-Mode Dashboard:** * Added live counters to Smart CTAs (Bottleneck, Churn, Success).
+    * Converted CTAs and Macro Stats into clickable drill-down modals showing specific user emails.
+    * Added copy-to-clipboard and bulk email (`mailto:bcc`) capabilities directly from the dashboard.
+* **Freemium Pivot (Reducing / Debts Screen):** * Opened the base Debts screen to Free users (can add/edit/view debts to keep their cash flow accurate).
+    * Locked the "Time Machine / Sniper" algorithm (accelerated payoff dates) behind a Premium Teaser Card.
+    * Added visual locks (👑) to premium metrics.
+* **Local Notification Engine:** Integrated `flutter_local_notifications` and `timezone`. Created `NotificationService` to handle:
+    * *Operational:* 1st of the month rollover, Custom Withdrawal Day, 6-day Shopping Reminder.
+    * *Conversion:* Smart delayed teasers (14, 30, 60 days) for Free users to upgrade to Premium.
+* **Real-Time UI Fixes:** Fixed optimistic UI updating when executing withdrawals from Sinking Funds.
+* **Academy Update:** Added the "Weekly Digital Shopping Rule" to Chapter 4 (promoting online weekly shopping over physical/monthly shopping).
 
-## 🎯 Next Steps for Next Session (in fintel_playground)
-1. **Initialize Sandbox:** Open `fintel_playground` and verify `pubspec.yaml` before running `flutter pub add purchases_flutter url_launcher`.
-2. **Hybrid Billing Engine:** Implement the platform-specific logic in `PremiumService`.
-3. **Initialize Staging:** Create `fintel-staging` Firebase project and configure Flutter Flavors (Staging/Production).
+## ⏳ Next Steps (Upcoming Session)
+1.  **Fintel Playground:** Move to the Sandbox environment to build and test the Premium Billing infrastructure.
+2.  **Subscription Management:** Integrate in-app purchases (RevenueCat/Stripe) to physically unlock the `isPremium` flag.
+3.  **Advanced Push Notifications:** (Optional) Transition from local to server-side FCM if remote admin triggers are required.
 
-## 📓 Strategic Decision Log
-* **Legal Onboarding Strategy (April 6, 2026):** Decided to enforce Terms of Use and Privacy Policy acceptance via a mandatory checkbox during the Login/Onboarding flow, rather than an intrusive pop-up. Crafted professional legal text protecting the developers from financial liability and clarifying the use of Firebase Auth.
-* **Sinking-Growth Asset / 'חיסגור' (April 6, 2026):** Solved the PCF accumulation loop by routing the unspent PCF into the Assets Portfolio rather than Sinking Funds. Created a toggle ("נכס צובר תזרים לחירות") that allows users to wire their monthly PCF directly into any asset (e.g., a holding tank or directly to a Brokerage account).
-* **Hybrid Billing Architecture (April 6, 2026):** Replaced hardcoded Premium mocks with a `HybridBillingEngine` class to separate Web (Custom Gateway/Stripe) from Native (RevenueCat), ensuring compliance with store policies while saving 30% fees on Web.
-* **Sandbox Doctrine Enforced (March 27, 2026):** All Gamma Phase payment integrations, environment splitting, and new flows must be built and stabilized in `fintel_playground` before manual merging to the main project.
+## 🛑 Known Issues / Tech Debt
+* No critical bugs currently identified. The core loop is stable and perfectly synced with the global sorting and notification engines.
