@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Unified Sinking Funds Mode Logic to respect user settings)
+// 🔒 STATUS: EDITED (Added Null support for Dynamic Ratio Expense Bank Deposits)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -902,7 +902,12 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
               style: const TextStyle(color: Colors.black87),
               controller: _ctrl,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪'),
+              decoration: const InputDecoration(
+                labelText: 'מוגדר כרגע בבנק', 
+                labelStyle: TextStyle(color: Colors.black54), 
+                suffixText: '₪',
+                helperText: 'השאר ריק כדי למחוק הקפאה (איפוס לחישוב דינמי)',
+              ),
             ),
           ],
         ),
@@ -911,15 +916,17 @@ class _EditIndividualBankDepositDialogState extends State<_EditIndividualBankDep
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
             onPressed: () async {
-              final val = double.tryParse(_ctrl.text);
-              if (val != null) {
-                final nav = Navigator.of(context);
-                try {
-                  await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
-                  await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
-                } finally {
-                  nav.pop();
-                }
+              double? val;
+              if (_ctrl.text.trim().isNotEmpty) {
+                val = double.tryParse(_ctrl.text);
+                if (val == null) return;
+              }
+              final nav = Navigator.of(context);
+              try {
+                await Provider.of<BudgetProvider>(context, listen: false).updateBankDeposit(widget.expense.id!, val);
+                await DatabaseHelper.instance.updateUserMetric('hasSinkingFunds', true); // הזרקת המדד
+              } finally {
+                nav.pop();
               }
             },
             child: const Text('שמור'),
@@ -971,7 +978,13 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
               style: const TextStyle(color: Colors.black87),
               controller: _ctrl,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'מוגדר כרגע בבנק', labelStyle: TextStyle(color: Colors.black54), suffixText: '₪', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'מוגדר כרגע בבנק', 
+                labelStyle: TextStyle(color: Colors.black54), 
+                suffixText: '₪', 
+                border: OutlineInputBorder(),
+                helperText: 'השאר ריק כדי לאפס לחישוב דינמי (מחיקת הקפאה)',
+              ),
             ),
           ],
         ),
@@ -980,8 +993,12 @@ class _EditUnifiedBankDepositDialogState extends State<_EditUnifiedBankDepositDi
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
             onPressed: () async {
-              final val = double.tryParse(_ctrl.text);
-              if (val != null && widget.expenses.isNotEmpty) {
+              double? val;
+              if (_ctrl.text.trim().isNotEmpty) {
+                val = double.tryParse(_ctrl.text);
+                if (val == null) return;
+              }
+              if (widget.expenses.isNotEmpty) {
                 final nav = Navigator.of(context);
                 try {
                   final provider = Provider.of<BudgetProvider>(context, listen: false);

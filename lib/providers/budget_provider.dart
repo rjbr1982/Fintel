@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Integrated Notification Triggers for Load and Withdrawal Limits)
+// 🔒 STATUS: EDITED (Added Future Sorting & Fixed Dynamic Bank Deposit Freeze Logic)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -194,6 +194,19 @@ class BudgetProvider with ChangeNotifier {
       }
     }
 
+    // חוקיות מיון עבור ההיררכיה הפנימית בתוך "עתידיות"
+    int getFutureSubcategoryWeight(String parentCategory) {
+      switch (parentCategory) {
+        case 'רכישות גדולות': return 1;
+        case 'רכישות קטנות': return 2;
+        case 'הפקת אירועים': return 3;
+        case 'תיקונים': return 4;
+        case 'רפואי': return 5;
+        case 'חופשה שנתית': return 6;
+        default: return 99;
+      }
+    }
+
     // חוקיות מיון היררכיה משפחתית למשתנות
     int getPersonWeight(String searchString) {
       if (searchString.contains('אבא') || searchString.contains('בעל') || searchString.contains('אישי')) return 1;
@@ -225,10 +238,17 @@ class BudgetProvider with ChangeNotifier {
         if (subCatA != subCatB) return subCatA.compareTo(subCatB);
       }
 
+      // 2ב. מיון היררכי פנימי רק אם מדובר בהוצאות עתידיות!
+      if (a.category == 'עתידיות' && b.category == 'עתידיות') {
+        int subCatA = getFutureSubcategoryWeight(a.parentCategory);
+        int subCatB = getFutureSubcategoryWeight(b.parentCategory);
+        if (subCatA != subCatB) return subCatA.compareTo(subCatB);
+      }
+
       String searchA = "${a.parentCategory} ${a.name}";
       String searchB = "${b.parentCategory} ${b.name}";
 
-      // 2ב. מיון לפי היררכיה משפחתית (אבא -> אמא -> ילדים לפי גיל) - רלוונטי למשתנות
+      // 2ג. מיון לפי היררכיה משפחתית (אבא -> אמא -> ילדים לפי גיל) - רלוונטי למשתנות
       int pA = getPersonWeight(searchA);
       int pB = getPersonWeight(searchB);
       if (pA != pB) return pA.compareTo(pB);
@@ -551,6 +571,16 @@ class BudgetProvider with ChangeNotifier {
     return ratios;
   }
 
+  // >>> הפונקציה הבלעדית לחישוב הקפאת ערך הבנק - מונעת הקפאה על הוצאות דינמיות <<<
+  double? _getCapturedBankDeposit(Expense old) {
+    if (old.actualBankDeposit != null) return old.actualBankDeposit;
+    bool isDynamic = !old.isLocked && (old.allocationRatio != null && old.allocationRatio! > 0) && (old.category == 'משתנות' || old.category == 'עתידיות');
+    if (isDynamic) return null; // לא מקפיאים ערכים דינמיים!
+    int multiplier = old.isPerChild ? childCount : 1;
+    if (multiplier < 1) multiplier = 1;
+    return old.monthlyAmount * multiplier;
+  }
+
   Future<void> resetExpenseToDefault(int expenseId, {bool? isSinking}) async {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index == -1) return;
@@ -575,11 +605,9 @@ class BudgetProvider with ChangeNotifier {
     }
 
     final old = _expenses[index];
-    int multiplier = old.isPerChild ? childCount : 1;
-    if (multiplier < 1) multiplier = 1;
     
     // 🔒 הקפאת ערך הבנק הקודם רגע לפני איפוס היעד
-    double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+    double? capturedBankDeposit = _getCapturedBankDeposit(old);
 
     final updated = Expense(
       id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
@@ -1036,9 +1064,7 @@ class BudgetProvider with ChangeNotifier {
       final old = _expenses[index];
       
       // 🔒 הקפאת ערך הבנק
-      int multiplier = old.isPerChild ? childCount : 1;
-      if (multiplier < 1) multiplier = 1;
-      double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+      double? capturedBankDeposit = _getCapturedBankDeposit(old);
 
       final updated = Expense(
         id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
@@ -1079,9 +1105,7 @@ class BudgetProvider with ChangeNotifier {
       final old = _expenses[index];
       
       // 🔒 הקפאת ערך הבנק
-      int multiplier = old.isPerChild ? childCount : 1;
-      if (multiplier < 1) multiplier = 1;
-      double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+      double? capturedBankDeposit = _getCapturedBankDeposit(old);
 
       final updated = Expense(
         id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
@@ -1105,9 +1129,7 @@ class BudgetProvider with ChangeNotifier {
       final old = _expenses[index];
       
       // 🔒 הקפאת ערך הבנק
-      int multiplier = old.isPerChild ? childCount : 1;
-      if (multiplier < 1) multiplier = 1;
-      double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+      double? capturedBankDeposit = _getCapturedBankDeposit(old);
 
       final updated = Expense(
         id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
@@ -1132,9 +1154,7 @@ class BudgetProvider with ChangeNotifier {
       final old = _expenses[index];
       
       // 🔒 הקפאת ערך הבנק
-      int multiplier = old.isPerChild ? childCount : 1;
-      if (multiplier < 1) multiplier = 1;
-      double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+      double? capturedBankDeposit = _getCapturedBankDeposit(old);
 
       final updated = Expense(
         id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
@@ -1157,9 +1177,7 @@ class BudgetProvider with ChangeNotifier {
       final old = _expenses[index];
       
       // 🔒 הקפאת ערך הבנק רגע לפני עריכת היעד כדי לייצר פער בקרה
-      int multiplier = old.isPerChild ? childCount : 1;
-      if (multiplier < 1) multiplier = 1;
-      double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+      double? capturedBankDeposit = _getCapturedBankDeposit(old);
 
       final updated = Expense(
         id: old.id, name: name ?? old.name, category: old.category, parentCategory: old.parentCategory,
@@ -1186,14 +1204,15 @@ class BudgetProvider with ChangeNotifier {
         final old = _expenses[index];
         
         // 🔒 הקפאת ערך הבנק
-        int multiplier = old.isPerChild ? childCount : 1;
-        if (multiplier < 1) multiplier = 1;
-        double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
+        double? capturedBankDeposit = _getCapturedBankDeposit(old);
         
         Expense updatedExpense = expense;
         // אם הפעולה ב-UI לא שלחה ערך בנקאי, נשמור את המוקפא במקום לתת לו להתאפס ל-Null ולהפעיל את פער הבקרה
         if (expense.actualBankDeposit == null) {
-          updatedExpense = expense.copyWith(actualBankDeposit: capturedBankDeposit);
+          updatedExpense = expense.copyWith(
+            actualBankDeposit: capturedBankDeposit,
+            clearBankDeposit: capturedBankDeposit == null // מוחק הקפאות פיקטיביות ישנות של סעיפים דינמיים!
+          );
         }
         
         await DatabaseHelper.instance.updateExpense(updatedExpense);
