@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added hasAcceptedTerms logic for Legal Onboarding Post-Auth)
+// 🔒 STATUS: EDITED (Updated updateUserMetric to dynamic to support FCM Tokens)
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -38,7 +38,8 @@ class DatabaseHelper {
     }, SetOptions(merge: true));
   }
 
-  Future<void> updateUserMetric(String metricKey, bool value) async {
+  // 🔒 תמיכה בערכים דינמיים (bool, String) לצורך שמירת טוקנים ומדדים
+  Future<void> updateUserMetric(String metricKey, dynamic value) async {
     if (_uid == 'unauthenticated') return;
 
     await _db.collection('users').doc(_uid).set({

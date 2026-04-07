@@ -28,13 +28,14 @@ dependencies:
   local_auth: ^2.2.0
   package_info_plus: ^8.0.0 # 🔒 ADDED: Automatic Version Tracking
   
-  # SaaS & Firebase Cloud (Constitution 5.10)
+  # SaaS & Firebase Cloud (Constitution 5.10 & 5.17)
   firebase_core: ^4.4.0 
   cloud_firestore: ^6.1.2 
   firebase_auth: ^6.1.4 
   google_sign_in: ^6.3.0 
   firebase_ui_auth: ^3.0.1 
   firebase_ui_oauth_google: ^2.0.1 
+  firebase_messaging: ^16.1.2 # 🔒 EDITED: Upgraded version to resolve interface conflict
   url_launcher: ^6.3.2
   shared_preferences: ^2.5.4
 

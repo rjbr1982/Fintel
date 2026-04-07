@@ -1,9 +1,12 @@
-// 🔒 STATUS: NEW (Fintel Smart Notification Engine - 3 Layer Strategy)
+// 🔒 STATUS: EDITED (Hybrid Architecture: FCM for Web, Local for Mobile)
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import '../data/database_helper.dart';
 
 class NotificationService {
   // Singleton Pattern
@@ -13,28 +16,55 @@ class NotificationService {
   NotificationService._();
 
   Future<void> init() async {
-    // 1. אתחול אזורי זמן
-    tz.initializeTimeZones();
-    try {
-      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(timeZoneName));
-    } catch (e) {
-      tz.setLocalLocation(tz.getLocation('Asia/Jerusalem')); // Fallback למקרה שגיאה
+    // 1. אתחול Firebase Cloud Messaging (רלוונטי לכולם, קריטי ל-Web)
+    final messaging = FirebaseMessaging.instance;
+    
+    // בקשת הרשאות מהמשתמש (יקפיץ חלונית בדפדפן או ב-iOS)
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      debugPrint('User granted push permission');
+      // משיכת הטוקן הייחודי של המכשיר/דפדפן ושמירתו ב-Firestore תחת המשתמש
+      try {
+        String? token = await messaging.getToken();
+        if (token != null) {
+          debugPrint('FCM Token: $token');
+          await DatabaseHelper.instance.updateUserMetric('fcmToken', token);
+        }
+      } catch (e) {
+        debugPrint('Error fetching FCM token: $e');
+      }
+
+      // האזנה לרענון טוקנים (במקרה שהדפדפן מחליף טוקן)
+      messaging.onTokenRefresh.listen((newToken) async {
+        await DatabaseHelper.instance.updateUserMetric('fcmToken', newToken);
+      });
     }
 
-    // 2. אתחול הגדרות ה-OS (Android & iOS)
-    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    const InitializationSettings initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
+    // 2. אתחול התראות מקומיות (רק עבור מובייל, נחסם ב-Web)
+    if (!kIsWeb) {
+      tz.initializeTimeZones();
+      try {
+        final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+        tz.setLocalLocation(tz.getLocation(timeZoneName));
+      } catch (e) {
+        tz.setLocalLocation(tz.getLocation('Asia/Jerusalem')); // Fallback
+      }
 
-    await _notificationsPlugin.initialize(initSettings);
-    
-    // 3. בקשת הרשאות מפורשת (קריטי לאנדרואיד 13+ ול-iOS)
-    await _notificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
+      const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: false, // כבר טיפלנו בזה דרך FCM
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      );
+      const InitializationSettings initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
+
+      await _notificationsPlugin.initialize(initSettings);
+    }
   }
 
   NotificationDetails _getDetails() {
@@ -62,13 +92,15 @@ class NotificationService {
 
   /// מתזמן התראת ה-1 לחודש (Auto-Rollover)
   Future<void> scheduleMonthlyRollover() async {
-    await _notificationsPlugin.cancel(101); // ביטול קודם כדי למנוע כפילויות
+    if (kIsWeb) return; // ב-Web התזמון מנוהל בשרת
+
+    await _notificationsPlugin.cancel(101);
     
     final now = tz.TZDateTime.now(tz.local);
     int nextMonth = now.month == 12 ? 1 : now.month + 1;
     int year = now.month == 12 ? now.year + 1 : now.year;
     
-    var scheduledDate = tz.TZDateTime(tz.local, year, nextMonth, 1, 9, 0); // 1 לחודש ב-09:00 בבוקר
+    var scheduledDate = tz.TZDateTime(tz.local, year, nextMonth, 1, 9, 0);
 
     await _notificationsPlugin.zonedSchedule(
       101,
@@ -78,16 +110,18 @@ class NotificationService {
       _getDetails(),
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime, // יחזור על עצמו כל 1 לחודש
+      matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime, 
     );
   }
 
   /// מתזמן את יום המשיכות המרוכז שהמשתמש הגדיר
   Future<void> scheduleWithdrawalDay(int dayOfMonth) async {
+    if (kIsWeb) return; // ב-Web התזמון מנוהל בשרת
+
     await _notificationsPlugin.cancel(102); 
     
     final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, dayOfMonth, 10, 0); // בשעה 10:00
+    var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, dayOfMonth, 10, 0); 
     
     if (scheduledDate.isBefore(now)) {
       int nextMonth = now.month == 12 ? 1 : now.month + 1;
@@ -109,9 +143,10 @@ class NotificationService {
 
   /// תזכורת רמזור קניות (מופעל 6 ימים מהקנייה האחרונה)
   Future<void> scheduleShoppingReminder() async {
+    if (kIsWeb) return; // ב-Web התזמון מנוהל בשרת
+
     await _notificationsPlugin.cancel(103); 
     
-    // קובע התראה לעוד 6 ימים מהיום, בשעה 18:00
     final now = tz.TZDateTime.now(tz.local);
     var scheduledDate = now.add(const Duration(days: 6));
     scheduledDate = tz.TZDateTime(tz.local, scheduledDate.year, scheduledDate.month, scheduledDate.day, 18, 0);
@@ -131,10 +166,11 @@ class NotificationService {
   // שכבה 2: המרה חכמה - פרימיום (Conversion Layer)
   // ==========================================
 
-  /// מתזמן "טפטוף" שיווקי עדין למשתמשים חינמיים. אם משדרגים -> מבטלים.
+  /// מתזמן "טפטוף" שיווקי עדין למשתמשים חינמיים
   Future<void> setupPremiumTeasers(bool isPremium) async {
+    if (kIsWeb) return; // ב-Web התזמון מנוהל בשרת
+
     if (isPremium) {
-      // אם הוא בפרימיום, מבטלים את כל הטיזרים השיווקיים
       await _notificationsPlugin.cancel(301);
       await _notificationsPlugin.cancel(302);
       await _notificationsPlugin.cancel(303);
@@ -143,7 +179,6 @@ class NotificationService {
 
     final now = tz.TZDateTime.now(tz.local);
 
-    // טיזר 1: בעוד 14 ימים (מנוע החירות)
     await _notificationsPlugin.zonedSchedule(
       301,
       'הכסף שלך עובד בשבילך? 💸',
@@ -154,7 +189,6 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
 
-    // טיזר 2: בעוד 30 ימים (מכונת הזמן לחובות)
     await _notificationsPlugin.zonedSchedule(
       302,
       'סיימת לשלם הלוואה? 🎯',
@@ -165,7 +199,6 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
 
-    // טיזר 3: בעוד 60 ימים (ייצוב שכר)
     await _notificationsPlugin.zonedSchedule(
       303,
       'הכנסה תנודתית = גירעון סמוי 📉',
@@ -182,8 +215,14 @@ class NotificationService {
   // ==========================================
 
   Future<void> showImmediateVictory(String title, String body) async {
+    if (kIsWeb) {
+      // ב-Web נציג התראה מקומית בדפדפן אם פתוח, כרגע נשאיר לוג בלבד
+      debugPrint('Victory Web Push: $title - $body');
+      return;
+    }
+
     await _notificationsPlugin.show(
-      999, // מזהה שרירותי חד פעמי
+      999, 
       title,
       body,
       _getDetails(),
