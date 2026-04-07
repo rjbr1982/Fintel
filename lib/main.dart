@@ -1,13 +1,15 @@
-// 🔒 STATUS: EDITED (Removed aggressive session reset from StreamBuilder & Added Hybrid Billing Init)
+// 🔒 STATUS: EDITED (Integrated Local Notifications Engine & Centralized Post-Auth Legal Gate)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb; 
 import 'package:local_auth/local_auth.dart'; 
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // 🔔 תשתית התראות מקומיות
 
 import 'package:firebase_core/firebase_core.dart'; 
 import 'package:firebase_auth/firebase_auth.dart'; 
+import 'package:google_sign_in/google_sign_in.dart'; // הוסף כדי לאפשר ניתוק כפוי
 import 'firebase_options.dart';                    
 
 import 'providers/budget_provider.dart';
@@ -19,7 +21,11 @@ import 'ui/screens/login_screen.dart';
 import 'ui/screens/onboarding_screen.dart'; 
 import 'data/database_helper.dart'; 
 import 'utils/app_localizations.dart';
-import 'services/premium_service.dart'; // הזרקת שירות הפרימיום ואתחול מנוע החיוב
+import 'services/premium_service.dart';
+import 'services/notification_service.dart'; // 🔔 הזרקת שירות ההתראות
+
+// 🔔 מופע גלובלי של מנהל ההתראות
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +36,14 @@ void main() async {
 
   // אתחול מנוע החיוב ההיברידי (Web/Native)
   await HybridBillingEngine.init();
+
+  // 🔔 אתחול מערכת ההתראות המרכזית (כולל אזורי זמן והרשאות)
+  if (!kIsWeb) {
+    await NotificationService.instance.init();
+    
+    // קריאה ראשונית לתזמון התראות התפעול (1 לחודש)
+    await NotificationService.instance.scheduleMonthlyRollover();
+  }
 
   runApp(
     MultiProvider(
@@ -156,14 +170,14 @@ class AuthStreamGate extends StatelessWidget {
           return PostLoginRouter(key: const ValueKey('post_login_router'), user: snapshot.data!);
         }
 
-        // אם הגענו לפה, המשתמש באמת מנותק. ה-reset מתבצע עכשיו בצורה בטוחה רק כפתור ההתנתקות.
+        // המשתמש אכן מנותק, העבר למסך ההתחברות הנקי
         return const LoginScreen(key: ValueKey('login_screen'));
       },
     );
   }
 }
 
-// 🏦 שער 3: חוויית הבנק
+// 🏦 שער 3: חוויית הבנק, סינון משפטי וניתוב פנימי
 class PostLoginRouter extends StatefulWidget {
   final User user;
   const PostLoginRouter({super.key, required this.user});
@@ -176,6 +190,7 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
   bool _isProcessing = true;
   bool _needsOnboarding = false;
   bool _authFailed = false; 
+  bool _needsLegalConsent = false; // דגל הבוחן האם המשתמש טרם אישר תנאים
   late bool _isInitialAuthRun; 
 
   @override
@@ -189,8 +204,22 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
     setState(() {
       _isProcessing = true;
       _authFailed = false;
+      _needsLegalConsent = false;
     });
 
+    // 1. קודם כל: בדיקת תנאי שימוש (Legal Consent)
+    final hasAcceptedTerms = await DatabaseHelper.instance.hasAcceptedTerms();
+    if (!hasAcceptedTerms) {
+      if (mounted) {
+        setState(() {
+          _needsLegalConsent = true;
+          _isProcessing = false;
+        });
+      }
+      return; // עוצרים הכל עד שיאשר
+    }
+
+    // 2. רק אם אישר, ממשיכים לעיבוד הרגיל
     final expenses = await DatabaseHelper.instance.getExpenses();
     _needsOnboarding = expenses.isEmpty;
 
@@ -260,6 +289,70 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
             ]
           )
         )
+      );
+    }
+
+    // אם טרם אישר תנאים, חסום אותו במסך ייעודי (Post-Auth Legal Gate)
+    if (_needsLegalConsent) {
+      return Scaffold(
+        backgroundColor: Colors.grey.shade100,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Card(
+                color: Colors.white,
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.gavel_rounded, size: 48, color: Colors.blueGrey),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'עדכון חשוב בנושא פרטיות',
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'לפני שנתחיל להשתמש ב-Fintel, חשוב לנו לוודא שהפרטיות שלך והמידע הפיננסי שלך מוגנים כראוי.\n\nהאפליקציה אינה מהווה ייעוץ פיננסי, והמידע שלך מאובטח בענן (Google) ולא מועבר לאיש.',
+                        style: TextStyle(fontSize: 15, color: Colors.black87, height: 1.5),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00A3FF),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 32),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () async {
+                          await DatabaseHelper.instance.updateUserMetric('hasAcceptedTerms', true);
+                          // חוזרים למסלול העיבוד הרגיל עכשיו כשיש אישור
+                          _processLogin();
+                        },
+                        child: const Text('קראתי, ואני מאשר/ת את התנאים', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () async {
+                          AppGlobals.resetSession();
+                          try { await GoogleSignIn().disconnect(); } catch (_) {}
+                          await FirebaseAuth.instance.signOut();
+                        },
+                        child: const Text('סרב והתנתק מהחשבון', style: TextStyle(color: Colors.blueGrey)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       );
     }
 

@@ -1,4 +1,4 @@
-// 🔒 STATUS: FINAL (Admin God-Mode Dashboard - Fully Optimized with Smart CTA Drill-downs)
+// 🔒 STATUS: FINAL (Admin God-Mode Dashboard - Clickable Macro Stats & Smart CTAs)
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -266,6 +266,62 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  // --- Simple List Drilldown (For Countries) ---
+  void _showSimpleListDrilldown({required String title, required List<String> items, required Color themeColor}) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(backgroundColor: themeColor.withValues(alpha: 0.1), radius: 16, child: Text('${items.length}', style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 14))),
+                      const SizedBox(width: 12),
+                      Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    ],
+                  ),
+                  IconButton(icon: const Icon(Icons.close, color: Colors.blueGrey), onPressed: () => Navigator.pop(ctx)),
+                ],
+              ),
+              const Divider(),
+              const SizedBox(height: 8),
+              if (items.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: Text('אין נתונים להצגה', style: TextStyle(color: Colors.blueGrey))),
+                )
+              else
+                Flexible(
+                  child: Container(
+                    constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: items.length,
+                      separatorBuilder: (context, index) => const Divider(height: 1),
+                      itemBuilder: (context, index) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        child: Text(items[index], style: const TextStyle(fontSize: 16, color: Colors.black87, fontWeight: FontWeight.w500)),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showAdvancedScreener() {
     final uniqueCountries = _users.map((e) => e.country).toSet().toList();
     uniqueCountries.remove('Unknown');
@@ -384,8 +440,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return const Scaffold(backgroundColor: Color(0xFF121212), body: Center(child: CircularProgressIndicator(color: Colors.amber)));
     }
 
-    final active7Days = _users.where((u) => u.lastActive != null && DateTime.now().difference(u.lastActive!).inDays <= 7).length;
-    final uniqueCountriesCount = _users.map((e) => e.country).where((c) => c != 'Unknown').toSet().length;
+    final activeUsers = _users.where((u) => u.lastActive != null && DateTime.now().difference(u.lastActive!).inDays <= 7).toList();
+    final active7Days = activeUsers.length;
+    
+    final uniqueCountriesList = _users.map((e) => e.country).where((c) => c != 'Unknown').toSet().toList();
+    final uniqueCountriesCount = uniqueCountriesList.length;
 
     // חישוב הרשימות עבור הטריגרים החכמים
     final bottleneckUsers = _users.where((u) => u.createdAt != null && DateTime.now().difference(u.createdAt!).inHours > 48 && !(u.metrics['hasSalary'] ?? false)).map((u) => u.email).toList();
@@ -418,9 +477,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               runSpacing: 16,
               alignment: WrapAlignment.spaceBetween,
               children: [
-                _buildMacroStat('משתמשים', '${_users.length}'),
-                _buildMacroStat('פעילים', '$active7Days'),
-                _buildMacroStat('מדינות', '$uniqueCountriesCount'),
+                _buildMacroStat(
+                  label: 'משתמשים', 
+                  value: '${_users.length}',
+                  onTap: () => _showSmartCTADrilldown(
+                    title: 'כלל המשתמשים', emails: _users.map((u) => u.email).toList(), themeColor: Colors.blueGrey,
+                    defaultSubject: 'עדכון מ-Fintel', defaultBody: ''
+                  ),
+                ),
+                _buildMacroStat(
+                  label: 'פעילים', 
+                  value: '$active7Days',
+                  onTap: () => _showSmartCTADrilldown(
+                    title: 'פעילים (7 ימים)', emails: activeUsers.map((u) => u.email).toList(), themeColor: Colors.blueGrey,
+                    defaultSubject: 'עדכון למשתמשים פעילים', defaultBody: ''
+                  ),
+                ),
+                _buildMacroStat(
+                  label: 'מדינות', 
+                  value: '$uniqueCountriesCount',
+                  onTap: () => _showSimpleListDrilldown(
+                    title: 'מדינות פעילות', items: uniqueCountriesList, themeColor: Colors.blueGrey
+                  ),
+                ),
                 if (!_isCommercial)
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87, padding: const EdgeInsets.symmetric(horizontal: 12)),
@@ -563,14 +642,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildMacroStat(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-      ],
+  Widget _buildMacroStat({required String label, required String value, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+            Text(label, style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+          ],
+        ),
+      ),
     );
   }
 

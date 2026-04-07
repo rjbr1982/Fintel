@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Global Sorting Engine & Fixed Sinking-Growth Rollover)
+// 🔒 STATUS: EDITED (Fixed Real-Time UI Update for Withdrawals and Balance Changes)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -154,6 +154,7 @@ class BudgetProvider with ChangeNotifier {
       return n;
     }).toList();
 
+    // חוקיות מיון עבור קטגוריית העל (1: הכנסות, 2: קבועות וכו')
     int getCategoryWeight(String category) {
       switch (category) {
         case 'הכנסות': return 1;
@@ -166,6 +167,26 @@ class BudgetProvider with ChangeNotifier {
       }
     }
 
+    // חוקיות מיון עבור ההיררכיה הפנימית בתוך "הוצאות קבועות"
+    int getFixedSubcategoryWeight(String parentCategory) {
+      switch (parentCategory) {
+        case 'צדקה': return 1;
+        case 'תרומות': return 1; // זהה לצדקה
+        case 'דיור': return 2;
+        case 'מגורים': return 3;
+        case 'רכב': return 4;
+        case 'ילדים - קבועות': return 5;
+        case 'חגים': return 6;
+        case 'מדיה': return 7;
+        case 'קופת חולים': return 8;
+        case 'נסיעות': return 9;
+        case 'תספורת': return 10;
+        case 'קטנות לבית': return 11;
+        default: return 99; // כל הוצאה שנוספה עצמאית תרד לסוף הרשימה
+      }
+    }
+
+    // חוקיות מיון היררכיה משפחתית למשתנות
     int getPersonWeight(String searchString) {
       if (searchString.contains('אבא') || searchString.contains('בעל') || searchString.contains('אישי')) return 1;
       if (searchString.contains('אמא') || searchString.contains('אישה')) return 2;
@@ -175,6 +196,7 @@ class BudgetProvider with ChangeNotifier {
       return 99;
     }
 
+    // חוקיות סוג הוצאה במשתנות
     int getTypeWeight(String name) {
       if (name.contains('בגדים')) return 1;
       if (name.contains('בילויים')) return 2;
@@ -188,10 +210,17 @@ class BudgetProvider with ChangeNotifier {
       int catB = getCategoryWeight(b.category);
       if (catA != catB) return catA.compareTo(catB);
 
+      // 2א. מיון היררכי פנימי רק אם מדובר בהוצאות קבועות!
+      if (a.category == 'קבועות' && b.category == 'קבועות') {
+        int subCatA = getFixedSubcategoryWeight(a.parentCategory);
+        int subCatB = getFixedSubcategoryWeight(b.parentCategory);
+        if (subCatA != subCatB) return subCatA.compareTo(subCatB);
+      }
+
       String searchA = "${a.parentCategory} ${a.name}";
       String searchB = "${b.parentCategory} ${b.name}";
 
-      // 2. מיון לפי היררכיה משפחתית (אבא -> אמא -> ילדים לפי גיל)
+      // 2ב. מיון לפי היררכיה משפחתית (אבא -> אמא -> ילדים לפי גיל) - רלוונטי למשתנות
       int pA = getPersonWeight(searchA);
       int pB = getPersonWeight(searchB);
       if (pA != pB) return pA.compareTo(pB);
@@ -201,7 +230,7 @@ class BudgetProvider with ChangeNotifier {
       int tB = getTypeWeight(b.name);
       if (tA != tB) return tA.compareTo(tB);
       
-      // 4. מיון אלפביתי מקבץ עבור קטגוריות אב רגילות (למשל רכב, דיור)
+      // 4. מיון אלפביתי מקבץ (Fall-back) עבור קטגוריות אב שוות משקל
       int parentCmp = (a.parentCategory).compareTo(b.parentCategory);
       if (parentCmp != 0) return parentCmp;
 
@@ -1110,7 +1139,7 @@ class BudgetProvider with ChangeNotifier {
     if (index != -1) {
       final old = _expenses[index];
       
-      // 🔒 הקפאת ערך הבנק רגע לפני עריכת היעד כדי לייצר את פער הבקרה
+      // 🔒 הקפאת ערך הבנק רגע לפני עריכת היעד כדי לייצר פער בקרה
       int multiplier = old.isPerChild ? childCount : 1;
       if (multiplier < 1) multiplier = 1;
       double capturedBankDeposit = old.actualBankDeposit ?? (old.monthlyAmount * multiplier);
@@ -1415,6 +1444,10 @@ class BudgetProvider with ChangeNotifier {
       isBusiness: expense.isBusiness, businessIncomes: expense.businessIncomes, businessExpenses: expense.businessExpenses, businessWorkingHours: expense.businessWorkingHours,
       actualBankDeposit: expense.actualBankDeposit,
     );
+    
+    _expenses[index] = updated; // עדכון מיידי בזיכרון (Optimistic Update)
+    notifyListeners();          // דחיפת הרענון לממשק (UI) באופן מיידי
+    
     await DatabaseHelper.instance.updateExpense(updated);
   }
 

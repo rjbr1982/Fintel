@@ -1,8 +1,9 @@
-// 🔒 STATUS: EDITED (Robust Google Auth, Deep Clean Session & Legal Onboarding - Checkbox Visibility Fix)
+// 🔒 STATUS: EDITED (Legal Onboarding Post-Auth Flow Implemented)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../../data/database_helper.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,7 +14,6 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
-  bool _termsAccepted = false; // דגל לאישור תנאי השימוש והפרטיות
 
   @override
   void initState() {
@@ -33,23 +33,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
-    // וידוא שהמשתמש אישר את תנאי השימוש לפני תחילת תהליך ההזדהות (איסוף המייל)
-    if (!_termsAccepted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('יש לאשר את תנאי השימוש ומדיניות הפרטיות כדי להמשיך.'),
-          backgroundColor: Colors.redAccent,
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
       // ניתוק מקדים לפני ניסיון התחברות כדי להבטיח בחירת חשבון נקייה
       await _forceDeepSignOut();
+
+      UserCredential? userCredential;
 
       if (kIsWeb) {
         final googleProvider = GoogleAuthProvider();
@@ -58,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // הגדרה זו מכריחה את גוגל להציג את חלונית בחירת החשבונות תמיד
         googleProvider.setCustomParameters({'prompt': 'select_account'});
         
-        await FirebaseAuth.instance.signInWithPopup(googleProvider);
+        userCredential = await FirebaseAuth.instance.signInWithPopup(googleProvider);
       } else {
         final GoogleSignIn googleSignIn = GoogleSignIn();
         
@@ -79,7 +69,21 @@ class _LoginScreenState extends State<LoginScreen> {
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
-        await FirebaseAuth.instance.signInWithCredential(credential);
+        userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      }
+      
+      if (userCredential.user != null) {
+        // המשתמש אומת מול גוגל. כעת נבדוק אם הוא אישר בעבר את התנאים
+        bool hasAccepted = await DatabaseHelper.instance.hasAcceptedTerms();
+        
+        if (!hasAccepted) {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            _showLegalDialog(); // הקפצת מסך חוסם לאישור
+          }
+          return;
+        }
+        // במידה וכבר אישר בעבר, מנוע הניווט הראשי (main.dart) יעביר אותו אוטומטית לדשבורד
       }
       
     } on FirebaseAuthException catch (e) {
@@ -102,40 +106,46 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      // אנחנו לא מסיימים את טעינת המסך אם אנחנו מחכים לחלונית האישור
+      if (mounted && FirebaseAuth.instance.currentUser == null) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   void _showLegalDialog() {
     showDialog(
       context: context,
+      barrierDismissible: false, // לא ניתן לסגור בלחיצה מחוץ לחלון
       builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Container(
-            constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'תנאי שימוש ומדיניות פרטיות',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: const SingleChildScrollView(
-                      physics: BouncingScrollPhysics(),
-                      child: Text(
-                        '''תנאי שימוש באפליקציית Fintel (דוחכם)
+        return PopScope(
+          canPop: false, // מניעת סגירה על ידי כפתור חזור של מערכת ההפעלה
+          child: Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'תנאי שימוש ומדיניות פרטיות',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: const SingleChildScrollView(
+                        physics: BouncingScrollPhysics(),
+                        child: Text(
+                          '''תנאי שימוש באפליקציית Fintel (דוחכם)
 1. הסכמה לתנאים: השימוש באפליקציית Fintel ("האפליקציה") מהווה את הסכמתך המלאה לתנאים המפורטים להלן ולמדיניות הפרטיות. 
 2. מהות השירות ואי-תלות (Disclaimer): האפליקציה מהווה כלי טכנולוגי לניהול תקציב, תכנון תזרים ומעקב אחר נכסים. המידע, הנתונים והתחזיות המופקים על ידי "מנוע החירות" או כל רכיב אחר במערכת ניתנים כמות שהם (AS IS). אין באמור באפליקציה משום ייעוץ פיננסי, פנסיוני, השקעות או מס, ואין בו כדי להחליף ייעוץ מקצועי ואישי. האחריות על כל החלטה כלכלית או השקעה חלה על המשתמש בלבד.
 3. הגבלת אחריות: מפתחי האפליקציה אינם אחראים לכל נזק, הפסד או אובדן כספי, ישיר או עקיף, העלול להיגרם כתוצאה מהסתמכות על חישובי המערכת, שיבושים בקווי תקשורת, הפסקות זמניות בשירותי הענן (Firebase), או תקלות במערכת ההפעלה של המכשיר.
@@ -148,33 +158,44 @@ class _LoginScreenState extends State<LoginScreen> {
 3. שימוש במידע אישי: האפליקציה אוספת את כתובת הדואר האלקטרוני, השם המלא ותמונת הפרופיל שלך המשויכים לחשבון ה-Google. נתונים אלו נועדו לזיהוי בעלי המידע ולמתן שירות אישי, וכן לצורך שליחת עדכונים מערכתיים או הצעות רלוונטיות, הניתנים להסרה בכל עת. המידע הפיננסי שלך פרטי ולעולם לא יימכר לצדדים שלישיים.
 4. גלישה בטוחה והצפנה: התקשורת בין האפליקציה לשרתי הענן מאובטחת ומוצפנת בסטנדרטים בינלאומיים מתקדמים (HTTPS/TLS). הגישה למסד הנתונים חסומה ברמת השרת (Security Rules) ומורשית אך ורק לבעל החשבון המאומת.
 5. הגנת המכשיר המקומי: האפליקציה מציעה מנגנון נעילה ביומטרית (טביעת אצבע/זיהוי פנים) כשכבת הגנה נוספת. באחריות המשתמש להפעיל מנגנון זה דרך מסך ההגדרות למניעת גישה לא מורשית.''',
-                        style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
-                        textAlign: TextAlign.right,
-                        textDirection: TextDirection.rtl,
+                          style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
+                          textAlign: TextAlign.right,
+                          textDirection: TextDirection.rtl,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00A3FF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00A3FF),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () async {
+                      // שומרים את ההסכמה בענן של המשתמש
+                      await DatabaseHelper.instance.updateUserMetric('hasAcceptedTerms', true);
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                        // לאחר האישור והסגירה, מנוע ה-main.dart שמקשיב ל-Firebase Auth יעביר אותו פנימה
+                      }
+                    },
+                    child: const Text('קראתי ואני מאשר/ת', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
-                  onPressed: () {
-                    setState(() => _termsAccepted = true);
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('קראתי ואני מאשר/ת', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('סגור ללא אישור', style: TextStyle(color: Colors.blueGrey)),
-                )
-              ],
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () async {
+                      // אם סירב לאשר - מנתקים אותו מיד מגוגל ומחזירים למסך הראשי
+                      await _forceDeepSignOut();
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    child: const Text('סגור ללא אישור (התנתק)', style: TextStyle(color: Colors.blueGrey)),
+                  )
+                ],
+              ),
             ),
           ),
         );
@@ -247,50 +268,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
-
-                    // רכיב אישור תנאי השימוש (Legal Onboarding) הבהרה וצבע כהה
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _termsAccepted ? Colors.grey.shade300 : Colors.red.shade200, width: 1),
-                      ),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                            value: _termsAccepted,
-                            activeColor: const Color(0xFF00A3FF),
-                            side: const BorderSide(color: Colors.black87, width: 2.0), // עיבוי וצביעה לכהה לבולטות
-                            onChanged: (bool? value) {
-                              setState(() => _termsAccepted = value ?? false);
-                            },
-                          ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: _showLegalDialog,
-                              child: const Text.rich(
-                                TextSpan(
-                                  text: 'אני מאשר/ת את ',
-                                  style: TextStyle(color: Colors.black87, fontSize: 14),
-                                  children: [
-                                    TextSpan(
-                                      text: 'תנאי השימוש ומדיניות הפרטיות',
-                                      style: TextStyle(
-                                        color: Color(0xFF00A3FF),
-                                        fontWeight: FontWeight.bold,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
 
                     _isLoading
                         ? const CircularProgressIndicator(color: Color(0xFF00A3FF))

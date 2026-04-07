@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Premium Crown Logic & Unified Freedom Settings Dialog UI, Added Info Icons)
+// 🔒 STATUS: EDITED (Removed Premium Lock from Debts Row, Added Asset Link in Freedom Settings)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -261,9 +261,8 @@ class PnLScreen extends StatelessWidget {
   Widget _buildDebtRow(BuildContext context, double amount, bool isFutureMode) {
     return InkWell(
       onTap: () {
-        PremiumService.requirePremium(context, () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const ReducingScreen()));
-        });
+        // הוסרה חומת התשלום (PremiumService.requirePremium) - עכשיו כולם יכולים להכנס למסך הבסיסי
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const ReducingScreen()));
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 8.0),
@@ -281,8 +280,7 @@ class PnLScreen extends StatelessWidget {
                     decoration: isFutureMode ? TextDecoration.lineThrough : null
                   )
                 ),
-                const SizedBox(width: 6),
-                const Icon(Icons.workspace_premium, color: Colors.amber, size: 16),
+                // הוסר אייקון הכתר (המסך פתוח חינם)
               ],
             ),
             Row(
@@ -506,6 +504,22 @@ class PnLScreen extends StatelessWidget {
                         prefixIcon: Icon(Icons.account_balance_wallet, color: Colors.blueGrey),
                         enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
                         focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        PremiumService.requirePremium(context, () {
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const AssetsScreen()));
+                        });
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 4.0),
+                        child: Text(
+                          'ההון העצמי נשאב אוטומטית מתיק הנכסים. להזנת חסכונות או השקעות עברו אל ⬅️ ניהול נכסים 👑',
+                          style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),

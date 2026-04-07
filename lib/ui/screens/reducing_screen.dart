@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
+// 🔒 STATUS: EDITED (Freemium Teaser for Time Machine & Open Base Debt Entry)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/debt_provider.dart';
@@ -7,9 +7,35 @@ import '../../data/debt_model.dart';
 import '../../utils/app_localizations.dart';
 import '../widgets/global_header.dart';
 import 'debt_schedule_screen.dart';
+import '../../services/premium_service.dart';
+import '../../data/database_helper.dart';
 
-class ReducingScreen extends StatelessWidget {
+class ReducingScreen extends StatefulWidget {
   const ReducingScreen({super.key});
+
+  @override
+  State<ReducingScreen> createState() => _ReducingScreenState();
+}
+
+class _ReducingScreenState extends State<ReducingScreen> {
+  bool _isPremium = false;
+  bool _isLoadingPremium = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPremiumStatus();
+  }
+
+  Future<void> _checkPremiumStatus() async {
+    final data = await DatabaseHelper.instance.getUserRootData();
+    if (mounted) {
+      setState(() {
+        _isPremium = data?['isPremium'] == true;
+        _isLoadingPremium = false;
+      });
+    }
+  }
 
   // === פונקציית עזר לתמרורי הדרכה ===
   void _showInfoDialog(BuildContext context, String title, String content) {
@@ -65,19 +91,25 @@ class ReducingScreen extends StatelessWidget {
       appBar: GlobalHeader(
         title: loc?.get('debts_title') ?? 'מכונת זמן פיננסית',
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _isLoadingPremium ? null : FloatingActionButton(
         onPressed: () => _showDebtDialog(context, debtProvider),
         backgroundColor: const Color(0xFF00A3FF), 
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: Column(
+      body: _isLoadingPremium 
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A3FF)))
+        : Column(
         children: [
           if (!hasActiveDebts) 
             Expanded(child: _buildVictoryState()) 
           else ...[
             const SizedBox(height: 8),
-            _buildMissionCard(actualMissionAmount, targetDebt),
-            _buildTimeMachineHeader(context, originalFinalDate, acceleratedFinalDate),
+            if (_isPremium) ...[
+              _buildMissionCard(actualMissionAmount, targetDebt),
+              _buildTimeMachineHeader(context, originalFinalDate, acceleratedFinalDate),
+            ] else ...[
+              _buildPremiumTeaserCard(context),
+            ],
             
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.0),
@@ -106,6 +138,63 @@ class ReducingScreen extends StatelessWidget {
             ),
           ]
         ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumTeaserCard(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        PremiumService.requirePremium(context, () {
+          setState(() => _isPremium = true);
+        });
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.blueGrey.shade900, Colors.black87],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4))],
+        ),
+        child: Column(
+          children: [
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.workspace_premium, color: Colors.amber, size: 24),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text('מתי באמת תסיימו לשלם את החובות?', 
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'מערכת הצלף של Fintel מחשבת כיצד הסטה של העודפים התזרימיים שלכם תחסל את ההלוואות שנים מוקדם יותר ותחסוך לכם אלפי שקלים בריבית. פתחו את מכונת הזמן כדי לראות את לוח הסילוקין המואץ.',
+              style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+              ),
+              child: const Text('לפתיחת מכונת הזמן 👑', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
+            )
+          ],
+        ),
       ),
     );
   }
@@ -310,8 +399,10 @@ class ReducingScreen extends StatelessWidget {
   }
 
   Widget _buildDebtCard(BuildContext context, Debt debt, bool isTarget, DateTime? payoffDate, double acceleratedPayment, DebtProvider provider) {
-    final statusColor = isTarget ? const Color(0xFFFF4B4B) : Colors.black87;
-    final dateStr = payoffDate != null ? "${payoffDate.month.toString().padLeft(2, '0')}/${payoffDate.year}" : "--";
+    final statusColor = (_isPremium && isTarget) ? const Color(0xFFFF4B4B) : Colors.black87;
+    final dateStr = _isPremium 
+        ? (payoffDate != null ? "${payoffDate.month.toString().padLeft(2, '0')}/${payoffDate.year}" : "--") 
+        : "נעול 👑";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -319,8 +410,8 @@ class ReducingScreen extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isTarget ? statusColor.withValues(alpha: 0.5) : Colors.black12, 
-          width: isTarget ? 2 : 1
+          color: (_isPremium && isTarget) ? statusColor.withValues(alpha: 0.5) : Colors.black12, 
+          width: (_isPremium && isTarget) ? 2 : 1
         ),
         boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
       ),
@@ -342,7 +433,7 @@ class ReducingScreen extends StatelessWidget {
                     )
                   ),
                 ),
-                if (isTarget)
+                if (_isPremium && isTarget)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(color: statusColor, borderRadius: BorderRadius.circular(4)),
@@ -376,7 +467,7 @@ class ReducingScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('החזר בסיס: ₪${debt.monthlyPayment.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, color: Colors.black38)),
-                    if (isTarget)
+                    if (_isPremium && isTarget)
                       Text(
                         'החזר מואץ: ₪${acceleratedPayment.toStringAsFixed(0)}', 
                         style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red[900], fontSize: 15)

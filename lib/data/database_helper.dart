@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added User Root Methods for Premium/Paywall Management)
+// 🔒 STATUS: EDITED (Added hasAcceptedTerms logic for Legal Onboarding Post-Auth)
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -47,6 +47,23 @@ class DatabaseHelper {
       },
       'lastActive': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+  }
+
+  // בדיקה האם המשתמש כבר אישר את תנאי השימוש בעבר
+  Future<bool> hasAcceptedTerms() async {
+    if (_uid == 'unauthenticated') return false;
+    try {
+      final doc = await _db.collection('users').doc(_uid).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        if (data.containsKey('metrics') && data['metrics'] is Map) {
+          return data['metrics']['hasAcceptedTerms'] == true;
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
   }
 
   // ==========================================
