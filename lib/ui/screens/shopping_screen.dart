@@ -1,11 +1,11 @@
-// 🔒 STATUS: EDITED (Enhanced Search Bar UI Contrast and Visibility)
+// 🔒 STATUS: EDITED (Migrated sorting persistence from SharedPreferences to Cloud-Sync via DatabaseHelper)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/shopping_provider.dart';
 import '../../providers/budget_provider.dart'; 
 import '../../data/shopping_model.dart';
 import '../../data/expense_model.dart';
+import '../../data/database_helper.dart';
 import '../widgets/global_header.dart';
 
 class ShoppingScreen extends StatefulWidget {
@@ -17,14 +17,11 @@ class ShoppingScreen extends StatefulWidget {
 
 class _ShoppingScreenState extends State<ShoppingScreen> {
   String _selectedCategory = 'הכל';
-  
   List<String> _allSortOptions = ['סיווג', 'שם', 'מחיר', 'תדירות', 'קנייה אחרונה'];
   List<String> _activeSorts = ['סיווג', 'שם']; 
-  
   int _comparisonOffset = 0; 
   double _textScale = 1.0;
   bool _showOnlyChecked = false;
-
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -32,13 +29,9 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   void initState() {
     super.initState();
     _loadSortPreferences();
-    
     _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.toLowerCase();
-      });
+      setState(() { _searchQuery = _searchController.text.toLowerCase(); });
     });
-
     Future.microtask(() {
       if (mounted) {
         context.read<ShoppingProvider>().loadItems();
@@ -47,22 +40,25 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   }
 
   Future<void> _loadSortPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedActive = prefs.getStringList('shopping_active_sorts');
-    final savedAll = prefs.getStringList('shopping_all_sorts');
-    
-    if (savedActive != null && savedActive.isNotEmpty && savedAll != null && savedAll.isNotEmpty) {
-      setState(() {
-        _activeSorts = savedActive;
-        _allSortOptions = savedAll;
-      });
+    final userData = await DatabaseHelper.instance.getUserRootData();
+    if (userData != null && userData.containsKey('metrics')) {
+      final metrics = userData['metrics'] as Map<String, dynamic>;
+      if (metrics.containsKey('shopping_active_sorts') && metrics.containsKey('shopping_all_sorts')) {
+        final savedActive = List<String>.from(metrics['shopping_active_sorts']);
+        final savedAll = List<String>.from(metrics['shopping_all_sorts']);
+        if (savedActive.isNotEmpty && savedAll.isNotEmpty) {
+          setState(() {
+            _activeSorts = savedActive;
+            _allSortOptions = savedAll;
+          });
+        }
+      }
     }
   }
 
   Future<void> _saveSortPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('shopping_active_sorts', _activeSorts);
-    await prefs.setStringList('shopping_all_sorts', _allSortOptions);
+    await DatabaseHelper.instance.updateUserMetric('shopping_active_sorts', _activeSorts);
+    await DatabaseHelper.instance.updateUserMetric('shopping_all_sorts', _allSortOptions);
   }
 
   @override
@@ -71,7 +67,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     super.dispose();
   }
 
-  // === פונקציית עזר לתמרורי הדרכה ===
   void _showInfoDialog(BuildContext context, String title, String content) {
     showDialog(
       context: context,
@@ -120,18 +115,16 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       return false;
     }
     final now = DateTime.now();
-    int daysToSubtract = now.weekday == 7 ? 0 : now.weekday;
+    int daysToSubtract = (now.weekday == 7) ? 0 : now.weekday;
     final startOfCurrentWeek = DateTime(now.year, now.month, now.day).subtract(Duration(days: daysToSubtract));
-    
     final startOfTargetWeek = startOfCurrentWeek.add(Duration(days: offset * 7));
     final endOfTargetWeek = startOfTargetWeek.add(const Duration(days: 7));
-
-    return item.lastPurchaseDateTime!.isAfter(startOfTargetWeek.subtract(const Duration(seconds: 1))) && 
+    return item.lastPurchaseDateTime!.isAfter(startOfTargetWeek.subtract(const Duration(seconds: 1))) &&
            item.lastPurchaseDateTime!.isBefore(endOfTargetWeek);
   }
 
   List<int> _getWeekOptions() {
-    return List.generate(25, (index) => -(index + 2)); 
+    return List.generate(25, (index) => -(index + 2));
   }
 
   String _getWeekLabel(int offset) {
@@ -142,17 +135,13 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       return "שבוע שעבר";
     }
     int weeksAgo = offset.abs();
-    if (weeksAgo % 4 == 0) {
-      return "לפני ${weeksAgo ~/ 4} חודשים";
-    }
-    return "לפני $weeksAgo שבועות";
+    return (weeksAgo % 4 == 0) ? "לפני ${weeksAgo ~/ 4} חודשים" : "לפני $weeksAgo שבועות";
   }
 
   @override
   Widget build(BuildContext context) {
     final shoppingProvider = context.watch<ShoppingProvider>();
     final budgetProvider = context.watch<BudgetProvider>();
-    
     final groceryExpense = budgetProvider.expenses.firstWhere(
       (e) => e.name.trim() == 'קניות' || (e.category == 'משתנות' && e.parentCategory == 'קניות'),
       orElse: () => Expense(
@@ -165,11 +154,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         frequency: Frequency.MONTHLY,
       ),
     );
-    
-    final double budgetLimit = groceryExpense.isLocked 
-        ? (groceryExpense.manualAmount ?? 0) 
-        : groceryExpense.originalAmount;
-
+    final double budgetLimit = groceryExpense.isLocked ? (groceryExpense.manualAmount ?? 0) : groceryExpense.originalAmount;
     final double plannedMonthly = shoppingProvider.totalMonthlyPlannedCost;
     final double actualMonthly = shoppingProvider.actualMonthlySpent;
     final double currentBasket = shoppingProvider.currentBasketTotal;
@@ -177,15 +162,10 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     if (!shoppingProvider.availableCategories.contains(_selectedCategory)) {
       _selectedCategory = 'הכל';
     }
-
-    List<ShoppingItem> displayedItems = _selectedCategory == 'הכל'
-        ? List.from(shoppingProvider.items)
-        : shoppingProvider.items.where((i) => i.category == _selectedCategory).toList();
-
+    List<ShoppingItem> displayedItems = (_selectedCategory == 'הכל') ? List.from(shoppingProvider.items) : shoppingProvider.items.where((i) => i.category == _selectedCategory).toList();
     if (_showOnlyChecked) {
       displayedItems = displayedItems.where((i) => shoppingProvider.isChecked(i.id ?? -1)).toList();
     }
-
     if (_searchQuery.isNotEmpty) {
       displayedItems = displayedItems.where((i) => i.name.toLowerCase().contains(_searchQuery)).toList();
     }
@@ -194,19 +174,18 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       for (String sort in _activeSorts) {
         int result = 0;
         if (sort == 'מחיר') {
-          result = b.price.compareTo(a.price); 
+          result = b.price.compareTo(a.price);
         } else if (sort == 'תדירות') {
           result = a.frequencyWeeks.compareTo(b.frequencyWeeks);
         } else if (sort == 'קנייה אחרונה') {
           final ad = a.lastPurchaseDateTime ?? DateTime(2000);
           final bd = b.lastPurchaseDateTime ?? DateTime(2000);
-          result = bd.compareTo(ad); 
+          result = bd.compareTo(ad);
         } else if (sort == 'סיווג') {
           result = a.category.compareTo(b.category);
         } else if (sort == 'שם') {
           result = a.name.compareTo(b.name);
         }
-        
         if (result != 0) {
           return result;
         }
@@ -221,17 +200,35 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: const GlobalHeader(title: 'רשימת קניות'),
-      floatingActionButton: currentBasket > 0 
-          ? null 
-          : FloatingActionButton(
-              backgroundColor: const Color(0xFF121212),
-              onPressed: () => _showItemEditor(context, shoppingProvider),
-              child: const Icon(Icons.add, color: Colors.white),
+      appBar: GlobalHeader(
+        title: 'רשימת קניות',
+        actions: [
+          IconButton(
+            icon: Icon(
+              budgetProvider.notifShoppingReminder ? Icons.notifications_active : Icons.notifications_off_outlined,
+              color: budgetProvider.notifShoppingReminder ? Colors.blue : Colors.blueGrey,
+              size: 22,
             ),
+            tooltip: budgetProvider.notifShoppingReminder ? 'התראת קניות פעילה' : 'התראת קניות כבויה',
+            onPressed: () {
+              budgetProvider.updateNotificationSetting('notif_shopping', !budgetProvider.notifShoppingReminder);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(budgetProvider.notifShoppingReminder ? 'תזכורת קניות שבועית הופעלה!' : 'תזכורת קניות בוטלה.'),
+                backgroundColor: budgetProvider.notifShoppingReminder ? Colors.green : Colors.blueGrey,
+                duration: const Duration(seconds: 2),
+              ));
+            },
+          ),
+        ],
+      ),
+      floatingActionButton: (currentBasket > 0) ? null : FloatingActionButton(
+        backgroundColor: const Color(0xFF121212),
+        onPressed: () => _showItemEditor(context, shoppingProvider),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
       body: Column(
         children: [
-          _buildEnhancedBudgetCard(budgetLimit, plannedMonthly, actualMonthly),
+          _buildEnhancedBudgetCard(budgetLimit, plannedMonthly, actualMonthly, shoppingProvider),
           _buildSearchBarAndActions(),
           _buildComparisonNavigator(),
           Padding(
@@ -243,10 +240,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                   children: [
                     Icon(Icons.layers, size: 18 * _textScale, color: Colors.blueGrey),
                     SizedBox(width: 8 * _textScale),
-                    Text(
-                      "$_selectedCategory | מיון: $sortDisplay",
-                      style: TextStyle(fontSize: 13 * _textScale, color: Colors.blueGrey, fontWeight: FontWeight.w500),
-                    ),
+                    Text("$_selectedCategory | מיון: $sortDisplay", style: TextStyle(fontSize: 13 * _textScale, color: Colors.blueGrey, fontWeight: FontWeight.w500)),
                   ],
                 ),
                 _buildControlMenu(shoppingProvider),
@@ -257,41 +251,30 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
           Expanded(
             child: Stack(
               children: [
-                displayedItems.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                        itemCount: displayedItems.length,
-                        separatorBuilder: (context, index) => SizedBox(height: 8 * _textScale),
-                        itemBuilder: (context, index) {
-                          final item = displayedItems[index];
-                          final bool wasPurchased = _wasItemPurchasedInWeek(item, _comparisonOffset);
-                          Widget tile = _buildComparisonTile(item, shoppingProvider, wasPurchased);
-
-                          if (_activeSorts.isNotEmpty && _activeSorts.first == 'סיווג' && _selectedCategory == 'הכל' && _searchQuery.isEmpty) {
-                            bool isFirst = index == 0;
-                            bool isNewCat = isFirst || displayedItems[index - 1].category != item.category;
-                            
-                            if (isNewCat) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding: EdgeInsets.only(top: 12 * _textScale, bottom: 6 * _textScale, right: 4),
-                                    child: Text(
-                                      item.category,
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14 * _textScale, color: Colors.blueGrey),
-                                    ),
-                                  ),
-                                  tile,
-                                ],
-                              );
-                            }
-                          }
-                          
-                          return tile;
-                        },
-                      ),
+                displayedItems.isEmpty ? _buildEmptyState() : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                  itemCount: displayedItems.length,
+                  separatorBuilder: (context, index) => SizedBox(height: 8 * _textScale),
+                  itemBuilder: (context, index) {
+                    final item = displayedItems[index];
+                    final bool wasPurchased = _wasItemPurchasedInWeek(item, _comparisonOffset);
+                    Widget tile = _buildComparisonTile(item, shoppingProvider, wasPurchased);
+                    if (_activeSorts.isNotEmpty && _activeSorts.first == 'סיווג' && _selectedCategory == 'הכל' && _searchQuery.isEmpty) {
+                      bool isFirst = (index == 0);
+                      bool isNewCat = isFirst || (displayedItems[index - 1].category != item.category);
+                      if (isNewCat) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(padding: EdgeInsets.only(top: 12 * _textScale, bottom: 6 * _textScale, right: 4), child: Text(item.category, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14 * _textScale, color: Colors.blueGrey))),
+                            tile,
+                          ],
+                        );
+                      }
+                    }
+                    return tile;
+                  },
+                ),
                 if (currentBasket > 0) _buildActiveBasketBar(currentBasket, shoppingProvider),
               ],
             ),
@@ -306,882 +289,115 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
         children: [
-          Expanded(
-            child: Container(
-              height: 46 * _textScale, // Increased height slightly
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(10), // Subtle shadow
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: TextField(
-                controller: _searchController,
-                style: TextStyle(fontSize: 14 * _textScale, color: Colors.black87),
-                decoration: InputDecoration(
-                  hintText: 'חיפוש מוצר...',
-                  hintStyle: TextStyle(fontSize: 14 * _textScale, color: Colors.blueGrey.shade400, fontWeight: FontWeight.w500),
-                  prefixIcon: Icon(Icons.search, size: 22 * _textScale, color: Colors.blue), // Colored and slightly larger icon
-                  suffixIcon: _searchQuery.isNotEmpty 
-                    ? IconButton(icon: Icon(Icons.clear, size: 20 * _textScale, color: Colors.blueGrey), onPressed: () => _searchController.clear()) 
-                    : null,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12), // Rounder edges
-                    borderSide: BorderSide(color: Colors.blueGrey.shade200, width: 1.5),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.blueGrey.shade200, width: 1.5),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.blue, width: 2.0),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-              ),
-            ),
-          ),
+          Expanded(child: Container(height: 46 * _textScale, decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 6, offset: const Offset(0, 2))]), child: TextField(controller: _searchController, style: TextStyle(fontSize: 14 * _textScale, color: Colors.black87), decoration: InputDecoration(hintText: 'חיפוש מוצר...', hintStyle: TextStyle(fontSize: 14 * _textScale, color: Colors.blueGrey.shade400, fontWeight: FontWeight.w500), prefixIcon: Icon(Icons.search, size: 22 * _textScale, color: Colors.blue), suffixIcon: _searchQuery.isNotEmpty ? IconButton(icon: Icon(Icons.clear, size: 20 * _textScale, color: Colors.blueGrey), onPressed: () => _searchController.clear()) : null, contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.blueGrey.shade200, width: 1.5)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.blueGrey.shade200, width: 1.5)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.blue, width: 2.0)), filled: true, fillColor: Colors.white)))),
           const SizedBox(width: 8),
-          InkWell(
-            onTap: () => setState(() => _showOnlyChecked = !_showOnlyChecked),
-            child: Container(
-              height: 46 * _textScale,
-              width: 46 * _textScale,
-              decoration: BoxDecoration(
-                color: _showOnlyChecked ? Colors.blue.shade50 : Colors.white,
-                border: Border.all(color: _showOnlyChecked ? Colors.blue.shade300 : Colors.blueGrey.shade200, width: 1.5),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)],
-              ),
-              child: Icon(_showOnlyChecked ? Icons.shopping_cart : Icons.shopping_cart_outlined, color: _showOnlyChecked ? Colors.blue : Colors.blueGrey, size: 22 * _textScale),
-            ),
-          ),
+          InkWell(onTap: () => setState(() => _showOnlyChecked = !_showOnlyChecked), child: Container(height: 46 * _textScale, width: 46 * _textScale, decoration: BoxDecoration(color: _showOnlyChecked ? Colors.blue.shade50 : Colors.white, border: Border.all(color: _showOnlyChecked ? Colors.blue.shade300 : Colors.blueGrey.shade200, width: 1.5), borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)]), child: Icon(_showOnlyChecked ? Icons.shopping_cart : Icons.shopping_cart_outlined, color: _showOnlyChecked ? Colors.blue : Colors.blueGrey, size: 22 * _textScale))),
           const SizedBox(width: 8),
-          InkWell(
-            onTap: _zoomOut,
-            child: Container(
-              height: 46 * _textScale,
-              width: 46 * _textScale,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.white, 
-                border: Border.all(color: Colors.blueGrey.shade200, width: 1.5), 
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)],
-              ),
-              child: Text('A-', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold, fontSize: 14 * _textScale)),
-            ),
-          ),
+          InkWell(onTap: _zoomOut, child: Container(height: 46 * _textScale, width: 46 * _textScale, alignment: Alignment.center, decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.blueGrey.shade200, width: 1.5), borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)]), child: Text('A-', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold, fontSize: 14 * _textScale)))),
           const SizedBox(width: 8),
-          InkWell(
-            onTap: _zoomIn,
-            child: Container(
-              height: 46 * _textScale,
-              width: 46 * _textScale,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.white, 
-                border: Border.all(color: Colors.blueGrey.shade200, width: 1.5), 
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)],
-              ),
-              child: Text('A+', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 15 * _textScale)),
-            ),
-          ),
+          InkWell(onTap: _zoomIn, child: Container(height: 46 * _textScale, width: 46 * _textScale, alignment: Alignment.center, decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.blueGrey.shade200, width: 1.5), borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4)]), child: Text('A+', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 15 * _textScale)))),
         ],
       ),
     );
   }
 
   Widget _buildComparisonNavigator() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: Colors.black.withAlpha(8), borderRadius: BorderRadius.circular(12)),
-      child: Row(
-        children: [
-          _buildWeekTab("השבוע", 0),
-          _buildWeekTab("שבוע שעבר", -1),
-          _buildDynamicWeekPicker(),
-        ],
-      ),
-    );
+    return Container(margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: Colors.black.withAlpha(8), borderRadius: BorderRadius.circular(12)), child: Row(children: [_buildWeekTab("השבוע", 0), _buildWeekTab("שבוע שעבר", -1), _buildDynamicWeekPicker()]));
   }
-
   Widget _buildWeekTab(String label, int offset) {
-    final bool isSelected = _comparisonOffset == offset;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _comparisonOffset = offset),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: isSelected ? [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 4)] : null,
-          ),
-          alignment: Alignment.center,
-          child: Text(label, style: TextStyle(fontSize: 11 * _textScale, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? const Color(0xFF00A3FF) : Colors.black54)),
-        ),
-      ),
-    );
+    final bool isSelected = (_comparisonOffset == offset);
+    return Expanded(child: GestureDetector(onTap: () => setState(() => _comparisonOffset = offset), child: Container(padding: const EdgeInsets.symmetric(vertical: 8), decoration: BoxDecoration(color: isSelected ? Colors.white : Colors.transparent, borderRadius: BorderRadius.circular(8), boxShadow: isSelected ? [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 4)] : null), alignment: Alignment.center, child: Text(label, style: TextStyle(fontSize: 11 * _textScale, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? const Color(0xFF00A3FF) : Colors.black54)))));
   }
-
   Widget _buildDynamicWeekPicker() {
-    final bool isExtraSelected = _comparisonOffset < -1;
-    return Expanded(
-      child: PopupMenuButton<int>(
-        color: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        onSelected: (val) => setState(() => _comparisonOffset = val),
-        itemBuilder: (context) => _getWeekOptions().map((offset) => PopupMenuItem(
-          value: offset,
-          child: Text(_getWeekLabel(offset), style: TextStyle(fontSize: 13 * _textScale, color: Colors.black87)),
-        )).toList(),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isExtraSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: isExtraSelected ? [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 4)] : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                isExtraSelected ? _getWeekLabel(_comparisonOffset) : "עוד שבועות...",
-                style: TextStyle(
-                  fontSize: 11 * _textScale, 
-                  fontWeight: isExtraSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isExtraSelected ? const Color(0xFF00A3FF) : Colors.black54
-                ),
-              ),
-              Icon(Icons.arrow_drop_down, size: 16 * _textScale, color: isExtraSelected ? const Color(0xFF00A3FF) : Colors.black54),
-            ],
-          ),
-        ),
-      ),
-    );
+    final bool isExtraSelected = (_comparisonOffset < -1);
+    return Expanded(child: PopupMenuButton<int>(color: Colors.white, surfaceTintColor: Colors.transparent, onSelected: (val) => setState(() => _comparisonOffset = val), itemBuilder: (context) => _getWeekOptions().map((offset) => PopupMenuItem(value: offset, child: Text(_getWeekLabel(offset), style: TextStyle(fontSize: 13 * _textScale, color: Colors.black87)))).toList(), child: Container(padding: const EdgeInsets.symmetric(vertical: 8), decoration: BoxDecoration(color: isExtraSelected ? Colors.white : Colors.transparent, borderRadius: BorderRadius.circular(8), boxShadow: isExtraSelected ? [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 4)] : null), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text(isExtraSelected ? _getWeekLabel(_comparisonOffset) : "עוד שבועות...", style: TextStyle(fontSize: 11 * _textScale, fontWeight: isExtraSelected ? FontWeight.bold : FontWeight.normal, color: isExtraSelected ? const Color(0xFF00A3FF) : Colors.black54)), Icon(Icons.arrow_drop_down, size: 16 * _textScale, color: isExtraSelected ? const Color(0xFF00A3FF) : Colors.black54)]))));
   }
 
   Widget _buildComparisonTile(ShoppingItem item, ShoppingProvider provider, bool wasPurchasedInHistory) {
     final bool checked = provider.isChecked(item.id ?? -1);
     final bool isViolation = item.isFrequencyViolation;
-
     return Container(
       decoration: BoxDecoration(
-        color: checked ? const Color(0xFFF1F8E9) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: (isViolation && checked) ? Border.all(color: Colors.orange.withAlpha(100), width: 1.5) : null,
-        boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4, offset: const Offset(0, 2))],
-      ),
+        color: checked ? const Color(0xFFF1F8E9) : Colors.white, 
+        borderRadius: BorderRadius.circular(12), 
+        border: (isViolation && checked) ? Border.all(color: Colors.orange.withValues(alpha: 0.4), width: 1.5) : null, 
+        boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 4, offset: const Offset(0, 2))]
+      ), 
       child: ListTile(
-        dense: true,
-        onLongPress: () => _showQuickHistoryAction(context, item, provider),
-        leading: Transform.scale(
-          scale: _textScale,
-          child: Checkbox(
-            value: checked,
-            activeColor: const Color(0xFF121212),
-            side: const BorderSide(color: Colors.black45, width: 1.5),
-            onChanged: (_) => provider.toggleItem(item.id!),
-          ),
-        ),
+        dense: true, 
+        onLongPress: () => _showQuickHistoryAction(context, item, provider), 
+        leading: Transform.scale(scale: _textScale, child: Checkbox(value: checked, activeColor: const Color(0xFF121212), side: const BorderSide(color: Colors.black45, width: 1.5), onChanged: (_) => provider.toggleItem(item.id!))), 
         title: Row(
           children: [
-            Expanded(
-              child: Text(
-                item.name,
-                style: TextStyle(
-                  decoration: checked ? TextDecoration.lineThrough : null,
-                  color: checked ? Colors.grey : Colors.black87,
-                  fontWeight: FontWeight.w500, fontSize: 14 * _textScale,
-                ),
-              ),
-            ),
-            if (wasPurchasedInHistory || _comparisonOffset != 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: wasPurchasedInHistory ? Colors.green.withAlpha(20) : Colors.red.withAlpha(10),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      wasPurchasedInHistory ? Icons.check_circle : Icons.radio_button_unchecked,
-                      size: 12 * _textScale, 
-                      color: wasPurchasedInHistory ? Colors.green : Colors.black12
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      wasPurchasedInHistory ? "נקנה" : "לא נקנה",
-                      style: TextStyle(fontSize: 9 * _textScale, color: wasPurchasedInHistory ? Colors.green[700] : Colors.black26, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-        subtitle: Text(
-          "₪${item.price.toStringAsFixed(1)} | ${_formatFrequency(item)}${item.lastPurchaseDate != null ? ' | נקנה לפני ${item.daysSinceLastPurchase} ימים' : ''}",
-          style: TextStyle(fontSize: 10 * _textScale, color: Colors.blueGrey),
-        ),
-        trailing: IconButton(
-          icon: Icon(Icons.edit_outlined, size: 18 * _textScale, color: Colors.black54),
-          onPressed: () => _showItemEditor(context, provider, item: item),
-        ),
-      ),
+            Expanded(child: Text(item.name, style: TextStyle(decoration: checked ? TextDecoration.lineThrough : null, color: checked ? Colors.grey : Colors.black87, fontWeight: FontWeight.w500, fontSize: 14 * _textScale))),
+            if (wasPurchasedInHistory || _comparisonOffset != 0) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: wasPurchasedInHistory ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(wasPurchasedInHistory ? Icons.check_circle : Icons.radio_button_unchecked, size: 12 * _textScale, color: wasPurchasedInHistory ? Colors.green : Colors.black12), const SizedBox(width: 4), Text(wasPurchasedInHistory ? "נקנה" : "לא נקנה", style: TextStyle(fontSize: 9 * _textScale, color: wasPurchasedInHistory ? Colors.green[700] : Colors.black26, fontWeight: FontWeight.bold))]))
+          ]
+        ), 
+        subtitle: Text("₪${item.price.toStringAsFixed(1)} | ${_formatFrequency(item)}${item.lastPurchaseDate != null ? ' | נקנה לפני ${item.daysSinceLastPurchase} ימים' : ''}", style: TextStyle(fontSize: 10 * _textScale, color: Colors.blueGrey)), 
+        trailing: IconButton(icon: Icon(Icons.edit_outlined, size: 18 * _textScale, color: Colors.black54), onPressed: () => _showItemEditor(context, provider, item: item))
+      )
     );
   }
 
   void _showQuickHistoryAction(BuildContext context, ShoppingItem item, ShoppingProvider provider) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text("תיעוד קנייה למפרע: ${item.name}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16 * _textScale, color: Colors.black87)),
-            ),
-            const Divider(),
-            ListTile(
-              leading: Icon(Icons.today, color: Colors.blue, size: 24 * _textScale),
-              title: Text("נקנה היום", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
-              onTap: () {
-                _applyRetroactivePurchaseDate(item, DateTime.now(), provider);
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.history, color: Colors.orange, size: 24 * _textScale),
-              title: Text("נקנה אתמול", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
-              onTap: () {
-                _applyRetroactivePurchaseDate(item, DateTime.now().subtract(const Duration(days: 1)), provider);
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.history_toggle_off, color: Colors.deepOrange, size: 24 * _textScale),
-              title: Text("נקנה שלשום", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
-              onTap: () {
-                _applyRetroactivePurchaseDate(item, DateTime.now().subtract(const Duration(days: 2)), provider);
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.edit_calendar, color: Colors.blueGrey, size: 24 * _textScale),
-              title: Text("תאריך מותאם אישית...", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now(),
-                  builder: (context, child) => Theme(data: ThemeData.light(), child: child!),
-                );
-                if (picked != null) {
-                  _applyRetroactivePurchaseDate(item, picked, provider);
-                }
-              },
-            ),
-            const SizedBox(height: 10),
-          ],
-        ),
-      ),
-    );
+    showModalBottomSheet(context: context, backgroundColor: Colors.white, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [Padding(padding: const EdgeInsets.all(16.0), child: Text("תיעוד קנייה למפרע: ${item.name}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16 * _textScale, color: Colors.black87))), const Divider(), ListTile(leading: Icon(Icons.today, color: Colors.blue, size: 24 * _textScale), title: Text("נקנה היום", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)), onTap: () { _applyRetroactivePurchaseDate(item, DateTime.now(), provider); Navigator.pop(ctx); }), ListTile(leading: Icon(Icons.history, color: Colors.orange, size: 24 * _textScale), title: Text("נקנה אתמול", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)), onTap: () { _applyRetroactivePurchaseDate(item, DateTime.now().subtract(const Duration(days: 1)), provider); Navigator.pop(ctx); }), ListTile(leading: Icon(Icons.history_toggle_off, color: Colors.deepOrange, size: 24 * _textScale), title: Text("נקנה שלשום", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)), onTap: () { _applyRetroactivePurchaseDate(item, DateTime.now().subtract(const Duration(days: 2)), provider); Navigator.pop(ctx); }), ListTile(leading: Icon(Icons.edit_calendar, color: Colors.blueGrey, size: 24 * _textScale), title: Text("תאריך מותאם אישית...", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)), onTap: () async { Navigator.pop(ctx); final picked = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime.now(), builder: (context, child) => Theme(data: ThemeData.light(), child: child!)); if (picked != null) { _applyRetroactivePurchaseDate(item, picked, provider); } }), const SizedBox(height: 10)])));
   }
 
   void _applyRetroactivePurchaseDate(ShoppingItem item, DateTime purchaseDate, ShoppingProvider provider) {
-    final updatedItem = item.copyWith(
-      lastPurchaseDate: purchaseDate.toIso8601String().split('T')[0],
-    );
-    
-    provider.updateItem(updatedItem);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("עודכן: ${item.name} סומן שנקנה ב-${purchaseDate.day}/${purchaseDate.month}/${purchaseDate.year}"),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    provider.updateItem(item.copyWith(lastPurchaseDate: purchaseDate.toIso8601String().split('T')[0]));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("עודכן: ${item.name} סומן שנקנה ב-${purchaseDate.day}/${purchaseDate.month}/${purchaseDate.year}"), backgroundColor: Colors.green, duration: const Duration(seconds: 2)));
   }
 
   Widget _buildControlMenu(ShoppingProvider provider) {
-    return PopupMenuButton<dynamic>(
-      icon: Icon(Icons.tune, color: const Color(0xFF121212), size: 24 * _textScale),
-      color: Colors.white, 
-      surfaceTintColor: Colors.white, 
-      onSelected: (value) {
-        if (value == 'manage_cats') {
-          _showCategoryManager(context, provider);
-        } else if (value == 'multi_sort') {
-          _showAdvancedSortSheet(context);
-        } else if (value == 'restore_catalog') {
-          _showRestoreCatalogConfirm(context, provider);
-        } else {
-          setState(() => _selectedCategory = value);
-        }
-      },
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'manage_cats', 
-          child: Row(
-            children: [
-              Icon(Icons.category_outlined, size: 18 * _textScale, color: Colors.blue), 
-              SizedBox(width: 8 * _textScale), 
-              Text("ניהול קטגוריות", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))
-            ]
-          )
-        ),
-        PopupMenuItem(
-          value: 'multi_sort', 
-          child: Row(
-            children: [
-              Icon(Icons.layers, size: 18 * _textScale, color: Colors.orange), 
-              SizedBox(width: 8 * _textScale), 
-              Text("מיון רב-שכבתי...", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))
-            ]
-          )
-        ),
-        PopupMenuItem(
-          value: 'restore_catalog', 
-          child: Row(
-            children: [
-              Icon(Icons.restore_page_outlined, size: 18 * _textScale, color: Colors.green), 
-              SizedBox(width: 8 * _textScale), 
-              Text("שחזר קטלוג חסר", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))
-            ]
-          )
-        ),
-        const PopupMenuDivider(),
-        PopupMenuItem(enabled: false, child: Text("סינון קטגוריה", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12 * _textScale, color: Colors.blue))),
-        ...provider.availableCategories.map((cat) => PopupMenuItem(value: cat, child: Row(children: [Icon(Icons.check, size: 16 * _textScale, color: _selectedCategory == cat ? Colors.blue : Colors.transparent), SizedBox(width: 8 * _textScale), Text(cat, style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale))]))),
-      ],
-    );
+    return PopupMenuButton<dynamic>(icon: Icon(Icons.tune, color: const Color(0xFF121212), size: 24 * _textScale), color: Colors.white, surfaceTintColor: Colors.white, onSelected: (value) { if (value == 'manage_cats') { _showCategoryManager(context, provider); } else if (value == 'multi_sort') { _showAdvancedSortSheet(context); } else if (value == 'restore_catalog') { _showRestoreCatalogConfirm(context, provider); } else { setState(() => _selectedCategory = value); } }, itemBuilder: (context) => [PopupMenuItem(value: 'manage_cats', child: Row(children: [Icon(Icons.category_outlined, size: 18 * _textScale, color: Colors.blue), SizedBox(width: 8 * _textScale), Text("ניהול קטגוריות", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))])), PopupMenuItem(value: 'multi_sort', child: Row(children: [Icon(Icons.layers, size: 18 * _textScale, color: Colors.orange), SizedBox(width: 8 * _textScale), Text("מיון רב-שכבתי...", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))])), PopupMenuItem(value: 'restore_catalog', child: Row(children: [Icon(Icons.restore_page_outlined, size: 18 * _textScale, color: Colors.green), SizedBox(width: 8 * _textScale), Text("שחזר קטלוג חסר", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))])), const PopupMenuDivider(), PopupMenuItem(enabled: false, child: Text("סינון קטגוריה", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12 * _textScale, color: Colors.blue))), ...provider.availableCategories.map((cat) => PopupMenuItem(value: cat, child: Row(children: [Icon(Icons.check, size: 16 * _textScale, color: (_selectedCategory == cat) ? Colors.blue : Colors.transparent), SizedBox(width: 8 * _textScale), Text(cat, style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale))]))),]);
   }
 
   void _showRestoreCatalogConfirm(BuildContext context, ShoppingProvider provider) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: Text("שחזור קטלוג", style: TextStyle(color: Colors.black87, fontSize: 18 * _textScale, fontWeight: FontWeight.bold)),
-        content: Text("האם לסרוק ולהוסיף מוצרי ברירת מחדל שחסרים ברשימה שלך? (שינויים שעשית במוצרים קיימים לא יידרסו).", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(fontSize: 14 * _textScale))),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await provider.restoreMissingDefaults();
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('הקטלוג נסרק והושלם בהצלחה.'), backgroundColor: Colors.green));
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF), foregroundColor: Colors.white),
-            child: Text("שחזר עכשיו", style: TextStyle(fontSize: 14 * _textScale))
-          )
-        ],
-      )
-    );
+    showDialog(context: context, builder: (ctx) => AlertDialog(backgroundColor: Colors.white, title: Text("שחזור קטלוג", style: TextStyle(color: Colors.black87, fontSize: 18 * _textScale, fontWeight: FontWeight.bold)), content: Text("האם לסרוק ולהוסיף מוצרי ברירת מחדל שחסרים ברשימה שלך? (שינויים שעשית במוצרים קיימים לא יידרסו).", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(fontSize: 14 * _textScale))), ElevatedButton(onPressed: () async { Navigator.pop(ctx); await provider.restoreMissingDefaults(); if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('הקטלוג נסרק והושלם בהצלחה.'), backgroundColor: Colors.green)); } }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF), foregroundColor: Colors.white), child: Text("שחזר עכשיו", style: TextStyle(fontSize: 14 * _textScale)))]));
   }
   
   void _showAdvancedSortSheet(BuildContext context) {
-    List<String> currentOrder = List.from(_allSortOptions);
-    List<String> currentActive = List.from(_activeSorts);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true, 
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setSheetState) {
-          final maxSheetHeight = MediaQuery.of(context).size.height * 0.75;
-          
-          return SafeArea(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxSheetHeight),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, 
-                  children: [
-                    Text("ניהול סדר מיון (רב-שכבתי)", style: TextStyle(fontSize: 18 * _textScale, fontWeight: FontWeight.bold, color: Colors.black87)),
-                    const SizedBox(height: 8),
-                    Text("המיון יתבצע מלמעלה למטה.\nגרור באמצעות הפסים כדי לשנות עדיפות, וסמן V כדי להפעיל.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12 * _textScale, color: Colors.grey)),
-                    const Divider(),
-                    Expanded(
-                      child: ReorderableListView(
-                        buildDefaultDragHandles: false,
-                        onReorder: (oldIndex, newIndex) {
-                          setSheetState(() {
-                            if (newIndex > oldIndex) {
-                              newIndex -= 1;
-                            }
-                            final item = currentOrder.removeAt(oldIndex);
-                            currentOrder.insert(newIndex, item);
-                          });
-                        },
-                        children: currentOrder.map((option) {
-                          final isActive = currentActive.contains(option);
-                          return ReorderableDragStartListener(
-                            key: ValueKey(option),
-                            index: currentOrder.indexOf(option),
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 4),
-                              decoration: BoxDecoration(
-                                color: isActive ? Colors.blue.withValues(alpha: 0.05) : Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.withValues(alpha: 0.2))
-                              ),
-                              child: CheckboxListTile(
-                                value: isActive,
-                                activeColor: Colors.blue,
-                                side: const BorderSide(color: Colors.black54, width: 1.5),
-                                onChanged: (val) {
-                                  setSheetState(() {
-                                    if (val == true) {
-                                      currentActive.add(option);
-                                    } else {
-                                      currentActive.remove(option);
-                                    }
-                                  });
-                                },
-                                title: Text(option, style: TextStyle(fontWeight: isActive ? FontWeight.bold : FontWeight.normal, color: Colors.black87, fontSize: 14 * _textScale)),
-                                secondary: Icon(Icons.drag_handle, color: Colors.grey, size: 24 * _textScale),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF121212), 
-                        foregroundColor: Colors.white, 
-                        minimumSize: const Size(double.infinity, 48)
-                      ),
-                      onPressed: () {
-                        List<String> newSorts = currentOrder.where((opt) => currentActive.contains(opt)).toList();
-                        if (newSorts.isEmpty) {
-                          newSorts = ['שם'];
-                        }
-                        
-                        setState(() {
-                          _activeSorts = newSorts;
-                          _allSortOptions = List.from(currentOrder); 
-                        });
-                        
-                        // שמירת הבחירה בזיכרון המקומי
-                        _saveSortPreferences();
-                        
-                        Navigator.pop(ctx);
-                      },
-                      child: Text("החל מיון", style: TextStyle(fontSize: 14 * _textScale)),
-                    )
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-      )
-    );
+    List<String> currentOrder = List.from(_allSortOptions); List<String> currentActive = List.from(_activeSorts);
+    showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.white, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), builder: (ctx) => StatefulBuilder(builder: (context, setSheetState) { final maxSheetHeight = MediaQuery.of(context).size.height * 0.75; return SafeArea(child: ConstrainedBox(constraints: BoxConstraints(maxHeight: maxSheetHeight), child: Padding(padding: const EdgeInsets.all(16.0), child: Column(mainAxisSize: MainAxisSize.min, children: [Text("ניהול סדר מיון (רב-שכבתי)", style: TextStyle(fontSize: 18 * _textScale, fontWeight: FontWeight.bold, color: Colors.black87)), const SizedBox(height: 8), Text("המיון יתבצע מלמעלה למטה.\nגרור באמצעות הפסים כדי לשנות עדיפות, וסמן V כדי להפעיל.", textAlign: TextAlign.center, style: TextStyle(fontSize: 12 * _textScale, color: Colors.grey)), const Divider(), Expanded(child: ReorderableListView(buildDefaultDragHandles: false, onReorder: (oldIndex, newIndex) { setSheetState(() { if (newIndex > oldIndex) { newIndex -= 1; } currentOrder.insert(newIndex, currentOrder.removeAt(oldIndex)); }); }, children: currentOrder.map((option) { final isActive = currentActive.contains(option); return ReorderableDragStartListener(key: ValueKey(option), index: currentOrder.indexOf(option), child: Container(margin: const EdgeInsets.only(bottom: 4), decoration: BoxDecoration(color: isActive ? Colors.blue.withValues(alpha: 0.05) : Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.withValues(alpha: 0.2))), child: CheckboxListTile(value: isActive, activeColor: Colors.blue, side: const BorderSide(color: Colors.black54, width: 1.5), onChanged: (val) { setSheetState(() { if (val == true) { currentActive.add(option); } else { currentActive.remove(option); } }); }, title: Text(option, style: TextStyle(fontWeight: isActive ? FontWeight.bold : FontWeight.normal, color: Colors.black87, fontSize: 14 * _textScale)), secondary: Icon(Icons.drag_handle, color: Colors.grey, size: 24 * _textScale)))); }).toList())), const SizedBox(height: 16), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF121212), foregroundColor: Colors.white, minimumSize: const Size(double.infinity, 48)), onPressed: () { List<String> newSorts = currentOrder.where((opt) => currentActive.contains(opt)).toList(); if (newSorts.isEmpty) { newSorts = ['שם']; } setState(() { _activeSorts = newSorts; _allSortOptions = List.from(currentOrder); }); _saveSortPreferences(); Navigator.pop(ctx); }, child: Text("החל מיון", style: TextStyle(fontSize: 14 * _textScale)))])))); }));
   }
 
-  Widget _buildEnhancedBudgetCard(double anchor, double planned, double actual) {
+  Widget _buildEnhancedBudgetCard(double anchor, double planned, double actual, ShoppingProvider provider) {
     double delta = anchor - planned;
-    
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10)], border: Border.all(color: Colors.black.withAlpha(10))),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(child: _buildStatDetail("תקציב עוגן", anchor, Colors.blueGrey)), 
-              Expanded(child: _buildStatDetail("תכנון חודשי", planned, Colors.black87)), 
-              Expanded(child: _buildDeltaDetail(delta)), 
-              Expanded(child: _buildStatDetail("ביצוע בפועל", actual, actual > anchor ? Colors.red : Colors.green)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          LinearProgressIndicator(value: (anchor > 0) ? (actual / anchor).clamp(0.0, 1.0) : 0, backgroundColor: Colors.grey[200], color: actual > anchor ? Colors.red : Colors.green, borderRadius: BorderRadius.circular(4)),
-        ],
-      ),
-    );
+    return Container(margin: const EdgeInsets.all(16), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withAlpha(5), blurRadius: 10)], border: Border.all(color: Colors.black.withAlpha(10))), child: Column(children: [Row(children: [Expanded(child: _buildStatDetail("תקציב עוגן", anchor, Colors.blueGrey)), Expanded(child: _buildStatDetail("תכנון חודשי", planned, Colors.black87)), Expanded(child: _buildDeltaDetail(delta)), Expanded(child: _buildActualStatDetail(actual, (actual > anchor) ? Colors.red : Colors.green, provider))]), const SizedBox(height: 12), LinearProgressIndicator(value: (anchor > 0) ? (actual / anchor).clamp(0.0, 1.0) : 0, backgroundColor: Colors.grey[200], color: (actual > anchor) ? Colors.red : Colors.green, borderRadius: BorderRadius.circular(4))]));
   }
-
-  Widget _buildStatDetail(String label, double value, Color color) {
-    return Column(
-      children: [
-        Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 10 * _textScale, color: Colors.grey, fontWeight: FontWeight.bold)), 
-        FittedBox(fit: BoxFit.scaleDown, child: Text("₪${value.toStringAsFixed(0)}", style: TextStyle(fontSize: 15 * _textScale, fontWeight: FontWeight.bold, color: color)))
-      ]
-    );
-  }
-  
-  Widget _buildDeltaDetail(double delta) {
-    final valueColor = delta >= 0 ? Colors.green : Colors.red;
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text("הפרש (דלתא)", textAlign: TextAlign.center, style: TextStyle(fontSize: 10 * _textScale, color: Colors.grey, fontWeight: FontWeight.bold)),
-            const SizedBox(width: 4),
-            InkWell(
-              onTap: () => _showInfoDialog(context, 'הפרש (דלתא)', "הדלתא מחשבת את הפער בין תקציב ה'עוגן' שהגדרת, לעלות החודשית התיאורטית של הרשימה. שמור עליה ירוקה."),
-              child: Icon(Icons.info_outline, size: 14 * _textScale, color: Colors.blue),
-            ),
-          ],
-        ),
-        FittedBox(fit: BoxFit.scaleDown, child: Text("₪${delta.abs().toStringAsFixed(0)}", style: TextStyle(fontSize: 15 * _textScale, fontWeight: FontWeight.bold, color: valueColor)))
-      ]
-    );
-  }
+  Widget _buildStatDetail(String label, double value, Color color) { return Column(children: [Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 10 * _textScale, color: Colors.grey, fontWeight: FontWeight.bold)), FittedBox(fit: BoxFit.scaleDown, child: Text("₪${value.toStringAsFixed(0)}", style: TextStyle(fontSize: 15 * _textScale, fontWeight: FontWeight.bold, color: color)))]); }
+  Widget _buildActualStatDetail(double value, Color color, ShoppingProvider provider) { final now = DateTime.now(); final isCurrent = (provider.targetMonth.year == now.year && provider.targetMonth.month == now.month); final monthStr = "${provider.targetMonth.month.toString().padLeft(2, '0')}/${provider.targetMonth.year.toString().substring(2)}"; return Column(children: [PopupMenuButton<int>(color: Colors.white, surfaceTintColor: Colors.transparent, onSelected: (offset) => provider.setTargetMonthOffset(offset), itemBuilder: (context) => List.generate(12, (index) { final m = DateTime(now.year, now.month - index, 1); return PopupMenuItem(value: index, child: Text((index == 0) ? "החודש הנוכחי" : "${m.month.toString().padLeft(2, '0')}/${m.year.toString().substring(2)}", style: TextStyle(fontSize: 13 * _textScale, color: Colors.black87))); }), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text(isCurrent ? "ביצוע בפועל" : "בפועל ($monthStr)", textAlign: TextAlign.center, style: TextStyle(fontSize: 10 * _textScale, color: isCurrent ? Colors.grey : Colors.blue, fontWeight: FontWeight.bold, decoration: isCurrent ? TextDecoration.none : TextDecoration.underline, decorationColor: Colors.blue.withAlpha(100))), Icon(Icons.arrow_drop_down, size: 14 * _textScale, color: isCurrent ? Colors.grey : Colors.blue)])), FittedBox(fit: BoxFit.scaleDown, child: Text("₪${value.toStringAsFixed(0)}", style: TextStyle(fontSize: 15 * _textScale, fontWeight: FontWeight.bold, color: color)))]); }
+  Widget _buildDeltaDetail(double delta) { final valueColor = (delta >= 0) ? Colors.green : Colors.red; return Column(children: [Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text("הפרש (דלתא)", textAlign: TextAlign.center, style: TextStyle(fontSize: 10 * _textScale, color: Colors.grey, fontWeight: FontWeight.bold)), const SizedBox(width: 4), InkWell(onTap: () => _showInfoDialog(context, 'הפרש (דלתא)', "הדלתא מחשבת את הפער בין תקציב ה'עוגן' שהגדרת, לעלות החודשית התיאורטית של הרשימה. שמור עליה ירוקה."), child: Icon(Icons.info_outline, size: 14 * _textScale, color: Colors.blue))]), FittedBox(fit: BoxFit.scaleDown, child: Text("₪${delta.abs().toStringAsFixed(0)}", style: TextStyle(fontSize: 15 * _textScale, fontWeight: FontWeight.bold, color: valueColor)))]); }
 
   Widget _buildActiveBasketBar(double total, ShoppingProvider provider) {
-    bool hasViolationsInBasket = false;
-    for (var item in provider.items) {
-      if (provider.isChecked(item.id ?? -1) && item.isFrequencyViolation) {
-        hasViolationsInBasket = true;
-        break;
-      }
-    }
-
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (hasViolationsInBasket)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 32),
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                border: Border.all(color: Colors.orange.withAlpha(50)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Expanded(
-                    child: Text(
-                      "שים לב: חריגת תדירות",
-                      style: TextStyle(fontSize: 11 * _textScale, color: Colors.orange[900], fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  InkWell(
-                    onTap: () => _showInfoDialog(context, 'תדירות קנייה', 'לכל מוצר יש תדירות מוגדרת. סימון מוצר מוקדם מדי יציג אזהרה למניעת חריגה.'),
-                    child: Icon(Icons.info_outline, size: 16 * _textScale, color: Colors.orange[900]),
-                  ),
-                ],
-              ),
-            ),
-          Container(
-            margin: EdgeInsets.only(left: 16, right: 16, bottom: 16, top: hasViolationsInBasket ? 0 : 16), 
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF121212), 
-              borderRadius: hasViolationsInBasket 
-                ? const BorderRadius.vertical(bottom: Radius.circular(30), top: Radius.circular(8))
-                : BorderRadius.circular(30), 
-              boxShadow: [BoxShadow(color: Colors.black.withAlpha(30), blurRadius: 15)]
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Text("סכום הקנייה הנוכחית", style: TextStyle(color: Colors.white60, fontSize: 10 * _textScale)), Text("₪${total.toStringAsFixed(2)}", style: TextStyle(color: Colors.white, fontSize: 18 * _textScale, fontWeight: FontWeight.bold))]),
-                ElevatedButton(onPressed: () => _confirmFinalize(provider), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF), foregroundColor: Colors.white, shape: const StadiumBorder()), child: Text("סיום ותיעוד", style: TextStyle(fontSize: 14 * _textScale))),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    bool hasViolations = provider.items.any((i) => provider.isChecked(i.id ?? -1) && i.isFrequencyViolation);
+    return Align(alignment: Alignment.bottomCenter, child: Column(mainAxisSize: MainAxisSize.min, children: [
+      if (hasViolations) Container(margin: const EdgeInsets.symmetric(horizontal: 32), padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12), decoration: BoxDecoration(color: Colors.orange[50], borderRadius: const BorderRadius.vertical(top: Radius.circular(12)), border: Border.all(color: Colors.orange.withValues(alpha: 0.2))), child: Row(mainAxisSize: MainAxisSize.min, children: [Expanded(child: Text("שים לב: חריגת תדירות", style: TextStyle(fontSize: 11 * _textScale, color: Colors.orange[900], fontWeight: FontWeight.w600))), InkWell(onTap: () => _showInfoDialog(context, 'תדירות קנייה', 'לכל מוצר יש תדירות מוגדרת. סימון מוצר מוקדם מדי יציג אזהרה למניעת חריגה.'), child: Icon(Icons.info_outline, size: 16 * _textScale, color: Colors.orange[900]))])),
+      Container(margin: EdgeInsets.only(left: 16, right: 16, bottom: 16, top: hasViolations ? 0 : 16), padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12), decoration: BoxDecoration(color: const Color(0xFF121212), borderRadius: hasViolations ? const BorderRadius.vertical(bottom: Radius.circular(30), top: Radius.circular(8)) : BorderRadius.circular(30), boxShadow: [BoxShadow(color: Colors.black.withAlpha(30), blurRadius: 15)]), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Text("סכום הקנייה הנוכחית", style: TextStyle(color: Colors.white60, fontSize: 10 * _textScale)), Text("₪${total.toStringAsFixed(2)}", style: TextStyle(color: Colors.white, fontSize: 18 * _textScale, fontWeight: FontWeight.bold))]), ElevatedButton(onPressed: () => _confirmFinalize(provider), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF), foregroundColor: Colors.white, shape: const StadiumBorder()), child: Text("סיום ותיעוד", style: TextStyle(fontSize: 14 * _textScale)))])),
+    ]));
   }
-
   void _confirmFinalize(ShoppingProvider provider) {
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      backgroundColor: Colors.white,
-      title: Text("סיום קנייה", style: TextStyle(color: Colors.black87, fontSize: 18 * _textScale)), 
-      content: Text("האם לעדכן את תאריכי הקנייה עבור כל המוצרים שבסל ולאפס את הרשימה?", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(fontSize: 14 * _textScale))), 
-        TextButton(onPressed: () { provider.finalizePurchase(); Navigator.pop(ctx); }, child: Text("כן, בצע", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14 * _textScale)))
-      ],
-    ));
+    showDialog(context: context, builder: (ctx) => AlertDialog(backgroundColor: Colors.white, title: Text("סיום קנייה", style: TextStyle(color: Colors.black87, fontSize: 18 * _textScale)), content: Text("האם לעדכן את תאריכי הקנייה עבור כל המוצרים שבסל ולאפס את הרשימה?", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(fontSize: 14 * _textScale))), TextButton(onPressed: () { provider.finalizePurchase(); Navigator.pop(ctx); }, child: Text("כן, בצע", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14 * _textScale)))]));
   }
-
-  String _formatFrequency(ShoppingItem item) {
-    List<String> parts = [];
-    if (item.displayMonths > 0) {
-      parts.add('${item.displayMonths}ח\'');
-    }
-    if (item.displayWeeks > 0) {
-      parts.add('${item.displayWeeks}ש\'');
-    }
-    return parts.isEmpty ? 'חד פעמי' : parts.join(' ');
-  }
-
-  Widget _buildEmptyState() {
-    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.shopping_basket_outlined, size: 48 * _textScale, color: Colors.grey[300]), SizedBox(height: 16 * _textScale), Text('הרשימה ריקה', style: TextStyle(color: Colors.grey, fontSize: 14 * _textScale))]));
-  }
-
+  String _formatFrequency(ShoppingItem item) { List<String> parts = []; if (item.displayMonths > 0) { parts.add('${item.displayMonths}ח\''); } if (item.displayWeeks > 0) { parts.add('${item.displayWeeks}ש\''); } return parts.isEmpty ? 'חד פעמי' : parts.join(' '); }
+  Widget _buildEmptyState() { return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.shopping_basket_outlined, size: 48 * _textScale, color: Colors.grey[300]), SizedBox(height: 16 * _textScale), Text('הרשימה ריקה', style: TextStyle(color: Colors.grey, fontSize: 14 * _textScale))])); }
   void _confirmDelete(BuildContext context, ShoppingProvider provider, ShoppingItem item) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        title: Text("מחיקת מוצר", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18 * _textScale)),
-        content: Text("האם אתה בטוח שברצונך למחוק את '${item.name}' לצמיתות?", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(color: Colors.black54, fontSize: 14 * _textScale))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            onPressed: () {
-              provider.deleteItem(item.id!);
-              Navigator.pop(ctx); 
-              Navigator.pop(context); 
-            },
-            child: Text("מחק", style: TextStyle(fontSize: 14 * _textScale)),
-          ),
-        ],
-      ),
-    );
+    showDialog(context: context, builder: (ctx) => AlertDialog(backgroundColor: Colors.white, title: Text("מחיקת מוצר", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18 * _textScale)), content: Text("האם אתה בטוח שברצונך למחוק את '${item.name}' לצמיתות?", style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale)), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(color: Colors.black54, fontSize: 14 * _textScale))), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white), onPressed: () { provider.deleteItem(item.id!); Navigator.pop(ctx); Navigator.pop(context); }, child: Text("מחק", style: TextStyle(fontSize: 14 * _textScale)))]));
   }
 
   void _showItemEditor(BuildContext context, ShoppingProvider provider, {ShoppingItem? item}) {
-    final nameController = TextEditingController(text: item?.name);
-    final priceController = TextEditingController(text: item?.price.toString());
-    final newCatController = TextEditingController();
-    
-    Set<String> categoriesForDialog = provider.availableCategories.toSet();
-    categoriesForDialog.remove('הכל'); 
-    categoriesForDialog.add('כללי'); 
-    
-    String selectedCat = item?.category ?? 'כללי'; 
-    bool isAddingNewCat = false;
-    int months = item != null ? (item.frequencyWeeks ~/ 4) : 0; 
-    int weeks = item != null ? (item.frequencyWeeks % 4) : 1;
-    DateTime? selectedPurchaseDate = item?.lastPurchaseDateTime;
-
-    final labelStyle = TextStyle(color: Colors.black54, fontSize: 14 * _textScale);
-    final contentStyle = TextStyle(color: Colors.black87, fontSize: 16 * _textScale);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: Colors.white, surfaceTintColor: Colors.transparent, 
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(item == null ? 'הוספת מוצר חדש' : 'עריכת מוצר', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 18 * _textScale)),
-          content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              TextField(controller: nameController, style: contentStyle, decoration: InputDecoration(labelText: 'שם המוצר', labelStyle: labelStyle)),
-              const SizedBox(height: 10),
-              
-              if (!isAddingNewCat)
-                DropdownButtonFormField<String>(
-                  initialValue: selectedCat, 
-                  dropdownColor: Colors.white, 
-                  style: contentStyle, 
-                  decoration: InputDecoration(labelText: 'קטגוריה', labelStyle: labelStyle),
-                  items: [
-                    ...categoriesForDialog.map((c) => DropdownMenuItem(value: c, child: Text(c, style: contentStyle))),
-                    DropdownMenuItem(value: 'NEW', child: Text("+ קטגוריה חדשה...", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 16 * _textScale))),
-                  ], 
-                  onChanged: (val) {
-                    if (val == 'NEW') {
-                      setDialogState(() => isAddingNewCat = true);
-                    } else {
-                      selectedCat = val!;
-                    }
-                  }, 
-                )
-              else
-                TextField(
-                  controller: newCatController, 
-                  style: contentStyle, 
-                  decoration: InputDecoration(
-                    labelText: 'שם קטגוריה חדשה', 
-                    labelStyle: labelStyle,
-                    suffixIcon: IconButton(icon: Icon(Icons.close, size: 24 * _textScale), onPressed: () => setDialogState(() => isAddingNewCat = false))
-                  )
-                ),
-
-              TextField(controller: priceController, keyboardType: TextInputType.number, style: contentStyle, decoration: InputDecoration(labelText: 'מחיר משוער', prefixText: '₪ ', labelStyle: labelStyle)),
-              
-              if (item == null) ...[
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('מועד קנייה:', style: TextStyle(fontSize: 13 * _textScale, color: Colors.black54)),
-                    TextButton.icon(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: selectedPurchaseDate ?? DateTime.now(),
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime.now(),
-                          builder: (context, child) => Theme(data: ThemeData.light(), child: child!),
-                        );
-                        if (picked != null) {
-                          setDialogState(() => selectedPurchaseDate = picked);
-                        }
-                      },
-                      icon: Icon(Icons.calendar_today, size: 16 * _textScale, color: selectedPurchaseDate == null ? Colors.orange : Colors.blue),
-                      label: Text(
-                        selectedPurchaseDate == null ? 'בחר תאריך' : '${selectedPurchaseDate!.day}/${selectedPurchaseDate!.month}/${selectedPurchaseDate!.year}', 
-                        style: TextStyle(color: selectedPurchaseDate == null ? Colors.orange : Colors.blue, fontWeight: FontWeight.bold, fontSize: 14 * _textScale)
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(),
-              ] else ...[
-                const SizedBox(height: 20),
-              ],
-              
-              Text('תדירות קנייה:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13 * _textScale, color: Colors.black87)),
-              const SizedBox(height: 10), 
-              Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [_buildCounter(label: 'חודשים', value: months, onChanged: (val) => setDialogState(() => months = val)), _buildCounter(label: 'שבועות', value: weeks, max: 3, onChanged: (val) => setDialogState(() => weeks = val))]),
-            ]),
-          ),
-          actionsAlignment: item != null ? MainAxisAlignment.spaceBetween : MainAxisAlignment.end,
-          actions: [
-            if (item != null)
-              IconButton(
-                icon: Icon(Icons.delete_outline, color: Colors.red, size: 24 * _textScale),
-                tooltip: "מחק מוצר",
-                onPressed: () => _confirmDelete(context, provider, item),
-              ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: Text('ביטול', style: TextStyle(color: Colors.black54, fontSize: 14 * _textScale))), 
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF121212), foregroundColor: Colors.white), 
-                  onPressed: () { 
-                    final finalCat = isAddingNewCat ? newCatController.text : selectedCat;
-                    if (nameController.text.isNotEmpty && finalCat.isNotEmpty) {
-                      
-                      String? finalPurchaseDateString = item?.lastPurchaseDate;
-                      
-                      if (item == null && selectedPurchaseDate != null) {
-                        finalPurchaseDateString = selectedPurchaseDate!.toIso8601String().split('T')[0];
-                      }
-
-                      final newItem = ShoppingItem(
-                        id: item?.id,
-                        name: nameController.text, 
-                        category: finalCat, 
-                        price: double.tryParse(priceController.text) ?? 0.0, 
-                        quantity: item?.quantity ?? 1, 
-                        frequencyWeeks: (months * 4) + weeks,
-                        lastPurchaseDate: finalPurchaseDateString,
-                      ); 
-                      
-                      if (item == null) {
-                        provider.addItem(newItem);
-                      } else {
-                        provider.updateItem(newItem);
-                      }
-                      
-                      Navigator.pop(ctx); 
-                    } 
-                  }, 
-                  child: Text("שמור", style: TextStyle(fontSize: 14 * _textScale))
-                )
-              ],
-            )
-          ],
-        ),
-      ),
-    );
+    final nameController = TextEditingController(text: item?.name); final priceController = TextEditingController(text: item?.price.toString()); final newCatController = TextEditingController();
+    Set<String> categoriesForDialog = provider.availableCategories.toSet(); categoriesForDialog.remove('הכל'); categoriesForDialog.add('כללי'); String selectedCat = item?.category ?? 'כללי'; bool isAddingNewCat = false; int months = (item != null) ? (item.frequencyWeeks ~/ 4) : 0; int weeks = (item != null) ? (item.frequencyWeeks % 4) : 1; DateTime? selectedPurchaseDate = item?.lastPurchaseDateTime;
+    final labelStyle = TextStyle(color: Colors.black54, fontSize: 14 * _textScale); final contentStyle = TextStyle(color: Colors.black87, fontSize: 16 * _textScale);
+    showDialog(context: context, builder: (ctx) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(backgroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), title: Text(item == null ? 'הוספת מוצר חדש' : 'עריכת מוצר', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 18 * _textScale)), content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [TextField(controller: nameController, style: contentStyle, decoration: InputDecoration(labelText: 'שם המוצר', labelStyle: labelStyle)), const SizedBox(height: 10), if (!isAddingNewCat) DropdownButtonFormField<String>(initialValue: selectedCat, dropdownColor: Colors.white, style: contentStyle, decoration: InputDecoration(labelText: 'קטגוריה', labelStyle: labelStyle), items: [...categoriesForDialog.map((c) => DropdownMenuItem(value: c, child: Text(c, style: contentStyle))), DropdownMenuItem(value: 'NEW', child: Text("+ קטגוריה חדשה...", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 16 * _textScale)))], onChanged: (val) { if (val == 'NEW') { setDialogState(() => isAddingNewCat = true); } else { selectedCat = val!; } }) else TextField(controller: newCatController, style: contentStyle, decoration: InputDecoration(labelText: 'שם קטגוריה חדשה', labelStyle: labelStyle, suffixIcon: IconButton(icon: Icon(Icons.close, size: 24 * _textScale), onPressed: () => setDialogState(() => isAddingNewCat = false)))), TextField(controller: priceController, keyboardType: TextInputType.number, style: contentStyle, decoration: InputDecoration(labelText: 'מחיר משוער', prefixText: '₪ ', labelStyle: labelStyle)), if (item == null) ...[const SizedBox(height: 20), Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('מועד קנייה:', style: TextStyle(fontSize: 13 * _textScale, color: Colors.black54)), TextButton.icon(onPressed: () async { final picked = await showDatePicker(context: context, initialDate: selectedPurchaseDate ?? DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime.now(), builder: (context, child) => Theme(data: ThemeData.light(), child: child!)); if (picked != null) { setDialogState(() => selectedPurchaseDate = picked); } }, icon: Icon(Icons.calendar_today, size: 16 * _textScale, color: (selectedPurchaseDate == null) ? Colors.orange : Colors.blue), label: Text((selectedPurchaseDate == null) ? 'בחר תאריך' : '${selectedPurchaseDate!.day}/${selectedPurchaseDate!.month}/${selectedPurchaseDate!.year}', style: TextStyle(color: (selectedPurchaseDate == null) ? Colors.orange : Colors.blue, fontWeight: FontWeight.bold, fontSize: 14 * _textScale)))]), const Divider()] else const SizedBox(height: 20), Text('תדירות קנייה:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13 * _textScale, color: Colors.black87)), const SizedBox(height: 10), Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [_buildCounter(label: 'חודשים', value: months, onChanged: (val) => setDialogState(() => months = val)), _buildCounter(label: 'שבועות', value: weeks, max: 3, onChanged: (val) => setDialogState(() => weeks = val))])])), actionsAlignment: item != null ? MainAxisAlignment.spaceBetween : MainAxisAlignment.end, actions: [if (item != null) IconButton(icon: Icon(Icons.delete_outline, color: Colors.red, size: 24 * _textScale), tooltip: "מחק מוצר", onPressed: () => _confirmDelete(context, provider, item)), Row(mainAxisSize: MainAxisSize.min, children: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('ביטול', style: TextStyle(color: Colors.black54, fontSize: 14 * _textScale))), const SizedBox(width: 8), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF121212), foregroundColor: Colors.white), onPressed: () { final finalCat = isAddingNewCat ? newCatController.text : selectedCat; if (nameController.text.isNotEmpty && finalCat.isNotEmpty) { String? finalPurchaseDateString = item?.lastPurchaseDate; if (item == null && selectedPurchaseDate != null) { finalPurchaseDateString = selectedPurchaseDate!.toIso8601String().split('T')[0]; } final newItem = ShoppingItem(id: item?.id, name: nameController.text, category: finalCat, price: double.tryParse(priceController.text) ?? 0.0, quantity: item?.quantity ?? 1, frequencyWeeks: (months * 4) + weeks, lastPurchaseDate: finalPurchaseDateString); if (item == null) { provider.addItem(newItem); } else { provider.updateItem(newItem); } Navigator.pop(ctx); } }, child: Text("שמור", style: TextStyle(fontSize: 14 * _textScale)))])])));
   }
 
   void _showCategoryManager(BuildContext context, ShoppingProvider provider) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        title: Text("ניהול קטגוריות", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18 * _textScale, color: Colors.black87)),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView(
-            shrinkWrap: true,
-            children: provider.availableCategories.where((c) => c != 'הכל').map((cat) => ListTile(
-              title: Text(cat, style: TextStyle(fontSize: 15 * _textScale, color: Colors.black87)),
-              trailing: Icon(Icons.edit, size: 18 * _textScale, color: Colors.blueGrey),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showRenameCategoryDialog(context, provider, cat);
-              },
-            )).toList(),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text("סגור", style: TextStyle(fontSize: 14 * _textScale))),
-        ],
-      ),
-    );
+    showDialog(context: context, builder: (ctx) => AlertDialog(backgroundColor: Colors.white, title: Text("ניהול קטגוריות", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18 * _textScale, color: Colors.black87)), content: SizedBox(width: double.maxFinite, child: ListView(shrinkWrap: true, children: provider.availableCategories.where((c) => c != 'הכל').map((cat) => ListTile(title: Text(cat, style: TextStyle(fontSize: 15 * _textScale, color: Colors.black87)), trailing: Icon(Icons.edit, size: 18 * _textScale, color: Colors.blueGrey), onTap: () { Navigator.pop(ctx); _showRenameCategoryDialog(context, provider, cat); })).toList())), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text("סגור", style: TextStyle(fontSize: 14 * _textScale)))]));
   }
-
   void _showRenameCategoryDialog(BuildContext context, ShoppingProvider provider, String oldName) {
     final controller = TextEditingController(text: oldName);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        title: Text("שינוי שם: $oldName", style: TextStyle(color: Colors.black87, fontSize: 18 * _textScale)),
-        content: TextField(
-          controller: controller, 
-          style: TextStyle(color: Colors.black87, fontSize: 16 * _textScale),
-          decoration: InputDecoration(labelText: 'שם חדש', labelStyle: TextStyle(fontSize: 14 * _textScale)),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(fontSize: 14 * _textScale))),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty && controller.text != oldName) {
-                provider.renameCategory(oldName, controller.text);
-                Navigator.pop(ctx);
-              }
-            }, 
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF121212), foregroundColor: Colors.white),
-            child: Text("עדכן", style: TextStyle(fontSize: 14 * _textScale))
-          ),
-        ],
-      ),
-    );
+    showDialog(context: context, builder: (ctx) => AlertDialog(backgroundColor: Colors.white, title: Text("שינוי שם: $oldName", style: TextStyle(color: Colors.black87, fontSize: 18 * _textScale)), content: TextField(controller: controller, style: TextStyle(color: Colors.black87, fontSize: 16 * _textScale), decoration: InputDecoration(labelText: 'שם חדש', labelStyle: TextStyle(fontSize: 14 * _textScale)), autofocus: true), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text("ביטול", style: TextStyle(fontSize: 14 * _textScale))), ElevatedButton(onPressed: () { if (controller.text.isNotEmpty && controller.text != oldName) { provider.renameCategory(oldName, controller.text); Navigator.pop(ctx); } }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF121212), foregroundColor: Colors.white), child: Text("עדכן", style: TextStyle(fontSize: 14 * _textScale)))]));
   }
-
-  Widget _buildCounter({required String label, required int value, required Function(int) onChanged, int max = 99}) {
-    return Column(children: [Text(label, style: TextStyle(fontSize: 11 * _textScale, fontWeight: FontWeight.bold, color: Colors.black54)), Row(mainAxisSize: MainAxisSize.min, children: [IconButton(icon: Icon(Icons.remove_circle_outline, color: Colors.black45, size: 24 * _textScale), onPressed: value > 0 ? () => onChanged(value - 1) : null), Text('$value', style: TextStyle(fontSize: 16 * _textScale, fontWeight: FontWeight.bold, color: Colors.black87)), IconButton(icon: Icon(Icons.add_circle_outline, color: Colors.black45, size: 24 * _textScale), onPressed: value < max ? () => onChanged(value + 1) : null)])]);
-  }
+  Widget _buildCounter({required String label, required int value, required Function(int) onChanged, int max = 99}) { return Column(children: [Text(label, style: TextStyle(fontSize: 11 * _textScale, fontWeight: FontWeight.bold, color: Colors.black54)), Row(mainAxisSize: MainAxisSize.min, children: [IconButton(icon: Icon(Icons.remove_circle_outline, color: Colors.black45, size: 24 * _textScale), onPressed: (value > 0) ? () => onChanged(value - 1) : null), Text('$value', style: TextStyle(fontSize: 16 * _textScale, fontWeight: FontWeight.bold, color: Colors.black87)), IconButton(icon: Icon(Icons.add_circle_outline, color: Colors.black45, size: 24 * _textScale), onPressed: (value < max) ? () => onChanged(value + 1) : null)])]); }
 }

@@ -1,6 +1,8 @@
-// 🔒 STATUS: EDITED (Fixed Light Theme Contrast and Disappearing Text)
+// 🔒 STATUS: EDITED (Fixed TextDirection intl collision)
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:math';
+import 'dart:ui' as ui;
 import '../../data/database_helper.dart';
 import '../../data/checking_model.dart';
 import '../widgets/global_header.dart';
@@ -134,9 +136,9 @@ class CheckingHistoryScreen extends StatelessWidget {
       ..sort((a, b) => DateTime.parse(a.date).compareTo(DateTime.parse(b.date)));
     
     return Container(
-      height: 220,
+      height: 240,
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
@@ -150,7 +152,7 @@ class CheckingHistoryScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('מגמת יתרת העו"ש', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Expanded(
             child: CustomPaint(
               size: Size.infinite,
@@ -170,7 +172,6 @@ class CheckingHistoryScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setState) {
-          // עטיפה ב-ThemeData.light() כדי למנוע התנגשות עם עיצוב כהה גלובלי
           return Theme(
             data: ThemeData.light(),
             child: AlertDialog(
@@ -256,19 +257,16 @@ class _CheckingGraphPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (entries.isEmpty) return;
-    if (entries.length == 1) {
-      final paint = Paint()..color = const Color(0xFF00A3FF)..strokeWidth = 4;
-      canvas.drawCircle(Offset(size.width / 2, size.height / 2), 6, paint);
-      return;
-    }
 
+    // אילוץ קו ה-0: מוודאים ש-minAmt הוא לכל היותר 0, ו-maxAmt הוא לפחות 0.
     double maxAmt = entries.map((e) => e.amount).reduce((a, b) => a > b ? a : b);
     double minAmt = entries.map((e) => e.amount).reduce((a, b) => a < b ? a : b);
+    
+    maxAmt = max(maxAmt, 0.0);
+    minAmt = min(minAmt, 0.0);
 
-    if (maxAmt == minAmt) {
-      maxAmt += 1000;
-      minAmt -= 1000;
-    }
+    double heightRange = maxAmt - minAmt;
+    if (heightRange == 0) heightRange = 1000;
 
     final path = Path();
     final paintLine = Paint()
@@ -281,16 +279,34 @@ class _CheckingGraphPainter extends CustomPainter {
       ..color = Colors.white
       ..style = PaintingStyle.fill;
 
-    final widthStep = size.width / (entries.length - 1);
-    final heightRange = maxAmt - minAmt;
+    // מרווחים למעלה ולמטה עבור הטקסט
+    const double paddingY = 24.0;
+    final double usableHeight = size.height - (paddingY * 2);
+    final double widthStep = entries.length > 1 ? size.width / (entries.length - 1) : size.width;
 
+    // ציור קו ה-0 (Zero-Line)
+    final zeroNormalized = (0 - minAmt) / heightRange;
+    final zeroY = usableHeight - (zeroNormalized * usableHeight) + paddingY;
+    
+    final zeroPaint = Paint()
+      ..color = Colors.white24
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(Offset(0, zeroY), Offset(size.width, zeroY), zeroPaint);
+    
+    final tpZero = TextPainter(
+      text: const TextSpan(text: '0', style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold)),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    tpZero.paint(canvas, Offset(0, zeroY - 14));
+
+    // שרטוט הגרף (משמאל לימין)
     List<Offset> points = [];
-
     for (int i = 0; i < entries.length; i++) {
       final entry = entries[i];
-      final x = i * widthStep;
+      final x = entries.length > 1 ? i * widthStep : size.width / 2;
       final normalizedY = (entry.amount - minAmt) / heightRange;
-      final y = size.height - (normalizedY * size.height); 
+      final y = usableHeight - (normalizedY * usableHeight) + paddingY; 
       points.add(Offset(x, y));
       
       if (i == 0) {
@@ -305,11 +321,28 @@ class _CheckingGraphPainter extends CustomPainter {
       }
     }
 
-    canvas.drawPath(path, paintLine);
+    if (entries.length > 1) {
+      canvas.drawPath(path, paintLine);
+    }
 
-    for (var point in points) {
-      canvas.drawCircle(point, 5, paintLine..style = PaintingStyle.fill);
-      canvas.drawCircle(point, 3, paintDot);
+    // ציור נקודות ותוויות נתונים
+    final textPainter = TextPainter(textDirection: ui.TextDirection.ltr);
+    for (int i = 0; i < points.length; i++) {
+      canvas.drawCircle(points[i], 5, paintLine..style = PaintingStyle.fill);
+      canvas.drawCircle(points[i], 3, paintDot);
+
+      // תווית סכום (מעל הנקודה)
+      final amt = '₪${entries[i].amount.toStringAsFixed(0)}';
+      textPainter.text = TextSpan(text: amt, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold));
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(points[i].dx - (textPainter.width / 2), points[i].dy - 20));
+
+      // תווית תאריך (מתחת לנקודה)
+      final dateObj = DateTime.parse(entries[i].date);
+      final dateStr = '${dateObj.day.toString().padLeft(2,'0')}/${dateObj.month.toString().padLeft(2,'0')}';
+      textPainter.text = TextSpan(text: dateStr, style: const TextStyle(color: Colors.white54, fontSize: 10));
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(points[i].dx - (textPainter.width / 2), points[i].dy + 8));
     }
   }
 

@@ -1,18 +1,17 @@
-# AI_CONTEXT.md - Dohaham (Fintel)
-**Date:** March 24, 2026
-**Current Constitution Version:** 12.82
+# Fintel - AI Development Context
 
-## 1. Project Overview
-"Dohaham" (Fintel) is a smart family budget management application designed for Israeli users. It uses Flutter, Provider for state management, and local SQLite synced to Firebase. The architecture follows a strict "E-Myth" philosophy (Financial Intelligence).
+## Project Overview
+Fintel (דוחכם) is a sophisticated financial intelligence application. This session focused on UX polishing, Navigation Architecture refinement, and data persistence.
 
-## 2. Recent Major Updates (v12.82 - Academy Refinement & UI Polish)
-* **Academy Screen Redesign:** Replaced the basic expansion list with an "Active Content View" architecture. A horizontal scrolling ChoiceChip bar now controls the visible chapter, with smooth fade transitions, saving vertical space on mobile devices.
-* **Academy Content Rationalization:** Rewrote the introduction to remove illogical marketing cliches (e.g., the "surprise" of needing data to calculate freedom). The text now strictly focuses on mathematical reality, Parkinson's Law, and the concept of the "objective mirror."
-* **Shopping Search UI:** Enhanced the search bar in the shopping list with better contrast, a subtle shadow, and a prominent blue icon to prevent it from blending into the Light Theme background.
+## Current Development State
+* **Constitution:** Version 12.88
+* **UX & Navigation:** Notification Settings successfully migrated into an internal BottomSheet accessed via the Hamburger menu. Premium icons universally updated to the explicit 👑 emoji. Academy content updated to reflect the new Freedom Engine calibration flow.
+* **Data Persistence:** Shopping screen multi-level sorting preferences migrated from local SharedPreferences to Cloud-Sync via `DatabaseHelper`.
+* **Stability:** Zero Linter warnings (`unnecessary_const` resolved). Codebase is perfectly clean.
 
-## 3. UNRESOLVED ISSUES
-* None. The infrastructure is clean, stable, fully secured, and Linter-warning-free (0 issues).
+## Next Immediate Mission
+Transition to `fintel_playground` (Sandbox) to engineer the **Billing and Subscription Architecture** (In-App Purchases) to dynamically toggle the `isPremium` root metric.
 
-## 4. Strict Protocols for AI
-* **Read-Before-Write:** NEVER rewrite or assume file content. ALWAYS ask for the current version before modifying.
-* **Zero Warnings Policy:** All code must pass `flutter analyze` without any warnings.
+## Knowledge Status
+* Constitution: 12.88 (Latest)
+* Codebase: Clean (flutter analyze: No issues found)

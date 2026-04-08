@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
+// 🔒 STATUS: EDITED (Fixed if-statement curlies & TextDirection)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui' as ui;
@@ -18,7 +18,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
   int? _selectedExpenseId;
   int _selectedRange = 6; // 3, 6, 12, 0 (0 means All)
 
-  // === פונקציית עזר לתמרורי הדרכה ===
   void _showInfoDialog(BuildContext context, String title, String content) {
     showDialog(
       context: context,
@@ -118,6 +117,9 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                       hours: hours,
                     );
                     await DatabaseHelper.instance.insertSalaryRecord(record);
+                    
+                    await DatabaseHelper.instance.updateUserMetric('hasSalary', true);
+
                     if (ctx.mounted) Navigator.pop(ctx);
                   }
                 },
@@ -133,11 +135,9 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
   Widget _buildMountainChart(List<SalaryRecord> records, bool isHourly) {
     if (records.isEmpty) return const SizedBox.shrink();
     
-    // סידור מהישן לחדש (כדי לחשב את הממוצעים לאורך ציר הזמן)
     var sortedRecords = List<SalaryRecord>.from(records);
     sortedRecords.sort((a, b) => DateTime.parse(a.monthYear).compareTo(DateTime.parse(b.monthYear)));
     
-    // חישוב הממוצע המצטבר (Cumulative Average) לכל נקודת זמן
     List<double> cumulativeValues = [];
     double runningNet = 0;
     double runningHours = 0;
@@ -150,12 +150,11 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
       if (isHourly) {
         val = runningHours > 0 ? runningNet / runningHours : 0;
       } else {
-        val = runningNet / (i + 1); // הממוצע חלקי כמות החודשים שהיו עד כה
+        val = runningNet / (i + 1); 
       }
       cumulativeValues.add(val);
     }
 
-    // סינון לפי הטווח שנבחר (למשל רק 6 אחרונים)
     List<SalaryRecord> displayRecords = sortedRecords;
     List<double> displayValues = cumulativeValues;
 
@@ -164,11 +163,20 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
       displayValues = cumulativeValues.sublist(cumulativeValues.length - _selectedRange);
     }
 
-    // הגרף נמתח או מתכווץ לרוחב המסך הקיים, ללא גלילה
-    return SizedBox(
-      height: 200,
+    return Container(
+      height: 240,
       width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
       child: CustomPaint(
+        size: Size.infinite,
         painter: _MountainChartPainter(displayRecords, displayValues, isHourly),
       ),
     );
@@ -192,7 +200,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
 
     final selectedExpense = incomeExpenses.firstWhere((e) => e.id == _selectedExpenseId);
     
-    // רשימה הפוכה (מהחדש לישן) עבור רשימת ההיסטוריה ההגיונית
     final myRecords = provider.salaryRecords.where((r) => r.expenseId == _selectedExpenseId).toList();
     myRecords.sort((a, b) => DateTime.parse(b.monthYear).compareTo(DateTime.parse(a.monthYear)));
 
@@ -235,8 +242,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-
-              // בורר מקור הכנסה
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[300]!)),
@@ -260,7 +265,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
               Row(
                 children: [
                   Expanded(
@@ -306,7 +310,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 30),
 
               if (myRecords.isNotEmpty) ...[
@@ -314,7 +317,6 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('מגמות וסטטיסטיקה', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                    // סרגל טווחים (Toggles)
                     ToggleButtons(
                       borderRadius: BorderRadius.circular(8),
                       constraints: const BoxConstraints(minHeight: 30, minWidth: 50),
@@ -344,23 +346,15 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                 
                 const Text('גרף ממוצע שכר נטו', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.fromLTRB(16, 30, 16, 16),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
-                  child: _buildMountainChart(myRecords, false),
-                ),
+                _buildMountainChart(myRecords, false),
+                
                 const SizedBox(height: 24),
                 const Text('גרף ממוצע תעריף שעתי', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.blueGrey)),
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.fromLTRB(16, 30, 16, 16),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[200]!)),
-                  child: _buildMountainChart(myRecords, true),
-                ),
+                _buildMountainChart(myRecords, true),
                 const SizedBox(height: 30),
               ],
 
-              // חלונית ההיסטוריה הנסתרת (אקורדיון)
               Card(
                 elevation: 0,
                 margin: EdgeInsets.zero,
@@ -452,7 +446,7 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
 }
 
 // ============================================================================
-// ציור גרף ההרים (Area Chart)
+// ציור הגרף בתצורה אחידה (Dark Mode & LTR)
 // ============================================================================
 class _MountainChartPainter extends CustomPainter {
   final List<SalaryRecord> records;
@@ -465,89 +459,78 @@ class _MountainChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (records.isEmpty) return;
 
-    final primaryColor = isHourly ? Colors.purple : Colors.blue;
+    final primaryColor = isHourly ? Colors.purpleAccent : const Color(0xFF00A3FF);
 
     final paintLine = Paint()
       ..color = primaryColor
       ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
 
-    final fillPaint = Paint()
-      ..shader = ui.Gradient.linear(
-        const Offset(0, 0),
-        Offset(0, size.height),
-        [
-          primaryColor.withValues(alpha: 0.4),
-          primaryColor.withValues(alpha: 0.0),
-        ],
-      )
+    final paintDot = Paint()
+      ..color = Colors.white
       ..style = PaintingStyle.fill;
 
-    double maxVal = 0;
-    double minVal = double.infinity;
-    for (var v in values) {
-      if (v > maxVal) maxVal = v;
-      if (v < minVal) minVal = v;
+    double maxVal = values.reduce((a, b) => a > b ? a : b);
+    double minVal = values.reduce((a, b) => a < b ? a : b);
+    if (maxVal == minVal) {
+      maxVal += 1000;
+      minVal -= 1000;
     }
-    if (maxVal == 0) maxVal = 1;
-    // נשאיר קצת אוויר מתחת למינימום
-    double bottomBase = (minVal * 0.8).clamp(0.0, double.infinity); 
-    double range = maxVal - bottomBase;
+
+    double range = maxVal - minVal;
     if (range <= 0) range = 1;
 
     final path = Path();
-    final fillPath = Path();
     
-    // רווח בין הנקודות - מתפרס על כל הרוחב
-    double stepX = size.width / (records.length > 1 ? records.length - 1 : 1);
-    
+    const double paddingY = 24.0;
+    final double usableHeight = size.height - (paddingY * 2);
+    final double widthStep = records.length > 1 ? size.width / (records.length - 1) : size.width;
+
     List<Offset> points = [];
     for (int i = 0; i < records.length; i++) {
       double v = values[i]; 
-      double x = size.width - (i * stepX); // משמאל לימין
-      double y = size.height - 30 - (((v - bottomBase) / range) * (size.height - 60));
+      double x = records.length > 1 ? i * widthStep : size.width / 2; // משמאל לימין (LTR)
+      double normalizedY = (v - minVal) / range;
+      double y = usableHeight - (normalizedY * usableHeight) + paddingY;
       points.add(Offset(x, y));
-    }
 
-    if (points.length == 1) {
-      path.moveTo(0, points[0].dy);
-      path.lineTo(size.width, points[0].dy);
-      fillPath.moveTo(0, points[0].dy);
-      fillPath.lineTo(size.width, points[0].dy);
-      fillPath.lineTo(size.width, size.height);
-      fillPath.lineTo(0, size.height);
-    } else {
-      path.moveTo(points[0].dx, points[0].dy);
-      fillPath.moveTo(points[0].dx, size.height);
-      fillPath.lineTo(points[0].dx, points[0].dy);
-      
-      for (int i = 1; i < points.length; i++) {
-        path.lineTo(points[i].dx, points[i].dy);
-        fillPath.lineTo(points[i].dx, points[i].dy);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        final prevX = points[i - 1].dx;
+        final prevY = points[i - 1].dy;
+        path.quadraticBezierTo(
+          prevX + (x - prevX) / 2, prevY, 
+          x, y
+        );
       }
-      fillPath.lineTo(points.last.dx, size.height);
     }
 
-    canvas.drawPath(fillPath, fillPaint);
-    canvas.drawPath(path, paintLine);
+    if (records.length > 1) {
+      canvas.drawPath(path, paintLine);
+    }
 
-    final textPainter = TextPainter(textDirection: TextDirection.ltr);
+    // ציור נקודות ותוויות נתונים
+    final textPainter = TextPainter(textDirection: ui.TextDirection.ltr);
     for (int i = 0; i < points.length; i++) {
-      canvas.drawCircle(points[i], 4, Paint()..color = Colors.white);
-      canvas.drawCircle(points[i], 4, paintLine..style = PaintingStyle.stroke);
+      canvas.drawCircle(points[i], 5, paintLine..style = PaintingStyle.fill);
+      canvas.drawCircle(points[i], 3, paintDot);
 
+      // תווית סכום
       double v = values[i];
-      String label = isHourly ? '₪${v.toStringAsFixed(1)}' : '${(v / 1000).toStringAsFixed(1)}k';
+      String valLabel = '₪${v.toStringAsFixed(isHourly ? 1 : 0)}';
       
-      textPainter.text = TextSpan(text: label, style: const TextStyle(color: Colors.black87, fontSize: 10, fontWeight: FontWeight.bold));
+      textPainter.text = TextSpan(text: valLabel, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold));
       textPainter.layout();
       textPainter.paint(canvas, Offset(points[i].dx - textPainter.width / 2, points[i].dy - 20));
       
+      // תווית תאריך
       DateTime d = DateTime.parse(records[i].monthYear);
       String dateLabel = '${d.month.toString().padLeft(2,'0')}/${d.year.toString().substring(2)}';
-      textPainter.text = TextSpan(text: dateLabel, style: const TextStyle(color: Colors.grey, fontSize: 10));
+      textPainter.text = TextSpan(text: dateLabel, style: const TextStyle(color: Colors.white54, fontSize: 10));
       textPainter.layout();
-      textPainter.paint(canvas, Offset(points[i].dx - textPainter.width / 2, size.height - 15));
+      textPainter.paint(canvas, Offset(points[i].dx - textPainter.width / 2, points[i].dy + 8));
     }
   }
 

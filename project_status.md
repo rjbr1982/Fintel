@@ -1,23 +1,23 @@
-# Project Status - Dohaham (Fintel)
-**Version:** Constitution 12.82
-**Last Updated:** March 24, 2026
+# Fintel (דוחכם) - Project Status
+**Last Updated:** April 2026
 
-## ✅ What is Working Perfectly
-* **UI Consistency & Theming:** The application features a cohesive Light Theme across all major entry points (Bootstrapper, Onboarding, and Academy).
-* **Fintel Academy:** Active Content View with horizontal chip navigation is fully implemented, providing a premium feel without sacrificing mobile screen estate.
-* **Shopping Module:** Search bar is highly visible and integrated with search, zooming, and persistent sorting.
-* **Production Infrastructure:** Live on custom domain with Google Login. Firebase Cloud sync is strictly secured.
-* **The Freedom Engine:** Accurately calculates Time-to-Freedom based on Assets and PCF.
+## 🚀 Current Phase
+UX Polishing, Navigation Architecture Refinement, and Data Persistence. Transitioning to Premium Billing Integration (Sandbox).
 
-## 🚧 Work In Progress (Bugs to Fix)
-* **Zero Bugs / Zero Warnings:** Current state is completely clean (`flutter analyze` passes without issues). App is secure and deployed.
+## ✅ Recent Accomplishments (Latest Session)
+* **Navigation Architecture:** Migrated Notification Settings from a standalone Scaffold into an integrated BottomSheet within the Global Menu, maintaining context and access to the Savings Center.
+* **Shopping Persistence:** Upgraded the Multi-Level Sorting engine in the Shopping Screen to save user preferences globally via Firebase (`DatabaseHelper`), replacing volatile local `SharedPreferences`.
+* **Premium UI Polish:** Universally replaced the Material Premium icon with the explicit 👑 emoji across all menus, drilldowns, and headers per the Constitution.
+* **Academy Content:** Updated "The Objective Mirror" introduction text to accurately reflect the new button-based calibration flow in the PnL screen.
+* **Linter Compliance:** Maintained the Zero Warnings Policy by resolving `unnecessary_const` issues in the animated calibration banner.
 
-## 🎯 Next Steps for Next Session
-1. **Globalization Assessment & Implementation:** Analyze the codebase to determine the transition strategy for full language support (`AppLocalizations`).
-2. **Premium Feature Gating:** Continue structural preparations and testing for the Freemium model (Section 5.13).
+## ⏳ Next Steps (Upcoming Session)
+1.  **Fintel Playground:** Move to the Sandbox environment to build the In-App Purchase (IAP) logic.
+2.  **Billing Integration:** Wire the `isPremium` flag to real-world subscription states (RevenueCat/Stripe).
+3.  **Admin Broadcast:** (Future) Use FCM tokens collected to enable mass-push capabilities from the Admin Dashboard.
 
-## 📜 Strategic Decision Log
-* **Academy UI Architecture (March 24, 2026):** Transitioned from a standard `ExpansionTile` list to an "Active Content View" to make the Academy feel more like a premium reading experience rather than a settings menu.
-* **Academy Content Rationality (March 24, 2026):** Decided to strictly enforce the "INTJ" analytical tone in user-facing texts. Removed gimmicky text about "surprising the user" in favor of mathematical truths like Parkinson's Law.
-* **UI Light Theme Unification (March 23, 2026):** Decided to abandon the "Dark Premium" look for the Onboarding and Academy screens. Enforcing a global Light Theme prevents UX fragmentation.
-* **Contextual Onboarding (March 23, 2026):** Implemented the "Silent Guide" doctrine (Section 5.12). Replaced all static explanatory banners with uniform `_showInfoDialog` popups.
+## 🛑 Known Issues / Tech Debt
+* **Local Notifications on Web:** Explicitly disabled to prevent browser crashes; handled gracefully via Hybrid logic.
+* **FCM Token Management:** Tokens are successfully collected and stored in Firestore, ready for server-side triggers.
+
+**Constitution Status:** 12.88 (Aligned with Code)

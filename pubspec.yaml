@@ -18,20 +18,24 @@ dependencies:
   # Utilities
   intl: ^0.20.0 
   
-  # Notifications
+  # Notifications & Time
   flutter_local_notifications: ^17.0.0
+  timezone: ^0.9.2           # 🔒 ADDED: Timezone support for notifications
+  flutter_timezone: ^1.0.8   # 🔒 ADDED: Fetch local device timezone
   
   # System
   path_provider: ^2.1.5
   local_auth: ^2.2.0
+  package_info_plus: ^8.0.0 # 🔒 ADDED: Automatic Version Tracking
   
-  # SaaS & Firebase Cloud (Constitution 5.10)
+  # SaaS & Firebase Cloud (Constitution 5.10 & 5.17)
   firebase_core: ^4.4.0 
   cloud_firestore: ^6.1.2 
   firebase_auth: ^6.1.4 
   google_sign_in: ^6.3.0 
   firebase_ui_auth: ^3.0.1 
   firebase_ui_oauth_google: ^2.0.1 
+  firebase_messaging: ^16.1.2 # 🔒 EDITED: Upgraded version to resolve interface conflict
   url_launcher: ^6.3.2
   shared_preferences: ^2.5.4
 
@@ -58,3 +62,4 @@ flutter:
   assets:
     - assets/icon/Fintel_Icon.png
     - assets/icon/splash.gif
+    - assets/fintel_brain_capsule.txt

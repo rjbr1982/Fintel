@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
+// 🔒 STATUS: EDITED (Fixed deprecated activeColor to activeThumbColor)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/asset_provider.dart';
@@ -147,7 +147,15 @@ class _AssetsScreenState extends State<AssetsScreen> {
                             child: ListTile(
                               onTap: () => _showAssetForm(context, loc, asset: asset),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              title: Text(asset.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(asset.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                                  ),
+                                  if (asset.isPcfAccumulator)
+                                    const Icon(Icons.bolt, color: Colors.amber, size: 18),
+                                ],
+                              ),
                               subtitle: Text('${asset.type} | ${asset.yieldPercentage}% תשואה', style: TextStyle(color: Colors.blueGrey[400], fontSize: 12)),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -188,6 +196,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
     final valueCtrl = TextEditingController(text: asset?.value.toStringAsFixed(0) ?? '');
     final yieldCtrl = TextEditingController(text: asset?.yieldPercentage.toString() ?? '4.0');
     String assetType = asset?.type ?? 'השקעה';
+    bool isPcfAccumulator = asset?.isPcfAccumulator ?? false;
 
     showDialog(
       context: context,
@@ -212,6 +221,22 @@ class _AssetsScreenState extends State<AssetsScreen> {
                   items: ['השקעה', 'נדל"ן', 'חיסכון', 'אחר'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
                   onChanged: (val) => setState(() => assetType = val!),
                 ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: isPcfAccumulator ? Colors.blue.withValues(alpha: 0.05) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: isPcfAccumulator ? Colors.blue.withValues(alpha: 0.3) : Colors.grey.shade300),
+                  ),
+                  child: SwitchListTile(
+                    title: const Text('נכס צובר תזרים (חיסגור)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: const Text('התזרים הפנוי החודשי יתווסף אוטומטית ליתרת נכס זה.', style: TextStyle(fontSize: 12)),
+                    value: isPcfAccumulator,
+                    activeThumbColor: const Color(0xFF00A3FF),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    onChanged: (val) => setState(() => isPcfAccumulator = val),
+                  ),
+                ),
               ],
             ),
           ),
@@ -223,7 +248,16 @@ class _AssetsScreenState extends State<AssetsScreen> {
                 final val = double.tryParse(valueCtrl.text);
                 final yld = double.tryParse(yieldCtrl.text) ?? 0.0;
                 if (val != null && nameCtrl.text.isNotEmpty) {
-                  final newAsset = Asset(id: asset?.id, name: nameCtrl.text, value: val, type: assetType, yieldPercentage: yld);
+                  final newAsset = Asset(
+                    id: asset?.id, 
+                    name: nameCtrl.text, 
+                    value: val, 
+                    type: assetType, 
+                    yieldPercentage: yld,
+                    isPcfAccumulator: isPcfAccumulator,
+                    // מעדכנים תאריך בכל עריכה ידנית כדי למנוע כפל חישוב על חודשים שעברו
+                    lastUpdateDate: DateTime.now().toIso8601String(),
+                  );
                   if (asset == null) {
                     await Provider.of<AssetProvider>(context, listen: false).addAsset(newAsset);
                   } else {

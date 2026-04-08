@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Maintains full SaaS NoSQL compatibility for Business / Passive Income data)
+// 🔒 STATUS: EDITED (Updated updateUserMetric to dynamic to support FCM Tokens)
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -22,6 +22,71 @@ class DatabaseHelper {
   }
 
   int _generateId() => DateTime.now().millisecondsSinceEpoch;
+
+  // ==========================================
+  // רשומת משתמש שורשית (Root User Document & Metrics)
+  // ==========================================
+  
+  Future<void> initializeUserRoot({required String email, String generation = 'Regular', String country = 'Unknown'}) async {
+    if (_uid == 'unauthenticated') return;
+    
+    await _db.collection('users').doc(_uid).set({
+      'email': email,
+      'generation': generation,
+      'country': country,
+      'lastActive': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  // 🔒 תמיכה בערכים דינמיים (bool, String) לצורך שמירת טוקנים ומדדים
+  Future<void> updateUserMetric(String metricKey, dynamic value) async {
+    if (_uid == 'unauthenticated') return;
+
+    await _db.collection('users').doc(_uid).set({
+      'metrics': {
+        metricKey: value
+      },
+      'lastActive': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  // בדיקה האם המשתמש כבר אישר את תנאי השימוש בעבר
+  Future<bool> hasAcceptedTerms() async {
+    if (_uid == 'unauthenticated') return false;
+    try {
+      final doc = await _db.collection('users').doc(_uid).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        if (data.containsKey('metrics') && data['metrics'] is Map) {
+          return data['metrics']['hasAcceptedTerms'] == true;
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ==========================================
+  // משיכת נתוני השורש (לצורכי חומת תשלום והרשאות)
+  // ==========================================
+  
+  Future<Map<String, dynamic>?> getUserRootData() async {
+    if (_uid == 'unauthenticated') return null;
+    try {
+      final doc = await _db.collection('users').doc(_uid).get();
+      return doc.data();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> setPremiumStatus(bool isPremium) async {
+    if (_uid == 'unauthenticated') return;
+    await _db.collection('users').doc(_uid).set({
+      'isPremium': isPremium,
+    }, SetOptions(merge: true));
+  }
 
   // ==========================================
   // 🔄 REAL-TIME STREAMS (SaaS Sync)
@@ -258,7 +323,6 @@ class DatabaseHelper {
           .get();
       
       final items = snap.docs.map((doc) => Withdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
-      // מיון מקומי פותר את שגיאת Firebase הקשורה לאינדקס מורכב חסר
       items.sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
       return items;
     } catch (e) {

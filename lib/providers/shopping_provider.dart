@@ -1,7 +1,8 @@
-// 🔒 STATUS: EDITED (Added Auto-Seed for empty catalogs & Fixed Checkbox State Loss)
+// 🔒 STATUS: EDITED (Integrated Smart Notification Reminder for Weekly Shopping)
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 import '../data/shopping_model.dart';
+import '../services/notification_service.dart'; // 🔔 הזרקת שירות ההתראות
 
 class ShoppingProvider with ChangeNotifier {
   List<ShoppingItem> _items = [];
@@ -12,6 +13,16 @@ class ShoppingProvider with ChangeNotifier {
     final categories = _items.map((e) => e.category).toSet().toList();
     categories.sort();
     return ['הכל', ...categories];
+  }
+
+  // --- מנגנון בחירת חודש להיסטוריית ביצוע בפועל ---
+  DateTime _targetMonth = DateTime.now();
+  DateTime get targetMonth => _targetMonth;
+
+  void setTargetMonthOffset(int monthsBack) {
+    final now = DateTime.now();
+    _targetMonth = DateTime(now.year, now.month - monthsBack, 1);
+    notifyListeners();
   }
 
   // --- 1. תוכנית אסטרטגית (מה שאמור לעלות חודש ממוצע) ---
@@ -31,15 +42,14 @@ class ShoppingProvider with ChangeNotifier {
         .fold(0.0, (sum, item) => sum + (item.price * item.quantity));
   }
 
-  // --- 3. ביצוע בפועל החודש (מה שכבר נקנה ותועד) ---
+  // --- 3. ביצוע בפועל החודש (או בחודש היסטורי נבחר) ---
   double get actualMonthlySpent {
     double total = 0.0;
-    final now = DateTime.now();
     for (var item in _items) {
       final lastDate = item.lastPurchaseDateTime;
       if (lastDate != null && 
-          lastDate.month == now.month && 
-          lastDate.year == now.year) {
+          lastDate.month == _targetMonth.month && 
+          lastDate.year == _targetMonth.year) {
         total += (item.price * item.quantity);
       }
     }
@@ -62,6 +72,7 @@ class ShoppingProvider with ChangeNotifier {
   Future<void> finalizePurchase() async {
     final db = DatabaseHelper.instance;
     final nowStr = DateTime.now().toIso8601String();
+    bool performedAny = false;
 
     for (int i = 0; i < _items.length; i++) {
       if (_items[i].isChecked) {
@@ -70,9 +81,20 @@ class ShoppingProvider with ChangeNotifier {
           isChecked: false,
         );
         await db.updateShoppingItem(_items[i]);
+        performedAny = true;
       }
     }
+    
     notifyListeners();
+
+    // 🔔 חיווט למנוע ההתראות: אם בוצעה קנייה, תזמן התראה לעוד 6 ימים לקנייה הבאה
+    if (performedAny) {
+      try {
+        await NotificationService.instance.scheduleShoppingReminder();
+      } catch (e) {
+        debugPrint('Error scheduling shopping reminder: $e');
+      }
+    }
   }
 
   Future<void> loadItems() async {

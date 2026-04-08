@@ -1,6 +1,7 @@
-// 🔒 STATUS: EDITED (Light Theme Implementation & Dynamic Plural/Single Texts)
+// 🔒 STATUS: EDITED (Fixed Reveal Animation Timing Bug - Memory Sync)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../providers/budget_provider.dart';
 import '../../services/seed_service.dart';
 import '../../data/expense_model.dart';
@@ -92,6 +93,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (!mounted) return;
 
+    // --- אתחול מסמך שורש של המשתמש ב-Firestore (SaaS Metrics) ---
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await DatabaseHelper.instance.initializeUserRoot(
+        email: user.email ?? 'unknown_email@fintel.com',
+      );
+    }
+    // -------------------------------------------------------------
+
+    if (!mounted) return;
+
     final budget = Provider.of<BudgetProvider>(context, listen: false);
     
     // שמירת הסטטוס המשפחתי כדי שלא יאופס למצב ברירת מחדל
@@ -123,10 +135,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       budget.updateHasActiveDebts(true);
     }
 
-    await budget.loadData();
-
-    // אתחול דגל חשיפה למצב "לא הושלם" כדי להפעיל את שער החירות
+    // אתחול דגל חשיפה למצב "לא הושלם" - מבוצע *לפני* הטעינה לזיכרון כדי למנוע את באג דילוג האנימציה
     await DatabaseHelper.instance.saveSetting('has_completed_reveal', 0.0);
+
+    // טעינת הנתונים לזיכרון המערכת כולל הדגל המעודכן
+    await budget.loadData();
 
     if (mounted) {
       Navigator.of(context).pushReplacement(

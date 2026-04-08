@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Dynamic Shopping Seed Calculation + Anchor Synchronization)
+// 🔒 STATUS: EDITED (Removed 'בילויים' from Default Fixed Expenses)
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
 import '../data/shopping_model.dart';

@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed const Linter Warnings in Infinity Animation)
+// 🔒 STATUS: EDITED (Fixed Infinity Pulse UX - Added explanation dialog instead of dead end)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -53,6 +53,34 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  // === פונקציית עזר לתמרורי הדרכה ===
+  void _showInfoDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showFreedomSettingsDialog(BuildContext context, BudgetProvider budget) {
     final targetCtrl = TextEditingController(
       text: budget.manualTargetIncome != null ? budget.manualTargetIncome!.toStringAsFixed(0) : ''
@@ -83,6 +111,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         labelStyle: const TextStyle(color: Colors.blueGrey),
                         hintText: budget.autoTargetIncome.toStringAsFixed(0),
                         hintStyle: const TextStyle(color: Colors.black38),
+                        helperText: 'מחושב אוטומטית מסך הוצאות המחיה והבסיס שלך.',
+                        helperStyle: const TextStyle(color: Colors.blueGrey, fontSize: 11),
+                        helperMaxLines: 2,
                         prefixIcon: const Icon(Icons.track_changes, color: Colors.blueGrey),
                         enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
                         focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
@@ -178,7 +209,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   }
 
   void _showFamilyDrilldown(BuildContext context, BudgetProvider budget, int? targetYear) {
-    if (targetYear == null) return;
+    if (targetYear == null) {
+      _showInfoDialog(context, 'חישוב גילאים במצב אינסוף', 'כדי לראות בני כמה יהיו בני המשפחה בעת ההגעה לחירות הפיננסית, עלינו קודם כל לייצב את התזרים ולכייל את מנוע החירות כך שיציג שנת יעד מוגדרת.');
+      return;
+    }
     
     showDialog(
       context: context,
@@ -438,12 +472,38 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('שנת החירות הפיננסית', style: TextStyle(fontSize: 16, color: Colors.blueGrey, fontWeight: FontWeight.w600)),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text('שנת החירות הפיננסית', style: TextStyle(fontSize: 16, color: Colors.blueGrey, fontWeight: FontWeight.w600)),
+                                  const SizedBox(width: 6),
+                                  InkWell(
+                                    onTap: () => _showInfoDialog(context, 'מנוע החירות', 'שנה זו מחושבת אוטומטית על ידי שילוב התזרים הפנוי שלך, תיק הנכסים הקיים, והתשואה שהגדרת למנוע ההשקעות. לחץ על אייקון המטרה (🎯) כדי לכייל את התשואה והיעד.'),
+                                    child: const Icon(Icons.info_outline, size: 18, color: Colors.blueGrey),
+                                  ),
+                                ],
+                              ),
                               const SizedBox(height: 10),
                               Text(
                                 yearText,
                                 style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: Color(0xFF121212), height: 1.1),
                               ),
+                              if (targetYear == null) ...[
+                                const SizedBox(height: 12),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.amber[600],
+                                    foregroundColor: Colors.black87,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    elevation: 0,
+                                  ),
+                                  onPressed: () => _showFreedomSettingsDialog(context, budget),
+                                  icon: const Icon(Icons.settings, size: 16),
+                                  label: const Text('כייל מנוע חירות', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -467,7 +527,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                 if (_showPulse) {
                                   setState(() => _showPulse = false);
                                 }
-                                if (targetYear != null) _showFamilyDrilldown(context, budget, targetYear);
+                                _showFamilyDrilldown(context, budget, targetYear);
                               },
                               child: const Icon(Icons.family_restroom, size: 24),
                             ),

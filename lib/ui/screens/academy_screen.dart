@@ -69,7 +69,7 @@ class _AcademyScreenState extends State<AcademyScreen> {
             Icon(Icons.workspace_premium, color: goldAccents, size: 24),
             SizedBox(width: 8),
             Text(
-              'המדריך לחירות פיננסית',
+              'אקדמיית Fintel - פרקטיקת השימוש',
               style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
