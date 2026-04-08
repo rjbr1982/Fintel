@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Restored Savings Center to Hamburger Menu and maintained Settings hierarchy)
+// 🔒 STATUS: EDITED (Moved Notification Settings into an internal BottomSheet and removed Scaffold screen)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -24,7 +24,6 @@ import '../screens/admin_dashboard_screen.dart';
 import '../screens/category_drilldown_screen.dart';
 import '../screens/reducing_screen.dart';
 import '../screens/assets_screen.dart';
-import '../screens/notification_settings_screen.dart';
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
@@ -88,7 +87,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Icon(Icons.workspace_premium, color: Colors.amber, size: 18),
+                const Text('👑', style: TextStyle(fontSize: 16)),
               ],
             ),
           ),
@@ -227,7 +226,6 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                 ),
                 _buildMenuTile(icon: Icons.shopping_cart_outlined, color: Colors.blueGrey[900]!, title: 'רשימת קניות', onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const ShoppingScreen())); }),
                 
-                // ✅ הוחזר: מרכז החסכונות בתפריט הראשי
                 if (showSavings) 
                   _buildMenuTile(
                     icon: Icons.savings_outlined, 
@@ -279,7 +277,7 @@ Widget _buildMenuTile({required IconData icon, required Color color, required St
   return ListTile(
     contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
     leading: CircleAvatar(backgroundColor: color.withValues(alpha: 0.1), child: Icon(icon, color: color, size: 22)),
-    title: Row(children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87)), if (isPremium) ...[const SizedBox(width: 8), const Icon(Icons.workspace_premium, color: Colors.amber, size: 18)]]),
+    title: Row(children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87)), if (isPremium) ...[const SizedBox(width: 8), const Text('👑', style: TextStyle(fontSize: 16))]]),
     trailing: trailing, onTap: onTap,
   );
 }
@@ -302,7 +300,7 @@ Widget _buildSubMenuTile(String title, IconData icon, VoidCallback onTap, {bool 
     onTap: onTap,
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(children: [Icon(icon, size: 18, color: Colors.blueGrey[600]), const SizedBox(width: 12), Text(title, style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w500)), if (isPremium) ...[const SizedBox(width: 8), const Icon(Icons.workspace_premium, color: Colors.amber, size: 16)]]),
+      child: Row(children: [Icon(icon, size: 18, color: Colors.blueGrey[600]), const SizedBox(width: 12), Text(title, style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w500)), if (isPremium) ...[const SizedBox(width: 8), const Text('👑', style: TextStyle(fontSize: 14))]]),
     ),
   );
 }
@@ -390,14 +388,13 @@ void _showMainSettingsBottomSheet(BuildContext context, BudgetProvider budget, b
                   if (user != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: _buildUserProfileCard(context, user)),
                   if (!kIsWeb) Consumer<BudgetProvider>(builder: (context, budgetProv, child) { return _buildMenuTile(icon: Icons.fingerprint, color: Colors.teal, title: 'כניסה ביומטרית', trailing: Switch(value: budgetProv.useBiometric, activeThumbColor: Colors.teal, onChanged: (val) { budgetProv.toggleBiometric(val); }), onTap: () { budgetProv.toggleBiometric(!budgetProv.useBiometric); }); }),
                   
-                  // 🔔 ניהול התראות בתוך הגדרות מערכת
                   _buildMenuTile(
                     icon: Icons.notifications_active_outlined, 
                     color: Colors.blueAccent, 
                     title: 'ניהול התראות', 
                     onTap: () { 
                       Navigator.pop(ctx); 
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationSettingsScreen())); 
+                      _showNotificationSettingsBottomSheet(context, budget, showSavings);
                     }
                   ),
 
@@ -412,6 +409,94 @@ void _showMainSettingsBottomSheet(BuildContext context, BudgetProvider budget, b
           ),
         ],
       ),
+    ),
+  );
+}
+
+// 🔔 הפונקציה החדשה: תפריט ניהול התראות כ-BottomSheet פנימי
+void _showNotificationSettingsBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
+  showModalBottomSheet(
+    context: context, backgroundColor: Colors.white, isScrollControlled: true,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildBottomSheetHeader(ctx, 'ניהול התראות', () => _showMainSettingsBottomSheet(context, budget, showSavings)),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'בחר אילו עדכונים תרצה לקבל מהמערכת ישירות למכשיר או לדפדפן שלך.',
+                    style: TextStyle(color: Colors.blueGrey, height: 1.5, fontSize: 14),
+                    textAlign: TextAlign.right,
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  _buildNotificationToggleCard(
+                    title: 'סיכום גלגול חודשי',
+                    subtitle: 'עדכון ב-1 לחודש על ביצוע ה-Rollover האוטומטי וסטטוס החסכונות.',
+                    icon: Icons.calendar_month,
+                    value: budget.notifMonthlyRollover,
+                    onChanged: (val) => budget.updateNotificationSetting('notif_monthly', val),
+                  ),
+                  
+                  _buildNotificationToggleCard(
+                    title: 'תזכורת יום משיכות',
+                    subtitle: 'התראה ביום הקבוע שהגדרת לביצוע משיכות פיזיות מהבנק.',
+                    icon: Icons.account_balance,
+                    value: budget.notifWithdrawalDay,
+                    onChanged: (val) => budget.updateNotificationSetting('notif_withdrawal', val),
+                  ),
+
+                  _buildNotificationToggleCard(
+                    title: 'רמזור קניות שבועי',
+                    subtitle: 'תזכורת להכנת רשימה (6 ימים מהקנייה האחרונה) והגנה על הדלתא.',
+                    icon: Icons.shopping_cart_checkout,
+                    value: budget.notifShoppingReminder,
+                    onChanged: (val) => budget.updateNotificationSetting('notif_shopping', val),
+                  ),
+
+                  _buildNotificationToggleCard(
+                    title: 'טיפים ועדכוני פרימיום',
+                    subtitle: 'מידע על פיצ\'רים חדשים וטיפים להאצת הדרך לחירות פיננסית.',
+                    icon: Icons.auto_awesome,
+                    value: budget.notifPremiumTeasers,
+                    onChanged: (val) => budget.updateNotificationSetting('notif_premium', val),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildNotificationToggleCard({required String title, required String subtitle, required IconData icon, required bool value, required Function(bool) onChanged}) {
+  return Card(
+    elevation: 0,
+    color: Colors.white,
+    margin: const EdgeInsets.only(bottom: 16),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16), 
+      side: BorderSide(color: Colors.grey.shade200) 
+    ),
+    child: SwitchListTile(
+      secondary: CircleAvatar(
+        backgroundColor: const Color(0xFF00A3FF).withValues(alpha: 0.1), 
+        child: Icon(icon, color: const Color(0xFF00A3FF), size: 22)
+      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+      value: value,
+      activeThumbColor: const Color(0xFF00A3FF),
+      activeTrackColor: const Color(0xFF00A3FF).withValues(alpha: 0.2),
+      onChanged: onChanged,
     ),
   );
 }

@@ -1,11 +1,11 @@
-// 🔒 STATUS: EDITED (Fixed Collection-If syntax errors and Set assignment issues)
+// 🔒 STATUS: EDITED (Migrated sorting persistence from SharedPreferences to Cloud-Sync via DatabaseHelper)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/shopping_provider.dart';
 import '../../providers/budget_provider.dart'; 
 import '../../data/shopping_model.dart';
 import '../../data/expense_model.dart';
+import '../../data/database_helper.dart';
 import '../widgets/global_header.dart';
 
 class ShoppingScreen extends StatefulWidget {
@@ -40,21 +40,25 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   }
 
   Future<void> _loadSortPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedActive = prefs.getStringList('shopping_active_sorts');
-    final savedAll = prefs.getStringList('shopping_all_sorts');
-    if (savedActive != null && savedActive.isNotEmpty && savedAll != null && savedAll.isNotEmpty) {
-      setState(() {
-        _activeSorts = savedActive;
-        _allSortOptions = savedAll;
-      });
+    final userData = await DatabaseHelper.instance.getUserRootData();
+    if (userData != null && userData.containsKey('metrics')) {
+      final metrics = userData['metrics'] as Map<String, dynamic>;
+      if (metrics.containsKey('shopping_active_sorts') && metrics.containsKey('shopping_all_sorts')) {
+        final savedActive = List<String>.from(metrics['shopping_active_sorts']);
+        final savedAll = List<String>.from(metrics['shopping_all_sorts']);
+        if (savedActive.isNotEmpty && savedAll.isNotEmpty) {
+          setState(() {
+            _activeSorts = savedActive;
+            _allSortOptions = savedAll;
+          });
+        }
+      }
     }
   }
 
   Future<void> _saveSortPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('shopping_active_sorts', _activeSorts);
-    await prefs.setStringList('shopping_all_sorts', _allSortOptions);
+    await DatabaseHelper.instance.updateUserMetric('shopping_active_sorts', _activeSorts);
+    await DatabaseHelper.instance.updateUserMetric('shopping_all_sorts', _allSortOptions);
   }
 
   @override

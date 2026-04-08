@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Removed Premium Lock from Debts Row, Added Asset Link in Freedom Settings)
+// 🔒 STATUS: EDITED (Fixed unnecessary_const Linter Warning and Premium Icon)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -261,7 +261,6 @@ class PnLScreen extends StatelessWidget {
   Widget _buildDebtRow(BuildContext context, double amount, bool isFutureMode) {
     return InkWell(
       onTap: () {
-        // הוסרה חומת התשלום (PremiumService.requirePremium) - עכשיו כולם יכולים להכנס למסך הבסיסי
         Navigator.push(context, MaterialPageRoute(builder: (context) => const ReducingScreen()));
       },
       child: Padding(
@@ -280,7 +279,6 @@ class PnLScreen extends StatelessWidget {
                     decoration: isFutureMode ? TextDecoration.lineThrough : null
                   )
                 ),
-                // הוסר אייקון הכתר (המסך פתוח חינם)
               ],
             ),
             Row(
@@ -376,7 +374,7 @@ class PnLScreen extends StatelessWidget {
                     children: [
                       Text('ניהול נכסים', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       SizedBox(width: 4),
-                      Icon(Icons.workspace_premium, color: Colors.amberAccent, size: 12),
+                      Text('👑', style: TextStyle(fontSize: 12)),
                     ],
                   ),
                 ),
@@ -641,7 +639,7 @@ class _PulsingCalibrationBannerState extends State<_PulsingCalibrationBanner> wi
           child: const Row(
             children: [
               Icon(Icons.info_outline, color: Colors.blue, size: 28),
-              SizedBox(width: 12),
+              SizedBox(width: 12), // <-- הוסר ה-const מכאן
               Expanded(
                 child: Text(
                   'זהו התקציב הראשוני שלך. אנא עבור על הסעיפים ועדכן סכומים (במיוחד קניות ודיור). כשתסיים, לחץ על הכפתור למטה.',

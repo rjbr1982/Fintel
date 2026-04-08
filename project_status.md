@@ -2,21 +2,19 @@
 **Last Updated:** April 2026
 
 ## 🚀 Current Phase
-Finalized Hybrid Notification Architecture and UX Polishing. Transitioning to Premium Billing Integration (Sandbox).
+UX Polishing, Navigation Architecture Refinement, and Data Persistence. Transitioning to Premium Billing Integration (Sandbox).
 
 ## ✅ Recent Accomplishments (Latest Session)
-* **Hybrid Notification Engine (FCM):** Implemented Firebase Cloud Messaging for Web. Built the `firebase-messaging-sw.js` infrastructure to support Push Notifications for iOS/Web users.
-* **Notification Control Center:** Created a dedicated UI for granular notification management and integrated contextual "Notification Bells" in Shopping and Sinking Funds screens.
-* **Fixed Global Sorting:** Enforced strict hierarchical sorting for "Future Expenses" (רכישות גדולות -> חופשה שנתית) across all views.
-* **Legal Onboarding V2:** Implemented a strict 2-stage consent flow with a mandatory checkbox and a secondary scrollable modal for full T&C text.
-* **Bank Deposit Logic Fix:** Resolved a bug where dynamic variable expenses were incorrectly "frozen," creating artificial gaps. The system now distinguishes between fixed-amount and ratio-based items for bank verification.
-* **Information Architecture:** Reorganized the Hamburger menu to group system-level settings (Notifications, Biometrics, Ratios) under "System Settings."
-* **Linter Compliance:** Optimized codebase for zero warnings, enforcing strict curly brace blocks and removing deprecated UI parameters.
+* **Navigation Architecture:** Migrated Notification Settings from a standalone Scaffold into an integrated BottomSheet within the Global Menu, maintaining context and access to the Savings Center.
+* **Shopping Persistence:** Upgraded the Multi-Level Sorting engine in the Shopping Screen to save user preferences globally via Firebase (`DatabaseHelper`), replacing volatile local `SharedPreferences`.
+* **Premium UI Polish:** Universally replaced the Material Premium icon with the explicit 👑 emoji across all menus, drilldowns, and headers per the Constitution.
+* **Academy Content:** Updated "The Objective Mirror" introduction text to accurately reflect the new button-based calibration flow in the PnL screen.
+* **Linter Compliance:** Maintained the Zero Warnings Policy by resolving `unnecessary_const` issues in the animated calibration banner.
 
 ## ⏳ Next Steps (Upcoming Session)
 1.  **Fintel Playground:** Move to the Sandbox environment to build the In-App Purchase (IAP) logic.
 2.  **Billing Integration:** Wire the `isPremium` flag to real-world subscription states (RevenueCat/Stripe).
-3.  **Admin Broadcast:** (Future) Use FCM tokens collected this session to enable mass-push capabilities from the Admin Dashboard.
+3.  **Admin Broadcast:** (Future) Use FCM tokens collected to enable mass-push capabilities from the Admin Dashboard.
 
 ## 🛑 Known Issues / Tech Debt
 * **Local Notifications on Web:** Explicitly disabled to prevent browser crashes; handled gracefully via Hybrid logic.
