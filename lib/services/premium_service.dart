@@ -1,16 +1,28 @@
+<<<<<<< HEAD
 // 🔒 STATUS: EDITED (Added forceFreeMode, Gamma Billing Infrastructure, Fixed Linter Warnings)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+=======
+// 🔒 STATUS: EDITED (Persistent Founders Gift & Hybrid Billing Architecture, Removed PENDING tags)
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
+>>>>>>> 7a28736953c5b3531f4f7e7b2639671f84565d12
 import '../data/database_helper.dart';
 
 /// מנוע החיוב ההיברידי (מפריד בין רכישות מובייל לרכישות דפדפן)
 class HybridBillingEngine {
+<<<<<<< HEAD
   // PENDING: Replace with the actual payment gateway link for Gamma phase
   static const String webPaymentUrl = 'https://meshulam.co.il/or/YOUR_PAYMENT_LINK';
 
   static Future<void> init() async {
     if (kIsWeb) {
+=======
+  static Future<void> init() async {
+    if (kIsWeb) {
+      // PENDING: Initialize Web Custom Gateway logic (e.g., listen to Webhook callbacks)
+>>>>>>> 7a28736953c5b3531f4f7e7b2639671f84565d12
       debugPrint('HybridBillingEngine: Web Gateway initialized');
     } else {
       // PENDING: Initialize RevenueCat (purchases_flutter)
@@ -20,6 +32,7 @@ class HybridBillingEngine {
     }
   }
 
+<<<<<<< HEAD
   static Future<bool> purchasePro(BuildContext context) async {
     try {
       if (kIsWeb) {
@@ -54,6 +67,19 @@ class HybridBillingEngine {
         
         // סימולציה זמנית למובייל בארגז החול
         await Future.delayed(const Duration(seconds: 2)); 
+=======
+  static Future<bool> purchasePro() async {
+    try {
+      if (kIsWeb) {
+        // PENDING: Redirect to Web Payment Link (Cloud Function / Israeli Gateway)
+        await Future.delayed(const Duration(seconds: 2)); // סימולציית המתנה
+        return true;
+      } else {
+        // PENDING: Trigger RevenueCat native bottom sheet
+        // final purchaserInfo = await Purchases.purchasePackage(package);
+        // return purchaserInfo.entitlements.all["pro"]?.isActive == true;
+        await Future.delayed(const Duration(seconds: 2)); // סימולציית המתנה
+>>>>>>> 7a28736953c5b3531f4f7e7b2639671f84565d12
         return true;
       }
     } catch (e) {
@@ -64,6 +90,7 @@ class HybridBillingEngine {
 }
 
 class PremiumService {
+<<<<<<< HEAD
   /// מתג מפתחים: כופה על המערכת להתייחס למשתמש כ"חינמי" לצורכי בדיקות (QA)
   static bool forceFreeMode = false;
 
@@ -82,6 +109,17 @@ class PremiumService {
     // בדיקת תקינות הקשר (Context) לאחר המתנה לפעולה אסינכרונית
     if (!context.mounted) return;
 
+=======
+  /// עוטף פעולות הדורשות מנוי פרימיום.
+  /// בודק מול בסיס הנתונים: משלמים או מייסדים עוברים, רגילים מקבלים מסך חומת תשלום (Paywall).
+  static Future<void> requirePremium(BuildContext context, VoidCallback onGranted) async {
+    // משיכת נתוני סטטוס מהירה (שקופה)
+    final userData = await DatabaseHelper.instance.getUserRootData();
+    
+    // בדיקת תקינות הקשר (Context) לאחר המתנה לפעולה אסינכרונית
+    if (!context.mounted) return;
+
+>>>>>>> 7a28736953c5b3531f4f7e7b2639671f84565d12
     final generation = userData?['generation'] ?? 'Regular';
     final isPremium = userData?['isPremium'] ?? false;
     
@@ -228,7 +266,11 @@ class PremiumService {
                               setState(() => isProcessing = true);
                               
                               // הפעלת מנוע החיוב ההיברידי (Web / Native)
+<<<<<<< HEAD
                               bool success = await HybridBillingEngine.purchasePro(ctx);
+=======
+                              bool success = await HybridBillingEngine.purchasePro();
+>>>>>>> 7a28736953c5b3531f4f7e7b2639671f84565d12
                               
                               if (!ctx.mounted) return;
                               
@@ -236,11 +278,14 @@ class PremiumService {
                                 Navigator.pop(ctx);
                                 await DatabaseHelper.instance.setPremiumStatus(true);
                                 
+<<<<<<< HEAD
                                 // אם מצב מפתחים דולק - מכבים אותו אוטומטית כדי לא להיתקע
                                 if (PremiumService.forceFreeMode) {
                                   PremiumService.forceFreeMode = false;
                                 }
                                 
+=======
+>>>>>>> 7a28736953c5b3531f4f7e7b2639671f84565d12
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -252,6 +297,7 @@ class PremiumService {
                                 onGranted();
                               } else {
                                 setState(() => isProcessing = false);
+<<<<<<< HEAD
                                 // הסרת השגיאה כאן כי בדפדפן הוא הועבר לקישור חיצוני, זה לא בהכרח "נכשל"
                                 if (!kIsWeb) {
                                   ScaffoldMessenger.of(ctx).showSnackBar(
@@ -261,6 +307,14 @@ class PremiumService {
                                     ),
                                   );
                                 }
+=======
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('התשלום בוטל או נכשל. נסה שוב.'), 
+                                    backgroundColor: Colors.redAccent
+                                  ),
+                                );
+>>>>>>> 7a28736953c5b3531f4f7e7b2639671f84565d12
                               }
                             },
                             child: const Text("התחל 30 ימי ניסיון חינם", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
