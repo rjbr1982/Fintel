@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Freemium Teaser for Time Machine & Open Base Debt Entry)
+// 🔒 STATUS: EDITED (Freemium Teaser updated to use Crown emoji)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/debt_provider.dart';
@@ -28,10 +28,10 @@ class _ReducingScreenState extends State<ReducingScreen> {
   }
 
   Future<void> _checkPremiumStatus() async {
-    final data = await DatabaseHelper.instance.getUserRootData();
+    final isPremium = await PremiumService.isUserPremium();
     if (mounted) {
       setState(() {
-        _isPremium = data?['isPremium'] == true;
+        _isPremium = isPremium;
         _isLoadingPremium = false;
       });
     }
@@ -167,7 +167,7 @@ class _ReducingScreenState extends State<ReducingScreen> {
             const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.workspace_premium, color: Colors.amber, size: 24),
+                Text('👑', style: TextStyle(fontSize: 24)),
                 SizedBox(width: 8),
                 Flexible(
                   child: Text('מתי באמת תסיימו לשלם את החובות?', 

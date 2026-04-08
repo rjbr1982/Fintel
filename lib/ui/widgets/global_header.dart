@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Moved Notification Settings into an internal BottomSheet and removed Scaffold screen)
+// 🔒 STATUS: EDITED (Converted to Stateful to dynamicly show crown, Unblocked ReducingScreen for free users)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -25,7 +25,7 @@ import '../screens/category_drilldown_screen.dart';
 import '../screens/reducing_screen.dart';
 import '../screens/assets_screen.dart';
 
-class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
+class GlobalHeader extends StatefulWidget implements PreferredSizeWidget {
   final String? title;
   final bool showBackButton;
   final bool showSavingsIcon;
@@ -43,6 +43,28 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   @override
+  State<GlobalHeader> createState() => _GlobalHeaderState();
+}
+
+class _GlobalHeaderState extends State<GlobalHeader> {
+  bool _isPremium = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPremium();
+  }
+
+  Future<void> _checkPremium() async {
+    final isPremium = await PremiumService.isUserPremium();
+    if (mounted) {
+      setState(() {
+        _isPremium = isPremium;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final budget = context.watch<BudgetProvider>();
     final loc = AppLocalizations.of(context);
@@ -55,7 +77,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: Colors.white,
       elevation: 0,
       centerTitle: false,
-      leading: (showBackButton && canPop) 
+      leading: (widget.showBackButton && canPop) 
         ? IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: Colors.blueGrey, size: 20),
             onPressed: () => Navigator.of(context).pop(),
@@ -79,22 +101,24 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
               children: [
                 Flexible(
                   child: Text(
-                    title ?? (loc?.get('appTitle') ?? 'דוחכם'),
-                    style: (title != null) 
+                    widget.title ?? (loc?.get('appTitle') ?? 'דוחכם'),
+                    style: (widget.title != null) 
                       ? const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)
                       : TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400]),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 6),
-                const Text('👑', style: TextStyle(fontSize: 16)),
+                if (_isPremium) ...[
+                  const SizedBox(width: 6),
+                  const Text('👑', style: TextStyle(fontSize: 16)),
+                ],
               ],
             ),
           ),
         ],
       ),
       actions: [
-        if (actions != null) ...actions!,
+        if (widget.actions != null) ...widget.actions!,
         if (canPop)
           IconButton(
             icon: const Icon(Icons.dashboard_outlined, color: brandBlue),
@@ -105,7 +129,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
           IconButton(
             icon: const Icon(Icons.menu, color: brandBlue, size: 28),
             tooltip: 'תפריט ראשי',
-            onPressed: () => _showMainMenuBottomSheet(context, budget, showSavingsIcon),
+            onPressed: () => _showMainMenuBottomSheet(context, budget, widget.showSavingsIcon),
           ),
         const SizedBox(width: 4),
       ],
@@ -218,7 +242,13 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     _buildSubMenuTile('מסך תזרים ראשי', Icons.dashboard, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const PnLScreen())); }),
                     _buildSubMenuTile('הכנסות', Icons.arrow_downward, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'הכנסות', displayTitle: 'הכנסות'))); }),
                     _buildSubMenuTile('קבועות', Icons.push_pin, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'קבועות', displayTitle: 'קבועות'))); }),
-                    _buildSubMenuTile('מנמיכות', Icons.trending_down, () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const ReducingScreen())); }); }, isPremium: true),
+                    
+                    // מנמיכות שוחרר למשתמשים חינמיים (הם יראו שם את טיזר הצלף)
+                    _buildSubMenuTile('מנמיכות', Icons.trending_down, () { 
+                      Navigator.pop(ctx); 
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ReducingScreen())); 
+                    }),
+                    
                     _buildSubMenuTile('משתנות', Icons.shopping_bag_outlined, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'משתנות', displayTitle: 'משתנות'))); }),
                     _buildSubMenuTile('עתידיות', Icons.savings_outlined, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'עתידיות', displayTitle: 'עתידיות'))); }),
                     _buildSubMenuTile('פיננסיות', Icons.trending_up, () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const AssetsScreen())); }); }, isPremium: true),
@@ -413,7 +443,6 @@ void _showMainSettingsBottomSheet(BuildContext context, BudgetProvider budget, b
   );
 }
 
-// 🔔 הפונקציה החדשה: תפריט ניהול התראות כ-BottomSheet פנימי
 void _showNotificationSettingsBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
   showModalBottomSheet(
     context: context, backgroundColor: Colors.white, isScrollControlled: true,
