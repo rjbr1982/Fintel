@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Notification Control Center Navigation & AppBar Actions support)
+// 🔒 STATUS: EDITED (Moved Notifications to System Settings submenu)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -24,13 +24,13 @@ import '../screens/admin_dashboard_screen.dart';
 import '../screens/category_drilldown_screen.dart';
 import '../screens/reducing_screen.dart';
 import '../screens/assets_screen.dart';
-import '../screens/notification_settings_screen.dart'; // 🔔 הזרקת מסך התראות
+import '../screens/notification_settings_screen.dart';
 
 class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
   final bool showBackButton;
   final bool showSavingsIcon;
-  final List<Widget>? actions; // 🔒 תמיכה ב-Actions מותאמים אישית (למשל פעמון התראות)
+  final List<Widget>? actions;
 
   const GlobalHeader({
     super.key,
@@ -81,7 +81,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
                 Flexible(
                   child: Text(
                     title ?? (loc?.get('appTitle') ?? 'דוחכם'),
-                    style: title != null 
+                    style: (title != null) 
                       ? const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)
                       : TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400]),
                     overflow: TextOverflow.ellipsis,
@@ -95,7 +95,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
         ],
       ),
       actions: [
-        if (actions != null) ...actions!, // הזרקת ה-Actions המותאמים אישית
+        if (actions != null) ...actions!,
         if (canPop)
           IconButton(
             icon: const Icon(Icons.dashboard_outlined, color: brandBlue),
@@ -230,9 +230,6 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                 _buildMenuTile(icon: Icons.account_balance_wallet_outlined, color: Colors.blueGrey, title: 'מעקב עו"ש', onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckingHistoryScreen())); }),
                 _buildMenuTile(icon: Icons.insights, color: Colors.orange, title: 'ממוצע שכר', isPremium: true, onTap: () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const SalaryEngineScreen())); }); }),
                 
-                // 🔔 שורת ההתראות החדשה
-                _buildMenuTile(icon: Icons.notifications_active_outlined, color: Colors.blueAccent, title: 'ניהול התראות', onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationSettingsScreen())); }),
-
                 const Divider(),
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -383,6 +380,18 @@ void _showMainSettingsBottomSheet(BuildContext context, BudgetProvider budget, b
                 children: [
                   if (user != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: _buildUserProfileCard(context, user)),
                   if (!kIsWeb) Consumer<BudgetProvider>(builder: (context, budgetProv, child) { return _buildMenuTile(icon: Icons.fingerprint, color: Colors.teal, title: 'כניסה ביומטרית', trailing: Switch(value: budgetProv.useBiometric, activeThumbColor: Colors.teal, onChanged: (val) { budgetProv.toggleBiometric(val); }), onTap: () { budgetProv.toggleBiometric(!budgetProv.useBiometric); }); }),
+                  
+                  // 🔔 שורת ההתראות עברה לכאן
+                  _buildMenuTile(
+                    icon: Icons.notifications_active_outlined, 
+                    color: Colors.blueAccent, 
+                    title: 'ניהול התראות', 
+                    onTap: () { 
+                      Navigator.pop(ctx); 
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationSettingsScreen())); 
+                    }
+                  ),
+
                   _buildMenuTile(icon: Icons.family_restroom_rounded, color: Colors.blue, title: 'הגדרות משפחה וסטטוס', onTap: () { Navigator.pop(ctx); _showFamilySettingsBottomSheet(context, budget, showSavings); }),
                   _buildMenuTile(icon: Icons.pie_chart_outline, color: Colors.orange, title: 'אחוז משתנות (רמת חיים)', onTap: () { Navigator.pop(ctx); _showRatioSettingsBottomSheet(context, budget, showSavings); }),
                   _buildMenuTile(icon: Icons.balance, color: Colors.purple, title: 'חלוקת שארית (עתידיות/פיננסיות)', onTap: () { Navigator.pop(ctx); _showFutureVsFinancialBottomSheet(context, budget, showSavings); }),
@@ -498,9 +507,9 @@ void _showFamilySettingsBottomSheet(BuildContext context, BudgetProvider budget,
 void _showEditMemberBottomSheet(BuildContext context, BudgetProvider budget, FamilyMember? member, bool showSavings) {
   final nameController = TextEditingController(text: member?.name ?? '');
   final yearController = TextEditingController(text: member?.birthYear.toString() ?? DateTime.now().year.toString());
-  final isAdult = member != null && member.role != FamilyRole.child;
-  final titleText = member == null ? 'הוספת ילד/ה' : (isAdult ? 'עריכת פרטי הורה' : 'עריכת פרטי ילד');
-  final nameLabel = member == null ? 'שם הילד/ה' : (isAdult ? 'שם ההורה' : 'שם הילד/ה');
+  final isAdult = (member != null && member.role != FamilyRole.child);
+  final titleText = (member == null) ? 'הוספת ילד/ה' : (isAdult ? 'עריכת פרטי הורה' : 'עריכת פרטי ילד');
+  final nameLabel = (member == null) ? 'שם הילד/ה' : (isAdult ? 'שם ההורה' : 'שם הילד/ה');
   final roleToSave = member?.role ?? FamilyRole.child; 
   showModalBottomSheet(
     context: context, backgroundColor: Colors.white, isScrollControlled: true,

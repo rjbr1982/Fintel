@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed RoundedRectangleBorder parameter and Deprecated Switch color)
+// 🔒 STATUS: EDITED (UI Polish: Clearer card styling and system integration)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -12,7 +12,7 @@ class NotificationSettingsScreen extends StatelessWidget {
     final budget = context.watch<BudgetProvider>();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FA), // רקע בהיר ונעים
       appBar: const GlobalHeader(title: 'ניהול התראות', showSavingsIcon: false),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -63,10 +63,11 @@ class NotificationSettingsScreen extends StatelessWidget {
   Widget _buildToggleCard({required String title, required String subtitle, required IconData icon, required bool value, required Function(bool) onChanged}) {
     return Card(
       elevation: 0,
+      color: Colors.white, // רקע לבן נקי (תוקן מהמצב הכהה)
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16), 
-        side: BorderSide(color: Colors.grey.shade200) // תוקן מ-border ל-side
+        side: BorderSide(color: Colors.grey.shade200) 
       ),
       child: SwitchListTile(
         secondary: CircleAvatar(
@@ -76,7 +77,8 @@ class NotificationSettingsScreen extends StatelessWidget {
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.black54)),
         value: value,
-        activeThumbColor: const Color(0xFF00A3FF), // תוקן מ-activeColor ל-activeThumbColor
+        activeThumbColor: const Color(0xFF00A3FF),
+        activeTrackColor: const Color(0xFF00A3FF).withValues(alpha: 0.2),
         onChanged: onChanged,
       ),
     );
