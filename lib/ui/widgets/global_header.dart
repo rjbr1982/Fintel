@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Converted to Stateful to dynamicly show crown, Unblocked ReducingScreen for free users)
+// 🔒 STATUS: EDITED (Reactive Header - Listens to PremiumService.stateNotifier for immediate Crown toggle)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -53,11 +53,19 @@ class _GlobalHeaderState extends State<GlobalHeader> {
   void initState() {
     super.initState();
     _checkPremium();
+    // האזנה לשינויים בזמן אמת (כמו מתג המפתחים או רכישה)
+    PremiumService.stateNotifier.addListener(_checkPremium);
+  }
+
+  @override
+  void dispose() {
+    PremiumService.stateNotifier.removeListener(_checkPremium);
+    super.dispose();
   }
 
   Future<void> _checkPremium() async {
     final isPremium = await PremiumService.isUserPremium();
-    if (mounted) {
+    if (mounted && _isPremium != isPremium) {
       setState(() {
         _isPremium = isPremium;
       });

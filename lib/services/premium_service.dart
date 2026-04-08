@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added isUserPremium helper, fixed UI paywall icons and content)
+// 🔒 STATUS: EDITED (Added Reactive stateNotifier for real-time UI updates across the app)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -54,12 +54,22 @@ class HybridBillingEngine {
 }
 
 class PremiumService {
+  /// מנגנון האזנה גלובלי - מודיע לרכיבי UI מתי סטטוס הפרימיום השתנה בזמן אמת
+  static final ValueNotifier<int> stateNotifier = ValueNotifier(0);
+  static void notifyStateChanged() => stateNotifier.value++;
+
+  static bool _forceFreeMode = false;
+  
   /// מתג מפתחים: כופה על המערכת להתייחס למשתמש כ"חינמי" לצורכי בדיקות (QA)
-  static bool forceFreeMode = false;
+  static bool get forceFreeMode => _forceFreeMode;
+  static set forceFreeMode(bool val) {
+    _forceFreeMode = val;
+    notifyStateChanged(); // עדכון מיידי של כל הכותרות באפליקציה
+  }
 
   /// בודק באופן אסינכרוני האם המשתמש זכאי לפרימיום (משמש לתצוגות UI כמו הכתר בכותרת)
   static Future<bool> isUserPremium() async {
-    if (forceFreeMode) return false;
+    if (_forceFreeMode) return false;
     final userData = await DatabaseHelper.instance.getUserRootData();
     if (userData == null) return false;
     
@@ -70,7 +80,7 @@ class PremiumService {
 
   /// עוטף פעולות הדורשות מנוי פרימיום.
   static Future<void> requirePremium(BuildContext context, VoidCallback onGranted) async {
-    if (forceFreeMode) {
+    if (_forceFreeMode) {
       _showPaywall(context, onGranted);
       return;
     }
@@ -223,6 +233,8 @@ class PremiumService {
                                 
                                 if (PremiumService.forceFreeMode) {
                                   PremiumService.forceFreeMode = false;
+                                } else {
+                                  PremiumService.notifyStateChanged();
                                 }
                                 
                                 if (context.mounted) {
