@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Freemium Teaser updated to use Crown emoji)
+// 🔒 STATUS: FINAL (Freemium Teaser updated to use Crown emoji, removed unused imports)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/debt_provider.dart';
@@ -8,7 +8,6 @@ import '../../utils/app_localizations.dart';
 import '../widgets/global_header.dart';
 import 'debt_schedule_screen.dart';
 import '../../services/premium_service.dart';
-import '../../data/database_helper.dart';
 
 class ReducingScreen extends StatefulWidget {
   const ReducingScreen({super.key});
