@@ -1,11 +1,11 @@
-// 🔒 STATUS: EDITED (Added Future Sorting & Fixed Dynamic Bank Deposit Freeze Logic)
+// 🔒 STATUS: EDITED (Linter Clean: Added curly braces to all flow control structures)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
 import '../data/asset_model.dart';
-import '../services/notification_service.dart'; // 🔔 הזרקת שירות ההתראות
+import '../services/notification_service.dart';
 
 class BudgetProvider with ChangeNotifier {
   List<Expense> _expenses = [];
@@ -37,12 +37,16 @@ class BudgetProvider with ChangeNotifier {
   
   bool _useBiometric = false;
   
-  // דגל ניהול "שער החירות"
-  bool _hasCompletedGrandReveal = true; // ברירת מחדל true למשתמשים קיימים
+  // הגדרות התראות
+  bool _notifMonthlyRollover = true;
+  bool _notifWithdrawalDay = true;
+  bool _notifShoppingReminder = true;
+  bool _notifPremiumTeasers = true;
+
+  bool _hasCompletedGrandReveal = true;
 
   List<SalaryRecord> _salaryRecords = [];
   
-  // Smart Withdrawal Manager States
   List<PlannedWithdrawal> _plannedWithdrawals = [];
   final Map<String, int> _bucketWithdrawalDays = {}; 
   
@@ -77,8 +81,12 @@ class BudgetProvider with ChangeNotifier {
   bool get useBiometric => _useBiometric;
   bool get hasCompletedGrandReveal => _hasCompletedGrandReveal;
   
-  double get variableDeficit => _variableDeficit;
+  bool get notifMonthlyRollover => _notifMonthlyRollover;
+  bool get notifWithdrawalDay => _notifWithdrawalDay;
+  bool get notifShoppingReminder => _notifShoppingReminder;
+  bool get notifPremiumTeasers => _notifPremiumTeasers;
 
+  double get variableDeficit => _variableDeficit;
   double get initialCapital => _initialCapital;
   double get expectedYield => _expectedYield;
   int get compoundingFrequency => _compoundingFrequency;
@@ -86,7 +94,6 @@ class BudgetProvider with ChangeNotifier {
 
   double get autoTargetIncome => totalFixedExpenses + totalVariableExpenses + totalFutureExpenses;
   
-  // סך ההכנסות מסווגות כ"פסיביות" אשר יקזזו את יעד המחייה
   double get totalPassiveIncome {
     double sum = 0;
     for (var e in _expenses.where((ex) => ex.category == 'הכנסות' && ex.isBusiness)) {
@@ -99,14 +106,17 @@ class BudgetProvider with ChangeNotifier {
 
   double get targetPassiveIncome {
     double baseTarget = _manualTargetIncome ?? autoTargetIncome;
-    // הפחתת הכנסה פסיבית קיימת מעסקים מתוך היעד הנדרש מתיק ההשקעות
     double reducedTarget = baseTarget - totalPassiveIncome;
-    return reducedTarget > 0 ? reducedTarget : 0;
+    return (reducedTarget > 0) ? reducedTarget : 0;
   }
 
   int getCategoryUnifiedMode(String cat) {
-    if (_unifiedCategoryModes.containsKey(cat)) return _unifiedCategoryModes[cat]!;
-    if (cat == 'רכב' || cat == 'ילדים - קבועות') return 2;
+    if (_unifiedCategoryModes.containsKey(cat)) {
+      return _unifiedCategoryModes[cat]!;
+    }
+    if (cat == 'רכב' || cat == 'ילדים - קבועות') {
+      return 2;
+    }
     return 0; 
   }
 
@@ -117,15 +127,13 @@ class BudgetProvider with ChangeNotifier {
   }
 
   int getBucketWithdrawalDay(String bucketName) {
-    return _bucketWithdrawalDays[bucketName] ?? 10; // ברירת מחדל: ב-10 לחודש
+    return _bucketWithdrawalDays[bucketName] ?? 10;
   }
 
   Future<void> setBucketWithdrawalDay(String bucketName, int day) async {
     _bucketWithdrawalDays[bucketName] = day;
     await DatabaseHelper.instance.saveSetting('bucket_day_$bucketName', day.toDouble());
     notifyListeners();
-    
-    // 🔔 חיווט למנוע ההתראות: תזמון "יום המשיכות"
     try {
       await NotificationService.instance.scheduleWithdrawalDay(day);
     } catch (e) {
@@ -152,17 +160,19 @@ class BudgetProvider with ChangeNotifier {
 
   void _sortInMemoryData() {
     _familyMembers.sort((a, b) {
-      if (a.role == FamilyRole.parent && b.role != FamilyRole.parent) return -1;
-      if (b.role == FamilyRole.parent && a.role != FamilyRole.parent) return 1;
+      if (a.role == FamilyRole.parent && b.role != FamilyRole.parent) {
+        return -1;
+      }
+      if (b.role == FamilyRole.parent && a.role != FamilyRole.parent) {
+        return 1;
+      }
       return a.birthYear.compareTo(b.birthYear);
     });
 
     final kidNames = _familyMembers.where((m) => m.role == FamilyRole.child).map((m) {
-      String n = m.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
-      return n;
+      return m.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
     }).toList();
 
-    // חוקיות מיון עבור קטגוריית העל (1: הכנסות, 2: קבועות וכו')
     int getCategoryWeight(String category) {
       switch (category) {
         case 'הכנסות': return 1;
@@ -175,11 +185,10 @@ class BudgetProvider with ChangeNotifier {
       }
     }
 
-    // חוקיות מיון עבור ההיררכיה הפנימית בתוך "הוצאות קבועות"
     int getFixedSubcategoryWeight(String parentCategory) {
       switch (parentCategory) {
         case 'צדקה': return 1;
-        case 'תרומות': return 1; // זהה לצדקה
+        case 'תרומות': return 1; 
         case 'דיור': return 2;
         case 'מגורים': return 3;
         case 'רכב': return 4;
@@ -190,11 +199,10 @@ class BudgetProvider with ChangeNotifier {
         case 'נסיעות': return 9;
         case 'תספורת': return 10;
         case 'קטנות לבית': return 11;
-        default: return 99; // כל הוצאה שנוספה עצמאית תרד לסוף הרשימה
+        default: return 99;
       }
     }
 
-    // חוקיות מיון עבור ההיררכיה הפנימית בתוך "עתידיות"
     int getFutureSubcategoryWeight(String parentCategory) {
       switch (parentCategory) {
         case 'רכישות גדולות': return 1;
@@ -207,62 +215,71 @@ class BudgetProvider with ChangeNotifier {
       }
     }
 
-    // חוקיות מיון היררכיה משפחתית למשתנות
     int getPersonWeight(String searchString) {
-      if (searchString.contains('אבא') || searchString.contains('בעל') || searchString.contains('אישי')) return 1;
-      if (searchString.contains('אמא') || searchString.contains('אישה')) return 2;
+      if (searchString.contains('אבא') || searchString.contains('בעל') || searchString.contains('אישי')) {
+        return 1;
+      }
+      if (searchString.contains('אמא') || searchString.contains('אישה')) {
+        return 2;
+      }
       for (int i = 0; i < kidNames.length; i++) {
-         if (searchString.contains(kidNames[i])) return 10 + i;
+         if (searchString.contains(kidNames[i])) {
+           return 10 + i;
+         }
       }
       return 99;
     }
 
-    // חוקיות סוג הוצאה במשתנות
     int getTypeWeight(String name) {
-      if (name.contains('בגדים')) return 1;
-      if (name.contains('בילויים')) return 2;
-      if (name.contains('טיפוח')) return 3;
+      if (name.contains('בגדים')) { return 1; }
+      if (name.contains('בילויים')) { return 2; }
+      if (name.contains('טיפוח')) { return 3; }
       return 99;
     }
 
     _expenses.sort((a, b) {
-      // 1. מיון לפי קטגוריית על (קבועות, משתנות וכו')
       int catA = getCategoryWeight(a.category);
       int catB = getCategoryWeight(b.category);
-      if (catA != catB) return catA.compareTo(catB);
+      if (catA != catB) {
+        return catA.compareTo(catB);
+      }
 
-      // 2א. מיון היררכי פנימי רק אם מדובר בהוצאות קבועות!
       if (a.category == 'קבועות' && b.category == 'קבועות') {
         int subCatA = getFixedSubcategoryWeight(a.parentCategory);
         int subCatB = getFixedSubcategoryWeight(b.parentCategory);
-        if (subCatA != subCatB) return subCatA.compareTo(subCatB);
+        if (subCatA != subCatB) {
+          return subCatA.compareTo(subCatB);
+        }
       }
 
-      // 2ב. מיון היררכי פנימי רק אם מדובר בהוצאות עתידיות!
       if (a.category == 'עתידיות' && b.category == 'עתידיות') {
         int subCatA = getFutureSubcategoryWeight(a.parentCategory);
         int subCatB = getFutureSubcategoryWeight(b.parentCategory);
-        if (subCatA != subCatB) return subCatA.compareTo(subCatB);
+        if (subCatA != subCatB) {
+          return subCatA.compareTo(subCatB);
+        }
       }
 
       String searchA = "${a.parentCategory} ${a.name}";
       String searchB = "${b.parentCategory} ${b.name}";
 
-      // 2ג. מיון לפי היררכיה משפחתית (אבא -> אמא -> ילדים לפי גיל) - רלוונטי למשתנות
       int pA = getPersonWeight(searchA);
       int pB = getPersonWeight(searchB);
-      if (pA != pB) return pA.compareTo(pB);
+      if (pA != pB) {
+        return pA.compareTo(pB);
+      }
 
-      // 3. מיון לפי סוג ההוצאה הפנימי (בגדים -> בילויים -> טיפוח)
       int tA = getTypeWeight(a.name);
       int tB = getTypeWeight(b.name);
-      if (tA != tB) return tA.compareTo(tB);
+      if (tA != tB) {
+        return tA.compareTo(tB);
+      }
       
-      // 4. מיון אלפביתי מקבץ (Fall-back) עבור קטגוריות אב שוות משקל
       int parentCmp = (a.parentCategory).compareTo(b.parentCategory);
-      if (parentCmp != 0) return parentCmp;
+      if (parentCmp != 0) {
+        return parentCmp;
+      }
 
-      // 5. מיון רגיל על פי מזהה (למניעת קפיצות)
       return (a.id ?? 0).compareTo(b.id ?? 0);
     });
   }
@@ -285,14 +302,18 @@ class BudgetProvider with ChangeNotifier {
       _futureAllocationRatio = await DatabaseHelper.instance.getSetting('future_ratio') ?? defaultFutureRatio;
       
       double msVal = await DatabaseHelper.instance.getSetting('marital_status') ?? 2.0;
-      _maritalStatus = msVal == 1.0 ? 'single' : 'married';
+      _maritalStatus = (msVal == 1.0) ? 'single' : 'married';
 
       double genderVal = await DatabaseHelper.instance.getSetting('gender') ?? 1.0;
-      _gender = genderVal == 1.0 ? 'male' : 'female';
+      _gender = (genderVal == 1.0) ? 'male' : 'female';
       
       _useBiometric = (await DatabaseHelper.instance.getSetting('use_biometric') ?? 0.0) == 1.0;
-      
       _hasCompletedGrandReveal = (await DatabaseHelper.instance.getSetting('has_completed_reveal') ?? 1.0) == 1.0;
+
+      _notifMonthlyRollover = (await DatabaseHelper.instance.getSetting('notif_monthly') ?? 1.0) == 1.0;
+      _notifWithdrawalDay = (await DatabaseHelper.instance.getSetting('notif_withdrawal') ?? 1.0) == 1.0;
+      _notifShoppingReminder = (await DatabaseHelper.instance.getSetting('notif_shopping') ?? 1.0) == 1.0;
+      _notifPremiumTeasers = (await DatabaseHelper.instance.getSetting('notif_premium') ?? 1.0) == 1.0;
 
       _customEntWarning = await DatabaseHelper.instance.getSetting('ent_warning');
       _customEntSuccess = await DatabaseHelper.instance.getSetting('ent_success');
@@ -300,9 +321,7 @@ class BudgetProvider with ChangeNotifier {
       await _forceCategorySync();
       await _performAutoRollover();
       _recalculateAll();
-      notifyListeners();
       
-      // 🔔 חיווט למנוע ההתראות: בדיקת פרימיום וארגון הטיזרים השיווקיים
       final userRoot = await DatabaseHelper.instance.getUserRootData();
       final bool isPremium = userRoot?['isPremium'] == true;
       try {
@@ -315,14 +334,30 @@ class BudgetProvider with ChangeNotifier {
         _setupStreams();
         _isListening = true;
       }
+      notifyListeners();
     } catch (e) {
       debugPrint("Error loading data: $e");
     }
   }
 
+  Future<void> updateNotificationSetting(String key, bool value) async {
+    switch (key) {
+      case 'notif_monthly': _notifMonthlyRollover = value; break;
+      case 'notif_withdrawal': _notifWithdrawalDay = value; break;
+      case 'notif_shopping': _notifShoppingReminder = value; break;
+      case 'notif_premium': _notifPremiumTeasers = value; break;
+    }
+    notifyListeners();
+    await DatabaseHelper.instance.saveSetting(key, value ? 1.0 : 0.0);
+    
+    if (value) {
+      await NotificationService.instance.requestPermission();
+    }
+  }
+
   void _setupStreams() {
     _expensesSub = DatabaseHelper.instance.streamExpenses().listen((data) {
-      if (_isSyncing) return; 
+      if (_isSyncing) { return; }
       _expenses = data;
       _sortInMemoryData();
       _recalculateAll();
@@ -370,10 +405,9 @@ class BudgetProvider with ChangeNotifier {
             _unifiedCategoryModes[catName] = mode;
             changed = true;
           }
-        }
-        else if (key != null && key.startsWith('unified_cat_') && val != null) {
+        } else if (key != null && key.startsWith('unified_cat_') && val != null) {
           String catName = key.substring(12);
-          int mode = val == 1.0 ? 2 : 0; 
+          int mode = (val == 1.0) ? 2 : 0; 
           if (_unifiedCategoryModes[catName] != mode) {
              _unifiedCategoryModes[catName] = mode;
              DatabaseHelper.instance.saveSetting('unified_mode_$catName', mode.toDouble());
@@ -397,24 +431,26 @@ class BudgetProvider with ChangeNotifier {
         if (key == 'future_ratio' && val != null && _futureAllocationRatio != val) { _futureAllocationRatio = val; changed = true; }
         
         if (key == 'marital_status' && val != null) { 
-          String newStatus = val == 1.0 ? 'single' : 'married';
+          String newStatus = (val == 1.0) ? 'single' : 'married';
           if (_maritalStatus != newStatus) { _maritalStatus = newStatus; changed = true; }
         }
-
         if (key == 'gender' && val != null) { 
-          String newGender = val == 1.0 ? 'male' : 'female';
+          String newGender = (val == 1.0) ? 'male' : 'female';
           if (_gender != newGender) { _gender = newGender; changed = true; }
         }
-        
         if (key == 'use_biometric' && val != null) {
-          bool useBio = val == 1.0;
+          bool useBio = (val == 1.0);
           if (_useBiometric != useBio) { _useBiometric = useBio; changed = true; }
         }
-        
         if (key == 'has_completed_reveal' && val != null) {
-          bool hasCompleted = val == 1.0;
+          bool hasCompleted = (val == 1.0);
           if (_hasCompletedGrandReveal != hasCompleted) { _hasCompletedGrandReveal = hasCompleted; changed = true; }
         }
+        
+        if (key == 'notif_monthly' && val != null) { _notifMonthlyRollover = (val == 1.0); changed = true; }
+        if (key == 'notif_withdrawal' && val != null) { _notifWithdrawalDay = (val == 1.0); changed = true; }
+        if (key == 'notif_shopping' && val != null) { _notifShoppingReminder = (val == 1.0); changed = true; }
+        if (key == 'notif_premium' && val != null) { _notifPremiumTeasers = (val == 1.0); changed = true; }
 
         if (key == 'ent_warning' && _customEntWarning != val) { _customEntWarning = val; changed = true; }
         if (key == 'ent_success' && _customEntSuccess != val) { _customEntSuccess = val; changed = true; }
@@ -457,8 +493,8 @@ class BudgetProvider with ChangeNotifier {
   }
 
   Future<void> updateFamilyStructure({String? maritalStatus, String? gender}) async {
-    if (maritalStatus != null) _maritalStatus = maritalStatus;
-    if (gender != null) _gender = gender;
+    if (maritalStatus != null) { _maritalStatus = maritalStatus; }
+    if (gender != null) { _gender = gender; }
     notifyListeners(); 
 
     if (maritalStatus != null) {
@@ -498,50 +534,51 @@ class BudgetProvider with ChangeNotifier {
     double yieldRate = _expectedYield / 100.0;
     double targetAnnual = targetPassiveIncome * 12;
 
-    if (yieldRate <= 0 && targetAnnual > 0) return null; 
-    if ((cap * yieldRate) >= targetAnnual) return 0; 
+    if (yieldRate <= 0 && targetAnnual > 0) { return null; }
+    if ((cap * yieldRate) >= targetAnnual) { return 0; }
 
     int months = 0;
     while (months < 1200) { 
       cap += monthlyDeposit;
       if (_compoundingFrequency == 1) { 
-        if (months > 0 && months % 12 == 0) cap += cap * yieldRate;
+        if (months > 0 && months % 12 == 0) { cap += cap * yieldRate; }
       } else if (_compoundingFrequency == 12) { 
         cap += cap * (yieldRate / 12);
       } else if (_compoundingFrequency == 52) { 
         cap *= math.pow(1 + yieldRate / 52, 52 / 12).toDouble();
       }
-      if ((cap * yieldRate) >= targetAnnual) return months;
+      if ((cap * yieldRate) >= targetAnnual) { return months; }
       months++;
     }
     return null; 
   }
 
-  String get _parent1Name => _maritalStatus == 'single' 
+  String get _parent1Name {
+    return (_maritalStatus == 'single') 
       ? (childCount == 0 ? 'אישי' : (_gender == 'male' ? 'אבא' : 'אמא')) 
       : (childCount == 0 ? 'בעל' : 'אבא');
+  }
 
-  String? get _parent2Name => _maritalStatus == 'single' 
-      ? null 
-      : (childCount == 0 ? 'אישה' : 'אמא');
+  String? get _parent2Name {
+    return (_maritalStatus == 'single') ? null : (childCount == 0 ? 'אישה' : 'אמא');
+  }
 
   Map<String, double> _getDynamicVariableRatios() {
     int cCount = childCount;
     final kids = _familyMembers.where((m) => m.role == FamilyRole.child).toList();
-    
     Map<String, double> ratios = {};
     String p1 = _parent1Name;
     String? p2 = _parent2Name;
 
     if (_maritalStatus == 'single') {
       if (cCount == 0) { 
-        ratios['בגדים $p1'] = _gender == 'female' ? 0.40 : 0.45;
-        ratios['בילויים $p1'] = _gender == 'female' ? 0.45 : 0.55;
-        if (_gender == 'female') ratios['טיפוח $p1'] = 0.15;
+        ratios['בגדים $p1'] = (_gender == 'female') ? 0.40 : 0.45;
+        ratios['בילויים $p1'] = (_gender == 'female') ? 0.45 : 0.55;
+        if (_gender == 'female') { ratios['טיפוח $p1'] = 0.15; }
       } else { 
         ratios['בגדים $p1'] = 0.28;
         ratios['בילויים $p1'] = 0.33;
-        if (_gender == 'female') ratios['טיפוח $p1'] = 0.15;
+        if (_gender == 'female') { ratios['טיפוח $p1'] = 0.15; }
       }
     } else { 
       if (cCount == 0) { 
@@ -571,44 +608,31 @@ class BudgetProvider with ChangeNotifier {
     return ratios;
   }
 
-  // >>> הפונקציה הבלעדית לחישוב הקפאת ערך הבנק - מונעת הקפאה על הוצאות דינמיות <<<
   double? _getCapturedBankDeposit(Expense old) {
-    if (old.actualBankDeposit != null) return old.actualBankDeposit;
+    if (old.actualBankDeposit != null) { return old.actualBankDeposit; }
     bool isDynamic = !old.isLocked && (old.allocationRatio != null && old.allocationRatio! > 0) && (old.category == 'משתנות' || old.category == 'עתידיות');
-    if (isDynamic) return null; // לא מקפיאים ערכים דינמיים!
-    int multiplier = old.isPerChild ? childCount : 1;
-    if (multiplier < 1) multiplier = 1;
+    if (isDynamic) { return null; }
+    int multiplier = (old.isPerChild) ? childCount : 1;
+    if (multiplier < 1) { multiplier = 1; }
     return old.monthlyAmount * multiplier;
   }
 
   Future<void> resetExpenseToDefault(int expenseId, {bool? isSinking}) async {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
-    if (index == -1) return;
-    
+    if (index == -1) { return; }
     final name = _expenses[index].name;
     String nameForMatch = name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
-
     final Map<String, double> defaultRatios = {
       ..._getDynamicVariableRatios(), 
-      'מקדמה לבית': 0.67, 
-      'בר מצווה אליעזר': 0.11,
-      'חופשה שנתית': 0.11,
-      'תנור גז': 0.07, 
-      'הדברה': 0.02, 
-      'רפואי': 0.02,
+      'מקדמה לבית': 0.67, 'בר מצווה אליעזר': 0.11, 'חופשה שנתית': 0.11,
+      'תנור גז': 0.07, 'הדברה': 0.02, 'רפואי': 0.02,
     };
-
     double defaultRatio = defaultRatios[nameForMatch] ?? 0.0;
-
     if (_expenses[index].parentCategory == 'ילדים - משתנות') {
-      defaultRatio = childCount > 0 ? (0.12 / childCount) : 0.0;
+      defaultRatio = (childCount > 0) ? (0.12 / childCount) : 0.0;
     }
-
     final old = _expenses[index];
-    
-    // 🔒 הקפאת ערך הבנק הקודם רגע לפני איפוס היעד
     double? capturedBankDeposit = _getCapturedBankDeposit(old);
-
     final updated = Expense(
       id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
       monthlyAmount: 0, originalAmount: old.originalAmount, frequency: old.frequency,
@@ -616,18 +640,15 @@ class BudgetProvider with ChangeNotifier {
       currentBalance: old.currentBalance, allocationRatio: defaultRatio,
       lastUpdateDate: old.lastUpdateDate, isLocked: false, manualAmount: null, date: old.date,
       isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
-      isCustom: old.isCustom,
-      isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
+      isCustom: old.isCustom, isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
       actualBankDeposit: capturedBankDeposit, 
     );
-
     await DatabaseHelper.instance.updateExpense(updated);
   }
 
   Future<void> addVehicleTemplate(String vehicleName, String type) async {
     final now = DateTime.now().toIso8601String();
     String parentCat = 'רכב';
-
     if (type == 'car') {
       await addExpense(Expense(name: 'טסט ($vehicleName)', category: 'קבועות', parentCategory: parentCat, monthlyAmount: 1250/12, frequency: Frequency.YEARLY, isSinking: true, isCustom: true, date: now));
       await addExpense(Expense(name: 'ביטוח ($vehicleName)', category: 'קבועות', parentCategory: parentCat, monthlyAmount: 3500/12, frequency: Frequency.YEARLY, isSinking: true, isCustom: true, date: now));
@@ -645,55 +666,39 @@ class BudgetProvider with ChangeNotifier {
   }
 
   Future<void> _forceCategorySync() async {
-    if (_isSyncing) {
-      _syncQueued = true;
-      return;
-    }
+    if (_isSyncing) { _syncQueued = true; return; }
     _isSyncing = true;
-    
     try {
       do {
         _syncQueued = false;
         bool changed = false;
         final now = DateTime.now().toIso8601String();
-        
         List<Expense> localExp = await DatabaseHelper.instance.getExpenses();
-        if (localExp.isEmpty) continue;
-
+        if (localExp.isEmpty) { continue; }
         String p1 = _parent1Name;
         String? p2 = _parent2Name;
-
         final Map<String, double> targetVariableRatios = _getDynamicVariableRatios();
         final List<String> validVarNames = targetVariableRatios.keys.toList();
         final List<String> prefixes = ['בגדים', 'בילויים', 'טיפוח'];
-        
-        String preferredSuffix = _maritalStatus == 'single' ? p1 : (_gender == 'female' && p2 != null ? p2 : p1);
+        String preferredSuffix = (_maritalStatus == 'single') ? p1 : ((_gender == 'female' && p2 != null) ? p2 : p1);
 
         for (int i = localExp.length - 1; i >= 0; i--) {
           final e = localExp[i];
           bool shouldDelete = false;
           String nameForMatch = e.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
-
-          bool isSystemGrooming = nameForMatch == 'טיפוח אישי' || nameForMatch == 'טיפוח אישה' || nameForMatch == 'טיפוח אמא';
-
+          bool isSystemGrooming = (nameForMatch == 'טיפוח אישי' || nameForMatch == 'טיפוח אישה' || nameForMatch == 'טיפוח אמא');
           if (nameForMatch == 'פארם וניקיון' || nameForMatch == 'בגדים ילדים' || nameForMatch == 'בילויים ילדים') {
             shouldDelete = true;
-          }
-          else if (childCount == 0 && e.parentCategory == 'ילדים - קבועות') {
+          } else if (childCount == 0 && e.parentCategory == 'ילדים - קבועות') {
             shouldDelete = true;
-          }
-          else if (_maritalStatus == 'single' && _gender == 'male' && isSystemGrooming) {
+          } else if (_maritalStatus == 'single' && _gender == 'male' && isSystemGrooming) {
             shouldDelete = true;
-          }
-          else if (e.category == 'משתנות' && e.parentCategory != 'קניות' && !e.isCustom) {
-            
+          } else if (e.category == 'משתנות' && e.parentCategory != 'קניות' && !e.isCustom) {
             bool isDynamicPrefix = prefixes.any((p) => nameForMatch.startsWith(p));
-            
             if (isDynamicPrefix) {
               if (!validVarNames.contains(nameForMatch)) {
                 bool salvaged = false;
                 String ePrefix = prefixes.firstWhere((p) => nameForMatch.startsWith(p), orElse: () => '');
-                
                 if (ePrefix.isNotEmpty) {
                   String? targetName;
                   try {
@@ -701,17 +706,13 @@ class BudgetProvider with ChangeNotifier {
                   } catch (_) {
                     try {
                       targetName = validVarNames.firstWhere((v) => v.startsWith(ePrefix) && (v.endsWith(p1) || (p2 != null && v.endsWith(p2))));
-                    } catch (_) {
-                      targetName = null;
-                    }
+                    } catch (_) { targetName = null; }
                   }
-
                   if (targetName != null && !localExp.any((ex) => ex.name == targetName)) {
                     String newParent = targetName.split(' ').skip(1).join(' ').trim();
                     if (_familyMembers.any((m) => m.role == FamilyRole.child && m.name.trim() == newParent)) {
                        newParent = 'ילדים - משתנות';
                     }
-
                     final updated = Expense(
                       id: e.id, name: targetName, category: e.category, parentCategory: newParent,
                       monthlyAmount: e.monthlyAmount, originalAmount: e.originalAmount, frequency: e.frequency,
@@ -720,28 +721,19 @@ class BudgetProvider with ChangeNotifier {
                       lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
                       isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: e.isCustom,
                       isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
-                      actualBankDeposit: e.actualBankDeposit, // PRESERVE BANK DEPOSIT
+                      actualBankDeposit: e.actualBankDeposit,
                     );
                     await DatabaseHelper.instance.updateExpense(updated);
-                    localExp[i] = updated; 
-                    salvaged = true;
-                    changed = true;
+                    localExp[i] = updated; salvaged = true; changed = true;
                   }
                 }
-                
-                if (!salvaged) {
-                  shouldDelete = true;
-                }
+                if (!salvaged) { shouldDelete = true; }
               }
-            } else if (!validVarNames.contains(nameForMatch)) {
-              shouldDelete = true;
-            }
+            } else if (!validVarNames.contains(nameForMatch)) { shouldDelete = true; }
           }
-
           if (shouldDelete) {
             await DatabaseHelper.instance.deleteExpense(e.id!);
-            localExp.removeAt(i);
-            changed = true;
+            localExp.removeAt(i); changed = true;
           }
         }
 
@@ -749,23 +741,17 @@ class BudgetProvider with ChangeNotifier {
           if (!localExp.any((e) => e.name == entry.key)) {
             String parentCat = 'אחר';
             String personName = entry.key.split(' ').skip(1).join(' ').trim();
-            
             if (_familyMembers.any((m) => m.role == FamilyRole.child && m.name.trim() == personName)) {
               parentCat = 'ילדים - משתנות';
-            } else if (personName == p1) {
-              parentCat = p1;
-            } else if (p2 != null && personName == p2) {
-              parentCat = p2;
-            }
-
+            } else if (personName == p1) { parentCat = p1;
+            } else if (p2 != null && personName == p2) { parentCat = p2; }
             final newE = Expense(
               name: entry.key, category: 'משתנות', parentCategory: parentCat,
               monthlyAmount: 0, originalAmount: 0, isSinking: true,
               isPerChild: false, allocationRatio: entry.value,
               date: now, isDynamicSalary: false, isCustom: false,
             );
-            await DatabaseHelper.instance.insertExpense(newE);
-            changed = true;
+            await DatabaseHelper.instance.insertExpense(newE); changed = true;
           }
         }
 
@@ -779,15 +765,11 @@ class BudgetProvider with ChangeNotifier {
                    frequency: (kf == 'ציוד בית ספר' || kf == 'קייטנות') ? Frequency.YEARLY : Frequency.MONTHLY,
                    date: now, isDynamicSalary: false, isCustom: false,
                );
-               await DatabaseHelper.instance.insertExpense(newE);
-               changed = true;
+               await DatabaseHelper.instance.insertExpense(newE); changed = true;
             }
           }
         }
-
-        if (changed) {
-          localExp = await DatabaseHelper.instance.getExpenses();
-        }
+        if (changed) { localExp = await DatabaseHelper.instance.getExpenses(); }
 
         final Map<String, Map<String, String>> syncRules = {
           'שכר לימוד': {'cat': 'קבועות', 'parent': 'ילדים - קבועות'},
@@ -807,753 +789,341 @@ class BudgetProvider with ChangeNotifier {
         for (int i = 0; i < localExp.length; i++) {
           final e = localExp[i];
           bool needsUpdate = false;
-          String newCat = e.category;
-          String newParent = e.parentCategory;
-          bool newIsPerChild = e.isPerChild;
-          String newName = e.name;
-          bool newIsCustom = e.isCustom;
-          double? newRatio = e.allocationRatio;
+          String newCat = e.category; String newParent = e.parentCategory;
+          bool newIsPerChild = e.isPerChild; String newName = e.name;
+          bool newIsCustom = e.isCustom; double? newRatio = e.allocationRatio;
           bool newIsSinking = e.isSinking;
           String nameForMatch = e.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
 
           if (syncRules.containsKey(nameForMatch)) {
             final rule = syncRules[nameForMatch]!;
             if (e.category != rule['cat'] || e.parentCategory != rule['parent']) {
-              newCat = rule['cat']!;
-              newParent = rule['parent']!;
+              newCat = rule['cat']!; newParent = rule['parent']!;
               newIsPerChild = (rule['parent']!.startsWith('ילדים - קבועות') || e.isPerChild);
               needsUpdate = true;
             }
           }
-
           if (targetVariableRatios.containsKey(nameForMatch)) {
             double targetRatio = targetVariableRatios[nameForMatch]!;
-            if (newRatio != targetRatio) {
-              newRatio = targetRatio;
-              needsUpdate = true;
-            }
-            
+            if (newRatio != targetRatio) { newRatio = targetRatio; needsUpdate = true; }
             String personName = nameForMatch.split(' ').skip(1).join(' ').trim();
             String expectedParent = 'אחר';
             if (_familyMembers.any((m) => m.role == FamilyRole.child && m.name.trim() == personName)) {
               expectedParent = 'ילדים - משתנות';
-            } else if (personName == p1) {
-              expectedParent = p1;
-            } else if (p2 != null && personName == p2) {
-              expectedParent = p2;
-            }
-            
-            if (newParent != expectedParent) {
-              newParent = expectedParent;
-              needsUpdate = true;
-            }
+            } else if (personName == p1) { expectedParent = p1;
+            } else if (p2 != null && personName == p2) { expectedParent = p2; }
+            if (newParent != expectedParent) { newParent = expectedParent; needsUpdate = true; }
           } else if (requiredRatios.containsKey(nameForMatch)) {
-            if (newRatio != requiredRatios[nameForMatch]) {
-              newRatio = requiredRatios[nameForMatch];
-              needsUpdate = true;
-            }
+            if (newRatio != requiredRatios[nameForMatch]) { newRatio = requiredRatios[nameForMatch]; needsUpdate = true; }
           }
-
-          if (newCat == 'עתידיות' || newParent == 'חגים') {
-            if (!newIsSinking) { newIsSinking = true; needsUpdate = true; }
-          }
+          if (newCat == 'עתידיות' || newParent == 'חגים') { if (!newIsSinking) { newIsSinking = true; needsUpdate = true; } }
           if (newParent == 'רכב') {
             String cleanVehicleName = newName.trim();
             if (!cleanVehicleName.startsWith('דלק') && !cleanVehicleName.startsWith('ליסינג')) {
               if (!newIsSinking) { newIsSinking = true; needsUpdate = true; }
-            } else {
-              if (newIsSinking) { newIsSinking = false; needsUpdate = true; }
-            }
+            } else { if (newIsSinking) { newIsSinking = false; needsUpdate = true; } }
           }
-          if (newName.trim() == 'הובלה ותיקונים' && !newIsSinking) {
-            newIsSinking = true; needsUpdate = true;
-          }
-
+          if (newName.trim() == 'הובלה ותיקונים' && !newIsSinking) { newIsSinking = true; needsUpdate = true; }
           final oldVehicleNames = ['טסט', 'ביטוח', 'טיפול', 'תיקונים', 'דלק', 'ליסינג', 'נסיעות'];
           if (e.parentCategory == 'רכב' && !e.name.contains('(') && oldVehicleNames.contains(e.name.trim())) {
-            newName = '${e.name} (אופנוע יסוד)';
-            newIsCustom = true; 
-            needsUpdate = true;
+            newName = '${e.name} (אופנוע יסוד)'; newIsCustom = true; needsUpdate = true;
           }
-
           if (needsUpdate) {
             final updated = Expense(
               id: e.id, name: newName, category: newCat, parentCategory: newParent,
               monthlyAmount: e.monthlyAmount, originalAmount: e.originalAmount, frequency: e.frequency,
-              isSinking: newIsSinking, isPerChild: newIsPerChild,
-              targetAmount: e.targetAmount, currentBalance: e.currentBalance, allocationRatio: newRatio,
+              isSinking: newIsSinking, isPerChild: newIsPerChild, targetAmount: e.targetAmount, currentBalance: e.currentBalance, allocationRatio: newRatio,
               lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
               isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: newIsCustom,
               isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
-              actualBankDeposit: e.actualBankDeposit, // PRESERVE BANK DEPOSIT
+              actualBankDeposit: e.actualBankDeposit,
             );
-            await DatabaseHelper.instance.updateExpense(updated);
-            changed = true;
+            await DatabaseHelper.instance.updateExpense(updated); changed = true;
           }
         }
-
-        if (changed) {
-          _expenses = await DatabaseHelper.instance.getExpenses();
-          _sortInMemoryData();
-        }
-
+        if (changed) { _expenses = await DatabaseHelper.instance.getExpenses(); _sortInMemoryData(); }
       } while (_syncQueued);
-    } finally {
-      _isSyncing = false;
-    }
+    } finally { _isSyncing = false; }
   }
 
   void updateExternalDebtPayment(double amount) {
-    if (_externalDebtPayment != amount) {
-      _externalDebtPayment = amount;
-      _recalculateAll();
-      notifyListeners();
-    }
+    if (_externalDebtPayment != amount) { _externalDebtPayment = amount; _recalculateAll(); notifyListeners(); }
   }
-
   void updateHasActiveDebts(bool hasDebts) {
-    if (_hasActiveDebts != hasDebts) {
-      _hasActiveDebts = hasDebts;
-      notifyListeners();
-    }
+    if (_hasActiveDebts != hasDebts) { _hasActiveDebts = hasDebts; notifyListeners(); }
   }
-
   void toggleFutureMode(bool isOn) {
-    if (_isFutureMode != isOn) {
-      _isFutureMode = isOn;
-      _recalculateAll(); 
-      notifyListeners();
-    }
+    if (_isFutureMode != isOn) { _isFutureMode = isOn; _recalculateAll(); notifyListeners(); }
   }
-
-  Future<void> resetVariableRatio() async {
-    await DatabaseHelper.instance.saveSetting('variable_ratio', defaultVariableRatio);
-  }
-
-  Future<void> resetFutureRatio() async {
-    await DatabaseHelper.instance.saveSetting('future_ratio', defaultFutureRatio);
-  }
+  Future<void> resetVariableRatio() async { await DatabaseHelper.instance.saveSetting('variable_ratio', defaultVariableRatio); }
+  Future<void> resetFutureRatio() async { await DatabaseHelper.instance.saveSetting('future_ratio', defaultFutureRatio); }
 
   Future<void> fullAppReset() async {
     await DatabaseHelper.instance.clearAllData();
-    _maritalStatus = 'married';
-    _gender = 'male';
-    _manualTargetIncome = null;
-    _initialCapital = 0.0;
-    _expectedYield = 4.0;
-    _compoundingFrequency = 12;
-    _variableAllocationRatio = defaultVariableRatio;
-    _futureAllocationRatio = defaultFutureRatio;
-    _externalDebtPayment = 0;
-    _isFutureMode = false;
-    _customEntWarning = null;
-    _customEntSuccess = null;
-    _unifiedCategoryModes.clear();
-    _bucketWithdrawalDays.clear();
-    _useBiometric = false;
-    _hasCompletedGrandReveal = false; 
-    _expenses = [];
-    _familyMembers = [];
-    _salaryRecords = [];
-    _plannedWithdrawals = [];
+    _maritalStatus = 'married'; _gender = 'male'; _manualTargetIncome = null;
+    _initialCapital = 0.0; _expectedYield = 4.0; _compoundingFrequency = 12;
+    _variableAllocationRatio = defaultVariableRatio; _futureAllocationRatio = defaultFutureRatio;
+    _externalDebtPayment = 0; _isFutureMode = false; _customEntWarning = null; _customEntSuccess = null;
+    _unifiedCategoryModes.clear(); _bucketWithdrawalDays.clear(); _useBiometric = false; _hasCompletedGrandReveal = false; 
+    _expenses = []; _familyMembers = []; _salaryRecords = []; _plannedWithdrawals = [];
     notifyListeners();
   }
 
   Future<void> _performAutoRollover() async {
     bool wasUpdated = false;
     final now = DateTime.now();
-    
-    // 1. הוצאות צוברות
     for (int i = 0; i < _expenses.length; i++) {
       final e = _expenses[i];
       if (e.isSinking && e.lastUpdateDate != null) {
         DateTime lastUpdate = DateTime.parse(e.lastUpdateDate!);
         int monthsDiff = (now.year - lastUpdate.year) * 12 + now.month - lastUpdate.month;
         if (monthsDiff > 0) {
-          double monthlyDeposit = e.monthlyAmount;
-          if (e.isPerChild) monthlyDeposit *= childCount;
+          double monthlyDeposit = (e.isPerChild) ? e.monthlyAmount * childCount : e.monthlyAmount;
           double addedAmount = monthlyDeposit * monthsDiff;
-          
           final updatedExpense = Expense(
             id: e.id, name: e.name, category: e.category, parentCategory: e.parentCategory,
             monthlyAmount: e.monthlyAmount, originalAmount: e.originalAmount, frequency: e.frequency, isSinking: e.isSinking, isPerChild: e.isPerChild,
             targetAmount: e.targetAmount, currentBalance: (e.currentBalance ?? 0) + addedAmount,
             allocationRatio: e.allocationRatio, lastUpdateDate: now.toIso8601String(),
             isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
-            isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
-            isCustom: e.isCustom,
+            isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: e.isCustom,
             isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
-            actualBankDeposit: e.actualBankDeposit, // PRESERVE BANK DEPOSIT
+            actualBankDeposit: e.actualBankDeposit,
           );
-          await DatabaseHelper.instance.updateExpense(updatedExpense);
-          _expenses[i] = updatedExpense;
-          wasUpdated = true;
+          await DatabaseHelper.instance.updateExpense(updatedExpense); _expenses[i] = updatedExpense; wasUpdated = true;
         }
       }
     }
-
-    // 2. נכסים צוברי תזרים (חיסגור) - סעיף 10.4.4
     final assets = await DatabaseHelper.instance.getAssets();
     for (var a in assets) {
       if (a.isPcfAccumulator && a.lastUpdateDate != null) {
         DateTime lastUpdate = DateTime.parse(a.lastUpdateDate!);
         int monthsDiff = (now.year - lastUpdate.year) * 12 + now.month - lastUpdate.month;
         if (monthsDiff > 0) {
-          // משיכת התזרים הפנוי הנוכחי (PCF)
           double monthlyPcf = totalFinancialExpenses; 
-          
           if (monthlyPcf > 0) {
             double addedAmount = monthlyPcf * monthsDiff;
-            final updatedAsset = Asset(
-              id: a.id, 
-              name: a.name, 
-              value: a.value + addedAmount, 
-              type: a.type, 
-              yieldPercentage: a.yieldPercentage,
-              isPcfAccumulator: true,
-              lastUpdateDate: now.toIso8601String(),
-            );
-            await DatabaseHelper.instance.updateAsset(updatedAsset);
-            wasUpdated = true;
+            final updatedAsset = Asset(id: a.id, name: a.name, value: a.value + addedAmount, type: a.type, yieldPercentage: a.yieldPercentage, isPcfAccumulator: true, lastUpdateDate: now.toIso8601String());
+            await DatabaseHelper.instance.updateAsset(updatedAsset); wasUpdated = true;
           } else {
-            // התזרים שלילי או אפס: רק מעדכנים תאריך כדי למנוע חריגות חישוב עתידיות
-            final updatedAsset = Asset(
-              id: a.id, 
-              name: a.name, 
-              value: a.value, 
-              type: a.type, 
-              yieldPercentage: a.yieldPercentage,
-              isPcfAccumulator: true,
-              lastUpdateDate: now.toIso8601String(),
-            );
-            await DatabaseHelper.instance.updateAsset(updatedAsset);
-            wasUpdated = true;
+            final updatedAsset = Asset(id: a.id, name: a.name, value: a.value, type: a.type, yieldPercentage: a.yieldPercentage, isPcfAccumulator: true, lastUpdateDate: now.toIso8601String());
+            await DatabaseHelper.instance.updateAsset(updatedAsset); wasUpdated = true;
           }
         }
       }
     }
-
-    if (wasUpdated) notifyListeners();
+    if (wasUpdated) { notifyListeners(); }
   }
 
   double getAverageSalary(int expenseId, {bool calendarYear = false}) {
     final records = _salaryRecords.where((r) => r.expenseId == expenseId).toList();
-    if (records.isEmpty) return 0.0;
-    
+    if (records.isEmpty) { return 0.0; }
     double totalNet = records.fold(0.0, (sum, r) => sum + r.netAmount);
-    
-    if (calendarYear) {
-       return totalNet / 12.0;
-    } else {
-       return totalNet / records.length; 
-    }
+    return calendarYear ? (totalNet / 12.0) : (totalNet / records.length); 
   }
-
   double getAverageHourlyRate(int expenseId) {
     final records = _salaryRecords.where((r) => r.expenseId == expenseId).toList();
-    if (records.isEmpty) return 0.0;
+    if (records.isEmpty) { return 0.0; }
     double totalNet = records.fold(0.0, (sum, r) => sum + r.netAmount);
     double totalHours = records.fold(0.0, (sum, r) => sum + r.hours);
-    if (totalHours <= 0) return 0.0;
-    return totalNet / totalHours;
+    return (totalHours <= 0) ? 0.0 : (totalNet / totalHours);
   }
-
   Future<void> toggleDynamicSalary(int expenseId, bool isDynamic, {String? startDate}) async {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index != -1) {
-      final old = _expenses[index];
-      
-      // 🔒 הקפאת ערך הבנק
-      double? capturedBankDeposit = _getCapturedBankDeposit(old);
-
-      final updated = Expense(
-        id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
-        monthlyAmount: old.monthlyAmount, originalAmount: old.originalAmount, frequency: old.frequency,
-        isSinking: old.isSinking, isPerChild: old.isPerChild, targetAmount: old.targetAmount,
-        currentBalance: old.currentBalance, allocationRatio: old.allocationRatio,
-        lastUpdateDate: old.lastUpdateDate, isLocked: old.isLocked, manualAmount: old.manualAmount, date: old.date,
-        isDynamicSalary: isDynamic, salaryStartDate: startDate ?? old.salaryStartDate,
-        isCustom: old.isCustom,
-        isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
-        actualBankDeposit: capturedBankDeposit, 
-      );
+      final old = _expenses[index]; double? capturedBankDeposit = _getCapturedBankDeposit(old);
+      final updated = Expense(id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory, monthlyAmount: old.monthlyAmount, originalAmount: old.originalAmount, frequency: old.frequency, isSinking: old.isSinking, isPerChild: old.isPerChild, targetAmount: old.targetAmount, currentBalance: old.currentBalance, allocationRatio: old.allocationRatio, lastUpdateDate: old.lastUpdateDate, isLocked: old.isLocked, manualAmount: old.manualAmount, date: old.date, isDynamicSalary: isDynamic, salaryStartDate: startDate ?? old.salaryStartDate, isCustom: old.isCustom, isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours, actualBankDeposit: capturedBankDeposit);
       await DatabaseHelper.instance.updateExpense(updated);
     }
   }
-
   void _recalculateDynamicSalaries() {
     for (int i = 0; i < _expenses.length; i++) {
       final e = _expenses[i];
       if (e.category == 'הכנסות' && e.isDynamicSalary && e.id != null) {
         double avg = getAverageSalary(e.id!);
-        if (e.monthlyAmount != avg) {
-          _updateExpenseInMemory(i, avg);
-        }
+        if (e.monthlyAmount != avg) { _updateExpenseInMemory(i, avg); }
       }
     }
   }
-
-  void _recalculateAll() {
-    _recalculateDynamicSalaries();
-    _recalculateVariableExpenses();
-    _recalculateFutureExpenses();
-  }
-
+  void _recalculateAll() { _recalculateDynamicSalaries(); _recalculateVariableExpenses(); _recalculateFutureExpenses(); }
   Future<void> lockExpenseAmount(int expenseId, double amount, {bool? isSinking}) async {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index != -1) {
-      final old = _expenses[index];
-      
-      // 🔒 הקפאת ערך הבנק
-      double? capturedBankDeposit = _getCapturedBankDeposit(old);
-
-      final updated = Expense(
-        id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
-        monthlyAmount: amount, originalAmount: old.originalAmount, frequency: old.frequency, 
-        isSinking: isSinking ?? old.isSinking, isPerChild: old.isPerChild,
-        targetAmount: old.targetAmount, currentBalance: old.currentBalance, allocationRatio: old.allocationRatio,
-        lastUpdateDate: DateTime.now().toIso8601String(),
-        isLocked: true, manualAmount: amount, date: old.date,
-        isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
-        isCustom: old.isCustom,
-        isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
-        actualBankDeposit: capturedBankDeposit, 
-      );
+      final old = _expenses[index]; double? capturedBankDeposit = _getCapturedBankDeposit(old);
+      final updated = Expense(id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory, monthlyAmount: amount, originalAmount: old.originalAmount, frequency: old.frequency, isSinking: isSinking ?? old.isSinking, isPerChild: old.isPerChild, targetAmount: old.targetAmount, currentBalance: old.currentBalance, allocationRatio: old.allocationRatio, lastUpdateDate: DateTime.now().toIso8601String(), isLocked: true, manualAmount: amount, date: old.date, isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate, isCustom: old.isCustom, isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours, actualBankDeposit: capturedBankDeposit);
       await DatabaseHelper.instance.updateExpense(updated);
     }
   }
-
   Future<void> updateExpenseRatio(int expenseId, double newRatio, {bool? isSinking}) async {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index != -1) {
-      final old = _expenses[index];
-      
-      // 🔒 הקפאת ערך הבנק
-      double? capturedBankDeposit = _getCapturedBankDeposit(old);
-
-      final updated = Expense(
-        id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
-        monthlyAmount: 0, originalAmount: old.originalAmount, frequency: old.frequency, 
-        isSinking: isSinking ?? old.isSinking, isPerChild: old.isPerChild,
-        targetAmount: old.targetAmount, currentBalance: old.currentBalance,
-        allocationRatio: newRatio, 
-        lastUpdateDate: DateTime.now().toIso8601String(),
-        isLocked: false, manualAmount: null, date: old.date,
-        isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
-        isCustom: old.isCustom,
-        isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
-        actualBankDeposit: capturedBankDeposit, 
-      );
+      final old = _expenses[index]; double? capturedBankDeposit = _getCapturedBankDeposit(old);
+      final updated = Expense(id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory, monthlyAmount: 0, originalAmount: old.originalAmount, frequency: old.frequency, isSinking: isSinking ?? old.isSinking, isPerChild: old.isPerChild, targetAmount: old.targetAmount, currentBalance: old.currentBalance, allocationRatio: newRatio, lastUpdateDate: DateTime.now().toIso8601String(), isLocked: false, manualAmount: null, date: old.date, isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate, isCustom: old.isCustom, isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours, actualBankDeposit: capturedBankDeposit);
       await DatabaseHelper.instance.updateExpense(updated);
     }
   }
-
   Future<void> unlockExpenseAmount(int expenseId) async {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index != -1) {
-      final old = _expenses[index];
-      
-      // 🔒 הקפאת ערך הבנק
-      double? capturedBankDeposit = _getCapturedBankDeposit(old);
-
-      final updated = Expense(
-        id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory,
-        monthlyAmount: 0, originalAmount: old.originalAmount, frequency: old.frequency, isSinking: old.isSinking, isPerChild: old.isPerChild,
-        targetAmount: old.targetAmount, currentBalance: old.currentBalance, allocationRatio: old.allocationRatio,
-        lastUpdateDate: DateTime.now().toIso8601String(),
-        isLocked: false, manualAmount: null, date: old.date,
-        isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
-        isCustom: old.isCustom,
-        isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
-        actualBankDeposit: capturedBankDeposit, 
-      );
+      final old = _expenses[index]; double? capturedBankDeposit = _getCapturedBankDeposit(old);
+      final updated = Expense(id: old.id, name: old.name, category: old.category, parentCategory: old.parentCategory, monthlyAmount: 0, originalAmount: old.originalAmount, frequency: old.frequency, isSinking: old.isSinking, isPerChild: old.isPerChild, targetAmount: old.targetAmount, currentBalance: old.currentBalance, allocationRatio: old.allocationRatio, lastUpdateDate: DateTime.now().toIso8601String(), isLocked: false, manualAmount: null, date: old.date, isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate, isCustom: old.isCustom, isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours, actualBankDeposit: capturedBankDeposit);
       await DatabaseHelper.instance.updateExpense(updated);
     }
   }
-
   Future<void> updateFutureExpenseDetails(int expenseId, {String? name, double? target, double? balance, double? ratio, bool? isLocked, double? manualAmount, bool? isSinking}) async {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index != -1) {
-      final old = _expenses[index];
-      
-      // 🔒 הקפאת ערך הבנק רגע לפני עריכת היעד כדי לייצר פער בקרה
-      double? capturedBankDeposit = _getCapturedBankDeposit(old);
-
-      final updated = Expense(
-        id: old.id, name: name ?? old.name, category: old.category, parentCategory: old.parentCategory,
-        monthlyAmount: (isLocked == true && manualAmount != null) ? manualAmount : 0, 
-        originalAmount: old.originalAmount, frequency: old.frequency, 
-        isSinking: isSinking ?? old.isSinking, isPerChild: old.isPerChild,
-        targetAmount: target ?? old.targetAmount, currentBalance: balance ?? old.currentBalance,
-        allocationRatio: ratio ?? old.allocationRatio, lastUpdateDate: DateTime.now().toIso8601String(),
-        isLocked: isLocked ?? old.isLocked, manualAmount: manualAmount ?? old.manualAmount, date: old.date,
-        isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate,
-        isCustom: old.isCustom,
-        isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours,
-        actualBankDeposit: capturedBankDeposit, 
-      );
+      final old = _expenses[index]; double? capturedBankDeposit = _getCapturedBankDeposit(old);
+      final updated = Expense(id: old.id, name: name ?? old.name, category: old.category, parentCategory: old.parentCategory, monthlyAmount: (isLocked == true && manualAmount != null) ? manualAmount : 0, originalAmount: old.originalAmount, frequency: old.frequency, isSinking: isSinking ?? old.isSinking, isPerChild: old.isPerChild, targetAmount: target ?? old.targetAmount, currentBalance: balance ?? old.currentBalance, allocationRatio: ratio ?? old.allocationRatio, lastUpdateDate: DateTime.now().toIso8601String(), isLocked: isLocked ?? old.isLocked, manualAmount: manualAmount ?? old.manualAmount, date: old.date, isDynamicSalary: old.isDynamicSalary, salaryStartDate: old.salaryStartDate, isCustom: old.isCustom, isBusiness: old.isBusiness, businessIncomes: old.businessIncomes, businessExpenses: old.businessExpenses, businessWorkingHours: old.businessWorkingHours, actualBankDeposit: capturedBankDeposit);
       await DatabaseHelper.instance.updateExpense(updated);
     }
   }
-
-  // >>> הפונקציה הכללית המשמשת לעדכונים חופשיים <<<
   Future<void> updateExpense(Expense expense) async {
     if (expense.id != null) {
       final index = _expenses.indexWhere((e) => e.id == expense.id);
       if (index != -1) {
-        final old = _expenses[index];
-        
-        // 🔒 הקפאת ערך הבנק
-        double? capturedBankDeposit = _getCapturedBankDeposit(old);
-        
+        final old = _expenses[index]; double? capturedBankDeposit = _getCapturedBankDeposit(old);
         Expense updatedExpense = expense;
-        // אם הפעולה ב-UI לא שלחה ערך בנקאי, נשמור את המוקפא במקום לתת לו להתאפס ל-Null ולהפעיל את פער הבקרה
-        if (expense.actualBankDeposit == null) {
-          updatedExpense = expense.copyWith(
-            actualBankDeposit: capturedBankDeposit,
-            clearBankDeposit: capturedBankDeposit == null // מוחק הקפאות פיקטיביות ישנות של סעיפים דינמיים!
-          );
-        }
-        
+        if (expense.actualBankDeposit == null) { updatedExpense = expense.copyWith(actualBankDeposit: capturedBankDeposit, clearBankDeposit: capturedBankDeposit == null); }
         await DatabaseHelper.instance.updateExpense(updatedExpense);
-      } else {
-        await DatabaseHelper.instance.updateExpense(expense);
-      }
+      } else { await DatabaseHelper.instance.updateExpense(expense); }
     }
   }
-
-  // 🔒 פונקציית עדכון הבנק תומכת כעת בערך Null כדי לאפשר איפוס חזרה לדינמי
   Future<void> updateBankDeposit(int expenseId, double? actualBankDeposit) async {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
     if (index != -1) {
-      final updated = _expenses[index].copyWith(
-        actualBankDeposit: actualBankDeposit,
-        clearBankDeposit: actualBankDeposit == null // שימוש בדגל החדש ממודל הנתונים
-      );
+      final updated = _expenses[index].copyWith(actualBankDeposit: actualBankDeposit, clearBankDeposit: actualBankDeposit == null);
       await DatabaseHelper.instance.updateExpense(updated);
-      _expenses[index] = updated; 
-      notifyListeners(); 
+      _expenses[index] = updated; notifyListeners(); 
     }
   }
 
   void _recalculateVariableExpenses() {
     final totalPot = totalVariableExpenses; 
     final variableIndices = <int>[];
-    for (int i = 0; i < _expenses.length; i++) {
-      if (_expenses[i].category == 'משתנות') variableIndices.add(i);
-    }
-    if (variableIndices.isEmpty) return;
-    
-    double usedBudget = 0;
-    double totalActiveRatios = 0;
-
+    for (int i = 0; i < _expenses.length; i++) { if (_expenses[i].category == 'משתנות') { variableIndices.add(i); } }
+    if (variableIndices.isEmpty) { return; }
+    double usedBudget = 0; double totalActiveRatios = 0;
     for (var i in variableIndices) {
-      final e = _expenses[i];
-      
-      bool isAnchor = (e.allocationRatio == null || e.allocationRatio == 0);
-
-      if (e.isLocked && e.manualAmount != null) {
-        usedBudget += e.manualAmount!;
-      } else if (isAnchor) {
-        usedBudget += e.originalAmount; 
-      } else {
-        totalActiveRatios += (e.allocationRatio ?? 0);
-      }
+      final e = _expenses[i]; bool isAnchor = (e.allocationRatio == null || e.allocationRatio == 0);
+      if (e.isLocked && e.manualAmount != null) { usedBudget += e.manualAmount!; }
+      else if (isAnchor) { usedBudget += e.originalAmount; }
+      else { totalActiveRatios += (e.allocationRatio ?? 0); }
     }
-    
     double remainingBudget = totalPot - usedBudget;
-    if (remainingBudget < 0) {
-      _variableDeficit = remainingBudget.abs();
-      remainingBudget = 0;
-    } else {
-      _variableDeficit = 0.0;
-    }
-    
+    if (remainingBudget < 0) { _variableDeficit = remainingBudget.abs(); remainingBudget = 0; }
+    else { _variableDeficit = 0.0; }
     for (var i in variableIndices) {
-      final e = _expenses[i];
-      double calculatedAmount = 0;
-      
-      bool isAnchor = (e.allocationRatio == null || e.allocationRatio == 0);
-
-      if (e.isLocked && e.manualAmount != null) {
-        calculatedAmount = e.manualAmount!;
-      } else if (isAnchor) {
-        calculatedAmount = e.originalAmount;
-      } else {
-        if (totalActiveRatios > 0) {
-          double ratioShare = (e.allocationRatio!) / totalActiveRatios;
-          calculatedAmount = remainingBudget * ratioShare;
-        }
-      }
-
+      final e = _expenses[i]; double calculatedAmount = 0; bool isAnchor = (e.allocationRatio == null || e.allocationRatio == 0);
+      if (e.isLocked && e.manualAmount != null) { calculatedAmount = e.manualAmount!; }
+      else if (isAnchor) { calculatedAmount = e.originalAmount; }
+      else if (totalActiveRatios > 0) { calculatedAmount = remainingBudget * ((e.allocationRatio!) / totalActiveRatios); }
       _updateExpenseInMemory(i, calculatedAmount);
     }
   }
-
   void _recalculateFutureExpenses() {
     final totalPot = totalFutureExpenses; 
     final futureIndices = <int>[];
-    for (int i = 0; i < _expenses.length; i++) {
-      if (_expenses[i].category == 'עתידיות') futureIndices.add(i);
-    }
-    if (futureIndices.isEmpty) return;
-    
-    double usedBudget = 0;
-    double totalActiveRatios = 0;
+    for (int i = 0; i < _expenses.length; i++) { if (_expenses[i].category == 'עתידיות') { futureIndices.add(i); } }
+    if (futureIndices.isEmpty) { return; }
+    double usedBudget = 0; double totalActiveRatios = 0;
     for (var i in futureIndices) {
-      final e = _expenses[i];
-      if (e.isLocked && e.manualAmount != null) {
-        usedBudget += e.manualAmount!;
-      } else {
-        totalActiveRatios += (e.allocationRatio ?? 0);
-      }
+      final e = _expenses[i]; if (e.isLocked && e.manualAmount != null) { usedBudget += e.manualAmount!; }
+      else { totalActiveRatios += (e.allocationRatio ?? 0); }
     }
-    
     double remainingBudget = totalPot - usedBudget;
-    if (remainingBudget < 0) remainingBudget = 0;
-    
+    if (remainingBudget < 0) { remainingBudget = 0; }
     for (var i in futureIndices) {
-      final e = _expenses[i];
-      double calculatedAmount = 0;
-      if (e.isLocked && e.manualAmount != null) {
-        calculatedAmount = e.manualAmount!;
-      } else {
-        if (totalActiveRatios > 0) {
-          double ratioShare = (e.allocationRatio!) / totalActiveRatios;
-          calculatedAmount = remainingBudget * ratioShare;
-        }
-      }
+      final e = _expenses[i]; double calculatedAmount = 0;
+      if (e.isLocked && e.manualAmount != null) { calculatedAmount = e.manualAmount!; }
+      else if (totalActiveRatios > 0) { calculatedAmount = remainingBudget * ((e.allocationRatio!) / totalActiveRatios); }
       _updateExpenseInMemory(i, calculatedAmount);
     }
   }
-
   void _updateExpenseInMemory(int index, double newMonthlyAmount) {
     final e = _expenses[index];
-    _expenses[index] = Expense(
-      id: e.id, name: e.name, category: e.category, parentCategory: e.parentCategory,
-      monthlyAmount: newMonthlyAmount, originalAmount: e.originalAmount, frequency: e.frequency,
-      isSinking: e.isSinking, isPerChild: e.isPerChild, targetAmount: e.targetAmount,
-      currentBalance: e.currentBalance, allocationRatio: e.allocationRatio,
-      lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
-      isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
-      isCustom: e.isCustom,
-      isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
-      actualBankDeposit: e.actualBankDeposit, // שומרים על הערך המוקפא כדי לא למחוק אותו ברענון הדינמי
-    );
+    _expenses[index] = Expense(id: e.id, name: e.name, category: e.category, parentCategory: e.parentCategory, monthlyAmount: newMonthlyAmount, originalAmount: e.originalAmount, frequency: e.frequency, isSinking: e.isSinking, isPerChild: e.isPerChild, targetAmount: e.targetAmount, currentBalance: e.currentBalance, allocationRatio: e.allocationRatio, lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date, isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: e.isCustom, isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours, actualBankDeposit: e.actualBankDeposit);
   }
-
   Future<void> addFamilyMember(String name, int birthYear, FamilyRole role) async {
     String cleanName = name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
-    final newMember = FamilyMember(name: cleanName, birthYear: birthYear, role: role);
-    await DatabaseHelper.instance.insertFamilyMember(newMember);
+    await DatabaseHelper.instance.insertFamilyMember(FamilyMember(name: cleanName, birthYear: birthYear, role: role));
   }
-
-  Future<void> removeFamilyMember(int id) async {
-    await DatabaseHelper.instance.deleteFamilyMember(id);
-  }
-
+  Future<void> removeFamilyMember(int id) async { await DatabaseHelper.instance.deleteFamilyMember(id); }
   Future<void> updateFamilyMember(FamilyMember member) async {
     if (member.id != null) {
       String cleanName = member.name.trim().replaceAll('-', ' ').replaceAll(RegExp(r'\s+'), ' ');
-      final updated = FamilyMember(id: member.id, name: cleanName, birthYear: member.birthYear, role: member.role);
-      await DatabaseHelper.instance.updateFamilyMember(updated);
+      await DatabaseHelper.instance.updateFamilyMember(FamilyMember(id: member.id, name: cleanName, birthYear: member.birthYear, role: member.role));
     }
   }
-
-  Future<void> addExpense(Expense expense) async {
-    await DatabaseHelper.instance.insertExpense(expense);
-  }
-
-  Future<void> deleteExpense(int id) async {
-    await DatabaseHelper.instance.deleteExpense(id);
-  }
-  
+  Future<void> addExpense(Expense expense) async { await DatabaseHelper.instance.insertExpense(expense); }
+  Future<void> deleteExpense(int id) async { await DatabaseHelper.instance.deleteExpense(id); }
   Future<void> renameParentCategory(String oldName, String newName) async {
-    if (oldName == newName || newName.trim().isEmpty) return;
+    if (oldName == newName || newName.trim().isEmpty) { return; }
     for (int i = 0; i < _expenses.length; i++) {
       if (_expenses[i].parentCategory == oldName) {
         final e = _expenses[i];
-        final updated = Expense(
-          id: e.id, name: e.name, category: e.category, parentCategory: newName.trim(),
-          monthlyAmount: e.monthlyAmount, originalAmount: e.originalAmount, frequency: e.frequency,
-          isSinking: e.isSinking, isPerChild: e.isPerChild, targetAmount: e.targetAmount,
-          currentBalance: e.currentBalance, allocationRatio: e.allocationRatio,
-          lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date,
-          isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate,
-          isCustom: e.isCustom,
-          isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours,
-          actualBankDeposit: e.actualBankDeposit,
-        );
-        await DatabaseHelper.instance.updateExpense(updated);
+        await DatabaseHelper.instance.updateExpense(Expense(id: e.id, name: e.name, category: e.category, parentCategory: newName.trim(), monthlyAmount: e.monthlyAmount, originalAmount: e.originalAmount, frequency: e.frequency, isSinking: e.isSinking, isPerChild: e.isPerChild, targetAmount: e.targetAmount, currentBalance: e.currentBalance, allocationRatio: e.allocationRatio, lastUpdateDate: e.lastUpdateDate, isLocked: e.isLocked, manualAmount: e.manualAmount, date: e.date, isDynamicSalary: e.isDynamicSalary, salaryStartDate: e.salaryStartDate, isCustom: e.isCustom, isBusiness: e.isBusiness, businessIncomes: e.businessIncomes, businessExpenses: e.businessExpenses, businessWorkingHours: e.businessWorkingHours, actualBankDeposit: e.actualBankDeposit));
       }
     }
   }
-
   Future<void> setAllocationRatios({double? variable, double? future}) async {
-    if (variable != null) await DatabaseHelper.instance.saveSetting('variable_ratio', variable);
-    if (future != null) await DatabaseHelper.instance.saveSetting('future_ratio', future);
+    if (variable != null) { await DatabaseHelper.instance.saveSetting('variable_ratio', variable); }
+    if (future != null) { await DatabaseHelper.instance.saveSetting('future_ratio', future); }
   }
 
-  // שורת ההכנסות הראשית מתייחסת לעסקים בצורה חכמה (כולל הפסדים, לא כולל רווח פסיבי שכבר קוזז)
   double get totalIncome {
     double sum = 0;
     for (var e in _expenses.where((ex) => ex.category == 'הכנסות')) {
-      if (e.isBusiness) {
-        double net = e.getBusinessNetProfit();
-        if (!e.isPassive) {
-          sum += net; 
-        }
-      } else {
-        sum += e.monthlyAmount;
-      }
+      if (e.isBusiness) { double net = e.getBusinessNetProfit(); if (!e.isPassive) { sum += net; } }
+      else { sum += e.monthlyAmount; }
     }
     return sum;
   }
-
   double get totalFixedExpenses => _expenses.where((e) => e.category == 'קבועות').fold(0.0, (sum, e) => sum + (e.monthlyAmount * (e.isPerChild ? childCount : 1)));
   double get totalReducingExpenses => _isFutureMode ? 0.0 : _externalDebtPayment;
   double get disposableIncome => totalIncome - totalFixedExpenses - totalReducingExpenses;
   double get totalVariableExpenses => disposableIncome * _variableAllocationRatio;
   double get _savingsBucket => disposableIncome - totalVariableExpenses;
   double get totalFutureExpenses => _savingsBucket * _futureAllocationRatio;
-  double get totalFinancialExpenses {
-    final bucket = _savingsBucket;
-    final future = totalFutureExpenses;
-    return bucket - future;
-  }
-  double get financialDiversionAmount {
-    if (_isFutureMode || !_hasActiveDebts) return 0.0;
-    return totalFinancialExpenses;
-  }
+  double get totalFinancialExpenses => _savingsBucket - totalFutureExpenses;
+  double get financialDiversionAmount => (_isFutureMode || !_hasActiveDebts) ? 0.0 : totalFinancialExpenses;
 
-  // ==========================================
-  // פעולות משיכה והוצאות צוברות
-  // ==========================================
-
-  Future<List<Withdrawal>> getWithdrawalsForExpense(int expenseId) async {
-    return await DatabaseHelper.instance.getWithdrawals(expenseId);
-  }
-
+  Future<List<Withdrawal>> getWithdrawalsForExpense(int expenseId) async { return await DatabaseHelper.instance.getWithdrawals(expenseId); }
   Future<void> addWithdrawal(int expenseId, double amount, String note) async {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
-    if (index == -1) return;
-    
-    final expense = _expenses[index];
-    final newBalance = (expense.currentBalance ?? 0) - amount;
-
-    final w = Withdrawal(expenseId: expenseId, amount: amount, date: DateTime.now().toIso8601String(), note: note);
-    await DatabaseHelper.instance.insertWithdrawal(w);
-
-    _updateExpenseCurrentBalance(index, newBalance);
+    if (index == -1) { return; }
+    _updateExpenseCurrentBalance(index, (_expenses[index].currentBalance ?? 0) - amount);
+    await DatabaseHelper.instance.insertWithdrawal(Withdrawal(expenseId: expenseId, amount: amount, date: DateTime.now().toIso8601String(), note: note));
   }
-
   Future<void> deleteWithdrawal(Withdrawal w) async {
-    if (w.id == null) return;
+    if (w.id == null) { return; }
     await DatabaseHelper.instance.deleteWithdrawal(w.id!);
-    
     final index = _expenses.indexWhere((e) => e.id == w.expenseId);
-    if (index != -1) {
-      final expense = _expenses[index];
-      final newBalance = (expense.currentBalance ?? 0) + w.amount;
-      _updateExpenseCurrentBalance(index, newBalance);
-    }
+    if (index != -1) { _updateExpenseCurrentBalance(index, (_expenses[index].currentBalance ?? 0) + w.amount); }
   }
-
   Future<void> setExpenseCurrentBalance(int expenseId, double newBalance) async {
     final index = _expenses.indexWhere((e) => e.id == expenseId);
-    if (index != -1) {
-      _updateExpenseCurrentBalance(index, newBalance, updateDate: true);
-    }
+    if (index != -1) { _updateExpenseCurrentBalance(index, newBalance, updateDate: true); }
   }
-
   void _updateExpenseCurrentBalance(int index, double newBalance, {bool updateDate = false}) async {
     final expense = _expenses[index];
-    final updated = Expense(
-      id: expense.id, name: expense.name, category: expense.category, parentCategory: expense.parentCategory,
-      monthlyAmount: expense.monthlyAmount, originalAmount: expense.originalAmount, frequency: expense.frequency,
-      isSinking: expense.isSinking, isPerChild: expense.isPerChild, targetAmount: expense.targetAmount,
-      currentBalance: newBalance, allocationRatio: expense.allocationRatio,
-      lastUpdateDate: updateDate ? DateTime.now().toIso8601String() : expense.lastUpdateDate, 
-      isLocked: expense.isLocked, manualAmount: expense.manualAmount, date: expense.date,
-      isDynamicSalary: expense.isDynamicSalary, salaryStartDate: expense.salaryStartDate,
-      isCustom: expense.isCustom,
-      isBusiness: expense.isBusiness, businessIncomes: expense.businessIncomes, businessExpenses: expense.businessExpenses, businessWorkingHours: expense.businessWorkingHours,
-      actualBankDeposit: expense.actualBankDeposit,
-    );
-    
-    _expenses[index] = updated; // עדכון מיידי בזיכרון (Optimistic Update)
-    notifyListeners();          // דחיפת הרענון לממשק (UI) באופן מיידי
-    
-    await DatabaseHelper.instance.updateExpense(updated);
+    final updated = Expense(id: expense.id, name: expense.name, category: expense.category, parentCategory: expense.parentCategory, monthlyAmount: expense.monthlyAmount, originalAmount: expense.originalAmount, frequency: expense.frequency, isSinking: expense.isSinking, isPerChild: expense.isPerChild, targetAmount: expense.targetAmount, currentBalance: newBalance, allocationRatio: expense.allocationRatio, lastUpdateDate: updateDate ? DateTime.now().toIso8601String() : expense.lastUpdateDate, isLocked: expense.isLocked, manualAmount: expense.manualAmount, date: expense.date, isDynamicSalary: expense.isDynamicSalary, salaryStartDate: expense.salaryStartDate, isCustom: expense.isCustom, isBusiness: expense.isBusiness, businessIncomes: expense.businessIncomes, businessExpenses: expense.businessExpenses, businessWorkingHours: expense.businessWorkingHours, actualBankDeposit: expense.actualBankDeposit);
+    _expenses[index] = updated; notifyListeners(); await DatabaseHelper.instance.updateExpense(updated);
   }
-
-  // ==========================================
-  // מנהל משיכות חכם (Smart Withdrawal Manager)
-  // ==========================================
-  
-  Future<void> addPlannedWithdrawal(PlannedWithdrawal pw) async {
-    await DatabaseHelper.instance.insertPlannedWithdrawal(pw);
-  }
-
-  Future<void> updatePlannedWithdrawal(PlannedWithdrawal pw) async {
-    await DatabaseHelper.instance.updatePlannedWithdrawal(pw);
-  }
-
-  Future<void> deletePlannedWithdrawal(int id) async {
-    await DatabaseHelper.instance.deletePlannedWithdrawal(id);
-  }
-
+  Future<void> addPlannedWithdrawal(PlannedWithdrawal pw) async { await DatabaseHelper.instance.insertPlannedWithdrawal(pw); }
+  Future<void> updatePlannedWithdrawal(PlannedWithdrawal pw) async { await DatabaseHelper.instance.updatePlannedWithdrawal(pw); }
+  Future<void> deletePlannedWithdrawal(int id) async { await DatabaseHelper.instance.deletePlannedWithdrawal(id); }
   Future<void> executePlannedWithdrawalsForBucket(String bucketName) async {
-    final pending = _plannedWithdrawals.where((pw) => 
-        pw.bucketName == bucketName && pw.status == PlannedWithdrawalStatus.pending).toList();
-    
-    if (pending.isEmpty) return;
-
+    final pending = _plannedWithdrawals.where((pw) => pw.bucketName == bucketName && pw.status == PlannedWithdrawalStatus.pending).toList();
+    if (pending.isEmpty) { return; }
     double totalAmount = pending.fold(0.0, (sum, item) => sum + item.amount);
-    String note = "משיכה מאוחדת: ${pending.map((p) => p.name).join(', ')}";
-
     int? targetExpenseId;
-    
     for (var e in _expenses.where((ex) => ex.isSinking)) {
-      String groupName = '';
-      if (e.parentCategory == 'רכב') {
-        groupName = 'רכב';
-      } else if (e.parentCategory == 'ילדים - משתנות') {
-        String kName = e.name.replaceAll('בגדים', '').replaceAll('בילויים', '').trim();
-        groupName = 'ילדים: $kName';
-      } else if (['ילדים - קבועות', 'אבא', 'אמא', 'אישי', 'חגים'].contains(e.parentCategory)) {
-        groupName = e.parentCategory;
-      }
-
-      if (groupName.isNotEmpty) {
-        if (groupName == bucketName) {
-          targetExpenseId = e.id;
-          break; 
-        }
-      } else {
-        bool isFuture = e.category == 'עתידיות';
-        String displayTitle = isFuture ? e.parentCategory : e.name;
-        if (displayTitle == bucketName) {
-          targetExpenseId = e.id;
-          break; 
-        }
-      }
+      String groupName = (e.parentCategory == 'רכב') ? 'רכב' : (e.parentCategory == 'ילדים - משתנות' ? 'ילדים: ${e.name.replaceAll('בגדים', '').replaceAll('בילויים', '').trim()}' : (['ילדים - קבועות', 'אבא', 'אמא', 'אישי', 'חגים'].contains(e.parentCategory) ? e.parentCategory : ''));
+      if (groupName.isEmpty) { groupName = (e.category == 'עתידיות') ? e.parentCategory : e.name; }
+      if (groupName == bucketName) { targetExpenseId = e.id; break; }
     }
-
-    if (targetExpenseId != null) {
-      await addWithdrawal(targetExpenseId, totalAmount, note);
-    }
-
-    for (var pw in pending) {
-      final updated = PlannedWithdrawal(
-        id: pw.id,
-        name: pw.name,
-        amount: pw.amount,
-        bucketName: pw.bucketName,
-        targetDate: pw.targetDate,
-        status: PlannedWithdrawalStatus.executed,
-      );
-      await DatabaseHelper.instance.updatePlannedWithdrawal(updated);
-    }
+    if (targetExpenseId != null) { await addWithdrawal(targetExpenseId, totalAmount, "משיכה מאוחדת: ${pending.map((p) => p.name).join(', ')}"); }
+    for (var pw in pending) { await DatabaseHelper.instance.updatePlannedWithdrawal(PlannedWithdrawal(id: pw.id, name: pw.name, amount: pw.amount, bucketName: pw.bucketName, targetDate: pw.targetDate, status: PlannedWithdrawalStatus.executed)); }
   }
 }
