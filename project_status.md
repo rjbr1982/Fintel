@@ -2,27 +2,24 @@
 **Last Updated:** April 2026
 
 ## 🚀 Current Phase
-Finalizing Core App Experience (UX/Flows), Freemium Strategy, and Local Notifications. Transitioning to Premium Billing Integration (Sandbox).
+Finalized Hybrid Notification Architecture and UX Polishing. Transitioning to Premium Billing Integration (Sandbox).
 
 ## ✅ Recent Accomplishments (Latest Session)
-* **Legal Onboarding Post-Auth:** Moved the Terms & Conditions consent to *after* Google Auth. The system now checks `hasAcceptedTerms` in the user's Firebase document, creating a seamless login for returning users while strictly blocking new/unconsented users.
-* **Global Sorting Engine:** Completely rewrote the sorting logic in `BudgetProvider`. Implemented a strict internal hierarchy for Fixed Expenses (Charity -> Housing -> Living -> Vehicle -> Kids -> Holidays -> Media -> Health -> Travel -> Haircut -> Household -> Others), alongside the existing Person and Item Type sorting.
-* **Admin God-Mode Dashboard:** * Added live counters to Smart CTAs (Bottleneck, Churn, Success).
-    * Converted CTAs and Macro Stats into clickable drill-down modals showing specific user emails.
-    * Added copy-to-clipboard and bulk email (`mailto:bcc`) capabilities directly from the dashboard.
-* **Freemium Pivot (Reducing / Debts Screen):** * Opened the base Debts screen to Free users (can add/edit/view debts to keep their cash flow accurate).
-    * Locked the "Time Machine / Sniper" algorithm (accelerated payoff dates) behind a Premium Teaser Card.
-    * Added visual locks (👑) to premium metrics.
-* **Local Notification Engine:** Integrated `flutter_local_notifications` and `timezone`. Created `NotificationService` to handle:
-    * *Operational:* 1st of the month rollover, Custom Withdrawal Day, 6-day Shopping Reminder.
-    * *Conversion:* Smart delayed teasers (14, 30, 60 days) for Free users to upgrade to Premium.
-* **Real-Time UI Fixes:** Fixed optimistic UI updating when executing withdrawals from Sinking Funds.
-* **Academy Update:** Added the "Weekly Digital Shopping Rule" to Chapter 4 (promoting online weekly shopping over physical/monthly shopping).
+* **Hybrid Notification Engine (FCM):** Implemented Firebase Cloud Messaging for Web. Built the `firebase-messaging-sw.js` infrastructure to support Push Notifications for iOS/Web users.
+* **Notification Control Center:** Created a dedicated UI for granular notification management and integrated contextual "Notification Bells" in Shopping and Sinking Funds screens.
+* **Fixed Global Sorting:** Enforced strict hierarchical sorting for "Future Expenses" (רכישות גדולות -> חופשה שנתית) across all views.
+* **Legal Onboarding V2:** Implemented a strict 2-stage consent flow with a mandatory checkbox and a secondary scrollable modal for full T&C text.
+* **Bank Deposit Logic Fix:** Resolved a bug where dynamic variable expenses were incorrectly "frozen," creating artificial gaps. The system now distinguishes between fixed-amount and ratio-based items for bank verification.
+* **Information Architecture:** Reorganized the Hamburger menu to group system-level settings (Notifications, Biometrics, Ratios) under "System Settings."
+* **Linter Compliance:** Optimized codebase for zero warnings, enforcing strict curly brace blocks and removing deprecated UI parameters.
 
 ## ⏳ Next Steps (Upcoming Session)
-1.  **Fintel Playground:** Move to the Sandbox environment to build and test the Premium Billing infrastructure.
-2.  **Subscription Management:** Integrate in-app purchases (RevenueCat/Stripe) to physically unlock the `isPremium` flag.
-3.  **Advanced Push Notifications:** (Optional) Transition from local to server-side FCM if remote admin triggers are required.
+1.  **Fintel Playground:** Move to the Sandbox environment to build the In-App Purchase (IAP) logic.
+2.  **Billing Integration:** Wire the `isPremium` flag to real-world subscription states (RevenueCat/Stripe).
+3.  **Admin Broadcast:** (Future) Use FCM tokens collected this session to enable mass-push capabilities from the Admin Dashboard.
 
 ## 🛑 Known Issues / Tech Debt
-* No critical bugs currently identified. The core loop is stable and perfectly synced with the global sorting and notification engines.
+* **Local Notifications on Web:** Explicitly disabled to prevent browser crashes; handled gracefully via Hybrid logic.
+* **FCM Token Management:** Tokens are successfully collected and stored in Firestore, ready for server-side triggers.
+
+**Constitution Status:** 12.88 (Aligned with Code)

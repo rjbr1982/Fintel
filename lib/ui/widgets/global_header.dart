@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Moved Notifications to System Settings submenu)
+// 🔒 STATUS: EDITED (Restored Savings Center to Hamburger Menu and maintained Settings hierarchy)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -226,7 +226,16 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                   ]
                 ),
                 _buildMenuTile(icon: Icons.shopping_cart_outlined, color: Colors.blueGrey[900]!, title: 'רשימת קניות', onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const ShoppingScreen())); }),
-                if (showSavings) _buildMenuTile(icon: Icons.savings_outlined, color: Colors.green, title: 'מרכז החסכונות', onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const SinkingFundsScreen())); }),
+                
+                // ✅ הוחזר: מרכז החסכונות בתפריט הראשי
+                if (showSavings) 
+                  _buildMenuTile(
+                    icon: Icons.savings_outlined, 
+                    color: Colors.green, 
+                    title: 'מרכז החסכונות', 
+                    onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const SinkingFundsScreen())); }
+                  ),
+
                 _buildMenuTile(icon: Icons.account_balance_wallet_outlined, color: Colors.blueGrey, title: 'מעקב עו"ש', onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckingHistoryScreen())); }),
                 _buildMenuTile(icon: Icons.insights, color: Colors.orange, title: 'ממוצע שכר', isPremium: true, onTap: () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const SalaryEngineScreen())); }); }),
                 
@@ -381,7 +390,7 @@ void _showMainSettingsBottomSheet(BuildContext context, BudgetProvider budget, b
                   if (user != null) Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: _buildUserProfileCard(context, user)),
                   if (!kIsWeb) Consumer<BudgetProvider>(builder: (context, budgetProv, child) { return _buildMenuTile(icon: Icons.fingerprint, color: Colors.teal, title: 'כניסה ביומטרית', trailing: Switch(value: budgetProv.useBiometric, activeThumbColor: Colors.teal, onChanged: (val) { budgetProv.toggleBiometric(val); }), onTap: () { budgetProv.toggleBiometric(!budgetProv.useBiometric); }); }),
                   
-                  // 🔔 שורת ההתראות עברה לכאן
+                  // 🔔 ניהול התראות בתוך הגדרות מערכת
                   _buildMenuTile(
                     icon: Icons.notifications_active_outlined, 
                     color: Colors.blueAccent, 
