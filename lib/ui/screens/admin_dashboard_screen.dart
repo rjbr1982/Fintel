@@ -1,16 +1,9 @@
-<<<<<<< HEAD
 // 🔒 STATUS: FINAL (Admin God-Mode Dashboard - Includes Force Free Dev Switch, Linter Compliant)
-=======
-// 🔒 STATUS: FINAL (Admin God-Mode Dashboard - Clickable Macro Stats & Smart CTAs)
->>>>>>> 7a28736953c5b3531f4f7e7b2639671f84565d12
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/admin_service.dart';
-<<<<<<< HEAD
 import '../../services/premium_service.dart';
-=======
->>>>>>> 7a28736953c5b3531f4f7e7b2639671f84565d12
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -525,7 +518,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             const SizedBox(height: 16),
 
-<<<<<<< HEAD
             // --- DEV SWITCH: FORCE FREE MODE ---
             Container(
               decoration: BoxDecoration(
@@ -555,8 +547,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             const SizedBox(height: 16),
 
-=======
->>>>>>> 7a28736953c5b3531f4f7e7b2639671f84565d12
             // --- FINTEL BRAIN EXTRACTOR (Section 13.2.1) ---
             SizedBox(
               width: double.infinity,
