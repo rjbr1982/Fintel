@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Unified Freedom Settings Dialog with PnL screen)
+// 🔒 STATUS: EDITED (Replaced text emoji crown with crown_icon.png)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -142,11 +142,20 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           Navigator.push(context, MaterialPageRoute(builder: (context) => const AssetsScreen()));
                         });
                       },
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 4.0),
-                        child: Text(
-                          'ההון העצמי נשאב אוטומטית מתיק הנכסים. להזנת חסכונות או השקעות עברו אל ⬅️ ניהול נכסים 👑',
-                          style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.w600),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'ההון העצמי נשאב אוטומטית מתיק הנכסים. להזנת חסכונות או השקעות עברו אל ⬅️ ניהול נכסים ',
+                                style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                          ]
                         ),
                       ),
                     ),
@@ -300,7 +309,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               ),
               if (isPremium) ...[
                 const SizedBox(width: 4),
-                const Icon(Icons.workspace_premium, color: Colors.amber, size: 14),
+                Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
               ]
             ],
           ),

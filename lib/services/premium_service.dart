@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Replaced text emoji crowns with image assets for paywall and dialogs)
+// 🔒 STATUS: EDITED (Replaced text emoji crowns with image assets: crown_icon.png & premium_icon.png)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -113,12 +113,11 @@ class PremiumService {
           title: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // שימוש באייקון הכתר הגרפי במקום טקסט
               Image.asset(
                 'assets/icon/crown_icon.png', 
                 width: 64, 
                 height: 64,
-                errorBuilder: (context, error, stackTrace) => const Text('👑', style: TextStyle(fontSize: 56)),
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 64),
               ),
               const SizedBox(height: 16),
               const Text(
@@ -183,12 +182,11 @@ class PremiumService {
                 ),
                 child: Column(
                   children: [
-                    // שימוש באייקון הלוגו+כתר המשולב בחומת התשלום
                     Image.asset(
                       'assets/icon/premium_icon.png', 
                       width: 72, 
                       height: 72,
-                      errorBuilder: (context, error, stackTrace) => const Text('👑', style: TextStyle(fontSize: 56)),
+                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 72),
                     ),
                     const SizedBox(height: 12),
                     const Text(
@@ -251,8 +249,13 @@ class PremiumService {
                                 
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('מצב פיתוח: המנוי הופעל בהצלחה. ברוך הבא ל-Pro! 👑'), 
+                                    SnackBar(
+                                      content: Row(
+                                        children: [
+                                          const Text('מצב פיתוח: המנוי הופעל בהצלחה!  '),
+                                          Image.asset('assets/icon/crown_icon.png', width: 16, height: 16, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                                        ]
+                                      ), 
                                       backgroundColor: Colors.green
                                     ),
                                   );

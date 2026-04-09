@@ -20,7 +20,7 @@ dependencies:
   
   # Notifications & Time
   flutter_local_notifications: ^17.0.0
-  timezone: ^0.9.2           # 🔒 ADDED: Timezone support for notifications
+  timezone: ^0.9.2          # 🔒 ADDED: Timezone support for notifications
   flutter_timezone: ^1.0.8   # 🔒 ADDED: Fetch local device timezone
   
   # System
@@ -50,16 +50,16 @@ dev_dependencies:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/icon/Fintel_Icon.png"
+  image_path: "assets/icon/fintel_icon.png"
   web:
     generate: true
-    image_path: "assets/icon/Fintel_Icon.png"
+    image_path: "assets/icon/fintel_icon.png"
     background_color: "#121212"
     theme_color: "#121212"
 
 flutter:
   uses-material-design: true
   assets:
-    - assets/icon/Fintel_Icon.png
-    - assets/icon/splash.gif
+    # ציון התיקייה כולה מאפשר לפלאטר לטעון את כל התמונות שבתוכה (fintel_icon, premium_icon, crown_icon, splash)
+    - assets/icon/
     - assets/fintel_brain_capsule.txt

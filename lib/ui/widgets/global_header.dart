@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Replaced Emoji Crown with dynamic custom premium_icon.png)
+// 🔒 STATUS: EDITED (Dynamic icon sizing and scaling to compensate for premium icon transparent padding)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -95,11 +95,14 @@ class _GlobalHeaderState extends State<GlobalHeader> {
         mainAxisSize: MainAxisSize.min,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            // ביטול עיגול פינות לאייקון הפרימיום כדי לא לחתוך בטעות את שפיצי הכתר
+            borderRadius: BorderRadius.circular(_isPremium ? 0 : 6),
             child: Image.asset(
-              // החלפה דינמית בין האייקון הרגיל לאייקון הפרימיום המעוצב
-              _isPremium ? 'assets/icon/premium_icon.png' : 'assets/icon/Fintel_Icon.png', 
-              width: 28, height: 28, fit: BoxFit.cover,
+              _isPremium ? 'assets/icon/premium_icon.png' : 'assets/icon/fintel_icon.png', 
+              // אם זה פרימיום, נגדיל ל-38 כדי לפצות על השוליים השקופים. אפשר לשנות את המספר 38 לפי הצורך!
+              width: _isPremium ? 38 : 28, 
+              height: _isPremium ? 38 : 28, 
+              fit: BoxFit.contain, // השתנה מ-cover ל-contain לשמירה על הפרופורציות
               errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
             ),
           ),
@@ -241,7 +244,6 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     _buildSubMenuTile('הכנסות', Icons.arrow_downward, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'הכנסות', displayTitle: 'הכנסות'))); }),
                     _buildSubMenuTile('קבועות', Icons.push_pin, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'קבועות', displayTitle: 'קבועות'))); }),
                     
-                    // מנמיכות שוחרר למשתמשים חינמיים (הם יראו שם את טיזר הצלף)
                     _buildSubMenuTile('מנמיכות', Icons.trending_down, () { 
                       Navigator.pop(ctx); 
                       Navigator.push(context, MaterialPageRoute(builder: (_) => const ReducingScreen())); 
@@ -305,7 +307,15 @@ Widget _buildMenuTile({required IconData icon, required Color color, required St
   return ListTile(
     contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
     leading: CircleAvatar(backgroundColor: color.withValues(alpha: 0.1), child: Icon(icon, color: color, size: 22)),
-    title: Row(children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87)), if (isPremium) ...[const SizedBox(width: 8), const Text('👑', style: TextStyle(fontSize: 16))]]),
+    title: Row(
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87)), 
+        if (isPremium) ...[
+          const SizedBox(width: 8), 
+          Image.asset('assets/icon/crown_icon.png', width: 18, height: 18, errorBuilder: (context, error, stackTrace) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 18))
+        ]
+      ]
+    ),
     trailing: trailing, onTap: onTap,
   );
 }
@@ -328,7 +338,17 @@ Widget _buildSubMenuTile(String title, IconData icon, VoidCallback onTap, {bool 
     onTap: onTap,
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(children: [Icon(icon, size: 18, color: Colors.blueGrey[600]), const SizedBox(width: 12), Text(title, style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w500)), if (isPremium) ...[const SizedBox(width: 8), const Text('👑', style: TextStyle(fontSize: 14))]]),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.blueGrey[600]), 
+          const SizedBox(width: 12), 
+          Text(title, style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w500)), 
+          if (isPremium) ...[
+            const SizedBox(width: 8), 
+            Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (context, error, stackTrace) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 14))
+          ]
+        ]
+      ),
     ),
   );
 }

@@ -1,4 +1,4 @@
-// 🔒 STATUS: FINAL (Freemium Teaser updated to use Crown emoji, removed unused imports)
+// 🔒 STATUS: FINAL (Replaced text emoji crown with crown_icon.png)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/debt_provider.dart';
@@ -163,12 +163,12 @@ class _ReducingScreenState extends State<ReducingScreen> {
         ),
         child: Column(
           children: [
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('👑', style: TextStyle(fontSize: 24)),
-                SizedBox(width: 8),
-                Flexible(
+                Image.asset('assets/icon/crown_icon.png', width: 24, height: 24, errorBuilder: (_,__,___) => const Text('👑', style: TextStyle(fontSize: 24))),
+                const SizedBox(width: 8),
+                const Flexible(
                   child: Text('מתי באמת תסיימו לשלם את החובות?', 
                     style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                     overflow: TextOverflow.ellipsis,
@@ -190,7 +190,13 @@ class _ReducingScreenState extends State<ReducingScreen> {
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
               ),
-              child: const Text('לפתיחת מכונת הזמן 👑', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('לפתיחת מכונת הזמן ', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
+                  Image.asset('assets/icon/crown_icon.png', width: 12, height: 12, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                ]
+              )
             )
           ],
         ),
@@ -399,10 +405,7 @@ class _ReducingScreenState extends State<ReducingScreen> {
 
   Widget _buildDebtCard(BuildContext context, Debt debt, bool isTarget, DateTime? payoffDate, double acceleratedPayment, DebtProvider provider) {
     final statusColor = (_isPremium && isTarget) ? const Color(0xFFFF4B4B) : Colors.black87;
-    final dateStr = _isPremium 
-        ? (payoffDate != null ? "${payoffDate.month.toString().padLeft(2, '0')}/${payoffDate.year}" : "--") 
-        : "נעול 👑";
-
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -455,7 +458,16 @@ class _ReducingScreenState extends State<ReducingScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('יתרה: ₪${debt.currentBalance.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                Text('סיום: $dateStr', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                if (_isPremium)
+                  Text('סיום: ${payoffDate != null ? "${payoffDate.month.toString().padLeft(2, '0')}/${payoffDate.year}" : "--"}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF00A3FF)))
+                else
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('נעול ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF00A3FF))),
+                      Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                    ]
+                  ),
               ],
             ),
             const Divider(height: 24, color: Colors.black12),

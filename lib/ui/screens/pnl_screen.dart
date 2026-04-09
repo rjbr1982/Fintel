@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed unnecessary_const Linter Warning and Premium Icon)
+// 🔒 STATUS: EDITED (Replaced text emoji crown with crown_icon.png)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -369,12 +369,12 @@ class PnLScreen extends StatelessWidget {
                     });
                   },
                   icon: const Icon(Icons.account_balance_wallet_outlined, size: 16),
-                  label: const Row(
+                  label: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('ניהול נכסים', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      SizedBox(width: 4),
-                      Text('👑', style: TextStyle(fontSize: 12)),
+                      const Text('ניהול נכסים', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 4),
+                      Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
                     ],
                   ),
                 ),
@@ -512,11 +512,20 @@ class PnLScreen extends StatelessWidget {
                           Navigator.push(context, MaterialPageRoute(builder: (context) => const AssetsScreen()));
                         });
                       },
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 4.0),
-                        child: Text(
-                          'ההון העצמי נשאב אוטומטית מתיק הנכסים. להזנת חסכונות או השקעות עברו אל ⬅️ ניהול נכסים 👑',
-                          style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.w600),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'ההון העצמי נשאב אוטומטית מתיק הנכסים. להזנת חסכונות או השקעות עברו אל ⬅️ ניהול נכסים ',
+                                style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                          ]
                         ),
                       ),
                     ),
@@ -639,7 +648,7 @@ class _PulsingCalibrationBannerState extends State<_PulsingCalibrationBanner> wi
           child: const Row(
             children: [
               Icon(Icons.info_outline, color: Colors.blue, size: 28),
-              SizedBox(width: 12), // <-- הוסר ה-const מכאן
+              SizedBox(width: 12), 
               Expanded(
                 child: Text(
                   'זהו התקציב הראשוני שלך. אנא עבור על הסעיפים ועדכן סכומים (במיוחד קניות ודיור). כשתסיים, לחץ על הכפתור למטה.',

@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Strict Legal Onboarding Flow with Checkbox & Secondary Modal)
+// 🔒 STATUS: EDITED (Replaced fintel_icon case-sensitivity for cross-platform safety)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -299,7 +299,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.asset(
-                      'assets/icon/Fintel_Icon.png', // אייקון סטטי
+                      'assets/icon/fintel_icon.png', // אייקון משתמש חינמי/כניסה
                       width: 36,
                       height: 36,
                       fit: BoxFit.cover,
