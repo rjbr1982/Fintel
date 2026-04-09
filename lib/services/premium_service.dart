@@ -1,33 +1,49 @@
-// 🔒 STATUS: EDITED (Persistent Founders Gift & Hybrid Billing Architecture, Removed PENDING tags)
+// 🔒 STATUS: FINAL (Replaced paywall header with custom fintel_pro_banner.jpg)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../data/database_helper.dart';
 
 /// מנוע החיוב ההיברידי (מפריד בין רכישות מובייל לרכישות דפדפן)
 class HybridBillingEngine {
+  // PENDING: Replace with the actual payment gateway link for Gamma phase
+  // כרגע מוגדר לקישור דמה כדי למנוע שגיאת 404 עד שיוקם עמוד תשלום אמיתי
+  static const String webPaymentUrl = 'https://example.com/fintel-pro-checkout';
+
   static Future<void> init() async {
     if (kIsWeb) {
-      // PENDING: Initialize Web Custom Gateway logic (e.g., listen to Webhook callbacks)
       debugPrint('HybridBillingEngine: Web Gateway initialized');
     } else {
       // PENDING: Initialize RevenueCat (purchases_flutter)
-      // await Purchases.setLogLevel(LogLevel.debug);
-      // await Purchases.configure(PurchasesConfiguration("YOUR_PUBLIC_KEY"));
       debugPrint('HybridBillingEngine: Native RevenueCat initialized');
     }
   }
 
-  static Future<bool> purchasePro() async {
+  static Future<bool> purchasePro(BuildContext context) async {
     try {
       if (kIsWeb) {
-        // PENDING: Redirect to Web Payment Link (Cloud Function / Israeli Gateway)
-        await Future.delayed(const Duration(seconds: 2)); // סימולציית המתנה
-        return true;
+        final Uri paymentUri = Uri.parse(webPaymentUrl);
+        
+        if (await canLaunchUrl(paymentUri)) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('מעביר לעמוד תשלום מאובטח... לאחר התשלום המערכת תתעדכן אוטומטית.'),
+                backgroundColor: Colors.blueGrey,
+                duration: Duration(seconds: 4),
+              ),
+            );
+          }
+          
+          await Future.delayed(const Duration(seconds: 1));
+          await launchUrl(paymentUri, mode: LaunchMode.externalApplication);
+          return false; 
+        } else {
+          throw Exception('Could not launch payment URL');
+        }
       } else {
-        // PENDING: Trigger RevenueCat native bottom sheet
-        // final purchaserInfo = await Purchases.purchasePackage(package);
-        // return purchaserInfo.entitlements.all["pro"]?.isActive == true;
-        await Future.delayed(const Duration(seconds: 2)); // סימולציית המתנה
+        // סימולציה זמנית למובייל בארגז החול
+        await Future.delayed(const Duration(seconds: 2)); 
         return true;
       }
     } catch (e) {
@@ -38,29 +54,50 @@ class HybridBillingEngine {
 }
 
 class PremiumService {
-  /// עוטף פעולות הדורשות מנוי פרימיום.
-  /// בודק מול בסיס הנתונים: משלמים או מייסדים עוברים, רגילים מקבלים מסך חומת תשלום (Paywall).
-  static Future<void> requirePremium(BuildContext context, VoidCallback onGranted) async {
-    // משיכת נתוני סטטוס מהירה (שקופה)
+  /// מנגנון האזנה גלובלי - מודיע לרכיבי UI מתי סטטוס הפרימיום השתנה בזמן אמת
+  static final ValueNotifier<int> stateNotifier = ValueNotifier(0);
+  static void notifyStateChanged() => stateNotifier.value++;
+
+  static bool _forceFreeMode = false;
+  
+  /// מתג מפתחים: כופה על המערכת להתייחס למשתמש כ"חינמי" לצורכי בדיקות (QA)
+  static bool get forceFreeMode => _forceFreeMode;
+  static set forceFreeMode(bool val) {
+    _forceFreeMode = val;
+    notifyStateChanged(); // עדכון מיידי של כל הכותרות באפליקציה
+  }
+
+  /// בודק באופן אסינכרוני האם המשתמש זכאי לפרימיום (משמש לתצוגות UI כמו הכתר בכותרת)
+  static Future<bool> isUserPremium() async {
+    if (_forceFreeMode) return false;
     final userData = await DatabaseHelper.instance.getUserRootData();
+    if (userData == null) return false;
     
-    // בדיקת תקינות הקשר (Context) לאחר המתנה לפעולה אסינכרונית
+    final isPremium = userData['isPremium'] == true;
+    final generation = userData['generation'] ?? 'Regular';
+    return isPremium || generation == 'Alpha' || generation == 'Beta';
+  }
+
+  /// עוטף פעולות הדורשות מנוי פרימיום.
+  static Future<void> requirePremium(BuildContext context, VoidCallback onGranted) async {
+    if (_forceFreeMode) {
+      _showPaywall(context, onGranted);
+      return;
+    }
+
+    final userData = await DatabaseHelper.instance.getUserRootData();
     if (!context.mounted) return;
 
     final generation = userData?['generation'] ?? 'Regular';
     final isPremium = userData?['isPremium'] ?? false;
-    
-    // משיכת זיכרון הפופ-אפ מהענן כדי לא להטריד את המשתמש פעמיים
     final metrics = userData?['metrics'] as Map<String, dynamic>? ?? {};
     final hasSeenFoundersGift = metrics['hasSeenFoundersGift'] == true;
 
-    // אם המשתמש הוא משלם (או שלחץ על 'התחל ניסיון' בסימולציה)
     if (isPremium) {
       onGranted();
       return;
     }
 
-    // ניווט לפי דורות: מתנת המייסדים ל-Alpha / Beta
     if (generation == 'Alpha' || generation == 'Beta') {
       if (hasSeenFoundersGift) {
         onGranted();
@@ -73,20 +110,25 @@ class PremiumService {
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Column(
+          title: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.workspace_premium, color: Colors.amber, size: 56),
-              SizedBox(height: 16),
-              Text(
-                "פיצ'ר פרימיום פתוח! 👑",
+              Image.asset(
+                'assets/icon/crown_icon.png', 
+                width: 64, 
+                height: 64,
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 64),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                "פיצ'ר פרימיום פתוח!",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 20),
               ),
             ],
           ),
           content: const Text(
-            "זיהינו שאתה מהמשתמשים הראשונים של דוחכם.\n\nלאות תודה, כל פיצ'רי הפרימיום (מנוע החירות, מכונת הזמן לחובות וסטטיסטיקות שכר) פתוחים עבורך כרגע בחינם לחלוטין. תהנה!",
+            "זיהינו שאתה מהמשתמשים הראשונים של דוחכם.\n\nלאות תודה, כל פיצ'רי הפרימיום (מנוע החירות, מכונת הזמן לחובות, אקדמיה וסטטיסטיקות שכר) פתוחים עבורך כרגע בחינם לחלוטין. תהנה!",
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.blueGrey, fontSize: 15, height: 1.4),
           ),
@@ -101,7 +143,6 @@ class PremiumService {
                 elevation: 2,
               ),
               onPressed: () async {
-                // רישום בענן שהמשתמש קיבל את המתנה (כדי שלא יקפוץ שוב בחיים)
                 await DatabaseHelper.instance.updateUserMetric('hasSeenFoundersGift', true);
                 if (!ctx.mounted) return;
                 Navigator.pop(ctx);
@@ -113,20 +154,16 @@ class PremiumService {
         ),
       );
     } else {
-      // אם זה משתמש רגיל (Regular) ואינו משלם - הצג את חומת התשלום הממירה
       _showPaywall(context, onGranted);
     }
   }
 
-  // =========================================================
-  // מסך חומת התשלום (Paywall) - UI שיווקי וממיר
-  // =========================================================
   static void _showPaywall(BuildContext context, VoidCallback onGranted) {
     bool isProcessing = false;
 
     showDialog(
       context: context,
-      barrierDismissible: false, // מכריח אותו לקבל החלטה
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           backgroundColor: Colors.white,
@@ -136,27 +173,36 @@ class PremiumService {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header כהה ויוקרתי
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF121212), // Deep Slate
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                child: const Column(
-                  children: [
-                    Icon(Icons.workspace_premium, color: Colors.amber, size: 56),
-                    SizedBox(height: 12),
-                    Text(
-                      'Fintel Pro',
-                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+              // החלק העליון של חומת התשלום - כעת מציג את הבאנר שלך
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Image.asset(
+                  'assets/icon/fintel_pro_banner.jpg',
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  // למקרה שהתמונה לא תיטען - גיבוי שקט לעיצוב השחור המקורי
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    color: const Color(0xFF121212),
+                    child: Column(
+                      children: [
+                        Image.asset(
+                          'assets/icon/premium_icon.png', 
+                          width: 72, 
+                          height: 72,
+                          errorBuilder: (_,__,___) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 72),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Fintel Pro',
+                          style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-              
-              // תוכן שיווקי
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
@@ -172,18 +218,21 @@ class PremiumService {
                     const SizedBox(height: 12),
                     _buildBullet("מערכת 'אנטי-הפתעות' מתקדמת."),
                     const SizedBox(height: 12),
-                    _buildBullet("בניית מפת דרכים מדויקת לחירות פיננסית."),
+                    _buildBullet("מכונת זמן לחיסול חובות מואץ (הצלף)."),
+                    const SizedBox(height: 12),
+                    _buildBullet("גישה מלאה לאקדמיית Fintel."),
+                    const SizedBox(height: 12),
+                    _buildBullet("בניית מפת דרכים לחירות פיננסית."),
                     
                     const SizedBox(height: 32),
                     
-                    // כפתור הנעה לפעולה אסינכרוני
                     SizedBox(
                       width: double.infinity,
                       child: isProcessing 
                         ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A3FF)))
                         : ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF00A3FF), // Electric Blue
+                              backgroundColor: const Color(0xFF00A3FF),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -191,9 +240,7 @@ class PremiumService {
                             ),
                             onPressed: () async {
                               setState(() => isProcessing = true);
-                              
-                              // הפעלת מנוע החיוב ההיברידי (Web / Native)
-                              bool success = await HybridBillingEngine.purchasePro();
+                              bool success = await HybridBillingEngine.purchasePro(ctx);
                               
                               if (!ctx.mounted) return;
                               
@@ -201,10 +248,21 @@ class PremiumService {
                                 Navigator.pop(ctx);
                                 await DatabaseHelper.instance.setPremiumStatus(true);
                                 
+                                if (PremiumService.forceFreeMode) {
+                                  PremiumService.forceFreeMode = false;
+                                } else {
+                                  PremiumService.notifyStateChanged();
+                                }
+                                
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('מצב פיתוח: המנוי הופעל בהצלחה. ברוך הבא ל-Pro! 👑'), 
+                                    SnackBar(
+                                      content: Row(
+                                        children: [
+                                          const Text('מצב פיתוח: המנוי הופעל בהצלחה!  '),
+                                          Image.asset('assets/icon/crown_icon.png', width: 16, height: 16, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                                        ]
+                                      ), 
                                       backgroundColor: Colors.green
                                     ),
                                   );
@@ -212,21 +270,20 @@ class PremiumService {
                                 onGranted();
                               } else {
                                 setState(() => isProcessing = false);
-                                ScaffoldMessenger.of(ctx).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('התשלום בוטל או נכשל. נסה שוב.'), 
-                                    backgroundColor: Colors.redAccent
-                                  ),
-                                );
+                                if (!kIsWeb) {
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('התשלום בוטל או נכשל. נסה שוב.'), 
+                                      backgroundColor: Colors.redAccent
+                                    ),
+                                  );
+                                }
                               }
                             },
                             child: const Text("התחל 30 ימי ניסיון חינם", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                           ),
                     ),
-                    
                     const SizedBox(height: 12),
-                    
-                    // יציאה (Opt-out)
                     TextButton(
                       onPressed: isProcessing ? null : () => Navigator.pop(ctx),
                       child: const Text(
@@ -244,14 +301,13 @@ class PremiumService {
     );
   }
 
-  // רכיב ויזואלי להצגת היתרונות (V)
   static Widget _buildBullet(String text) {
     return Row(
       children: [
-        const Icon(Icons.check_circle, color: Color(0xFF00FF85), size: 20), // Emerald Green
+        const Icon(Icons.check_circle, color: Color(0xFF00FF85), size: 20),
         const SizedBox(width: 12),
         Expanded(
-          child: Text(text, style: const TextStyle(fontSize: 15, color: Colors.black87)),
+          child: Text(text, style: const TextStyle(fontSize: 14, color: Colors.black87)),
         ),
       ],
     );

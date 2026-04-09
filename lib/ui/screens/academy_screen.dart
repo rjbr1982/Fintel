@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Active Content View & Horizontal Chips Implementation, fixed spread operator lint)
+// 🔒 STATUS: EDITED (Replaced text emoji crown with crown_icon.png)
 import 'package:flutter/material.dart';
 import '../../data/academy_content.dart';
 
@@ -54,7 +54,6 @@ class _AcademyScreenState extends State<AcademyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const Color goldAccents = Color(0xFFFFB800);
     final activeChapter = academyChapters[_selectedIndex];
 
     return Scaffold(
@@ -63,12 +62,12 @@ class _AcademyScreenState extends State<AcademyScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
-        title: const Row(
+        title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.workspace_premium, color: goldAccents, size: 24),
-            SizedBox(width: 8),
-            Text(
+            Image.asset('assets/icon/crown_icon.png', width: 24, height: 24, errorBuilder: (_,__,___) => const Text('👑', style: TextStyle(fontSize: 24))),
+            const SizedBox(width: 8),
+            const Text(
               'אקדמיית Fintel - פרקטיקת השימוש',
               style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
             ),
@@ -152,7 +151,7 @@ class _AcademyScreenState extends State<AcademyScreen> {
                   ),
                   const SizedBox(height: 20),
                   
-                  // Blocks - Removed .toList() to fix unnecessary_to_list_in_spreads lint
+                  // Blocks
                   ...activeChapter.content.map((block) => _buildBlock(block)),
                   
                   const SizedBox(height: 40), // Bottom padding

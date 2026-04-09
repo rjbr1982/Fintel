@@ -1,8 +1,9 @@
-// 🔒 STATUS: FINAL (Admin God-Mode Dashboard - Clickable Macro Stats & Smart CTAs)
+// 🔒 STATUS: FINAL (Admin God-Mode Dashboard - Includes Force Free Dev Switch, Linter Compliant)
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/admin_service.dart';
+import '../../services/premium_service.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -514,6 +515,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: const Text('סטטוס: Live', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
               ],
+            ),
+            const SizedBox(height: 16),
+
+            // --- DEV SWITCH: FORCE FREE MODE ---
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+              ),
+              child: SwitchListTile(
+                title: const Text('מצב מפתח: בדיקת חומת תשלום', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 14)),
+                subtitle: const Text('כופה על המכשיר שלך להתנהג כמשתמש חינמי רגיל (עוקף את מתנת המייסדים).', style: TextStyle(fontSize: 11, color: Colors.blueGrey)),
+                value: PremiumService.forceFreeMode,
+                activeThumbColor: Colors.red,
+                activeTrackColor: Colors.red.withValues(alpha: 0.3),
+                onChanged: (val) {
+                  setState(() {
+                    PremiumService.forceFreeMode = val;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(val ? 'מצב משתמש חינמי הופעל' : 'מצב משתמש חינמי כובה'),
+                      backgroundColor: val ? Colors.red : Colors.green,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 16),
 

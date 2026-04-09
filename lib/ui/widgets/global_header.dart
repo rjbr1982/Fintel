@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Moved Notification Settings into an internal BottomSheet and removed Scaffold screen)
+// 🔒 STATUS: EDITED (Dynamic icon sizing and scaling to compensate for premium icon transparent padding)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -25,7 +25,7 @@ import '../screens/category_drilldown_screen.dart';
 import '../screens/reducing_screen.dart';
 import '../screens/assets_screen.dart';
 
-class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
+class GlobalHeader extends StatefulWidget implements PreferredSizeWidget {
   final String? title;
   final bool showBackButton;
   final bool showSavingsIcon;
@@ -43,6 +43,36 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   @override
+  State<GlobalHeader> createState() => _GlobalHeaderState();
+}
+
+class _GlobalHeaderState extends State<GlobalHeader> {
+  bool _isPremium = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPremium();
+    // האזנה לשינויים בזמן אמת (כמו מתג המפתחים או רכישה)
+    PremiumService.stateNotifier.addListener(_checkPremium);
+  }
+
+  @override
+  void dispose() {
+    PremiumService.stateNotifier.removeListener(_checkPremium);
+    super.dispose();
+  }
+
+  Future<void> _checkPremium() async {
+    final isPremium = await PremiumService.isUserPremium();
+    if (mounted && _isPremium != isPremium) {
+      setState(() {
+        _isPremium = isPremium;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final budget = context.watch<BudgetProvider>();
     final loc = AppLocalizations.of(context);
@@ -55,7 +85,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: Colors.white,
       elevation: 0,
       centerTitle: false,
-      leading: (showBackButton && canPop) 
+      leading: (widget.showBackButton && canPop) 
         ? IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: Colors.blueGrey, size: 20),
             onPressed: () => Navigator.of(context).pop(),
@@ -65,36 +95,31 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            // ביטול עיגול פינות לאייקון הפרימיום כדי לא לחתוך בטעות את שפיצי הכתר
+            borderRadius: BorderRadius.circular(_isPremium ? 0 : 6),
             child: Image.asset(
-              'assets/icon/Fintel_Icon.png', 
-              width: 28, height: 28, fit: BoxFit.cover,
+              _isPremium ? 'assets/icon/premium_icon.png' : 'assets/icon/fintel_icon.png', 
+              // אם זה פרימיום, נגדיל ל-38 כדי לפצות על השוליים השקופים. אפשר לשנות את המספר 38 לפי הצורך!
+              width: _isPremium ? 48 : 28, 
+              height: _isPremium ? 48 : 28, 
+              fit: BoxFit.contain, // השתנה מ-cover ל-contain לשמירה על הפרופורציות
               errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
             ),
           ),
           const SizedBox(width: 8),
           Flexible(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    title ?? (loc?.get('appTitle') ?? 'דוחכם'),
-                    style: (title != null) 
-                      ? const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)
-                      : TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400]),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Text('👑', style: TextStyle(fontSize: 16)),
-              ],
+            child: Text(
+              widget.title ?? (loc?.get('appTitle') ?? 'דוחכם'),
+              style: (widget.title != null) 
+                ? const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)
+                : TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400]),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       ),
       actions: [
-        if (actions != null) ...actions!,
+        if (widget.actions != null) ...widget.actions!,
         if (canPop)
           IconButton(
             icon: const Icon(Icons.dashboard_outlined, color: brandBlue),
@@ -105,7 +130,7 @@ class GlobalHeader extends StatelessWidget implements PreferredSizeWidget {
           IconButton(
             icon: const Icon(Icons.menu, color: brandBlue, size: 28),
             tooltip: 'תפריט ראשי',
-            onPressed: () => _showMainMenuBottomSheet(context, budget, showSavingsIcon),
+            onPressed: () => _showMainMenuBottomSheet(context, budget, widget.showSavingsIcon),
           ),
         const SizedBox(width: 4),
       ],
@@ -218,7 +243,12 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                     _buildSubMenuTile('מסך תזרים ראשי', Icons.dashboard, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const PnLScreen())); }),
                     _buildSubMenuTile('הכנסות', Icons.arrow_downward, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'הכנסות', displayTitle: 'הכנסות'))); }),
                     _buildSubMenuTile('קבועות', Icons.push_pin, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'קבועות', displayTitle: 'קבועות'))); }),
-                    _buildSubMenuTile('מנמיכות', Icons.trending_down, () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const ReducingScreen())); }); }, isPremium: true),
+                    
+                    _buildSubMenuTile('מנמיכות', Icons.trending_down, () { 
+                      Navigator.pop(ctx); 
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ReducingScreen())); 
+                    }),
+                    
                     _buildSubMenuTile('משתנות', Icons.shopping_bag_outlined, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'משתנות', displayTitle: 'משתנות'))); }),
                     _buildSubMenuTile('עתידיות', Icons.savings_outlined, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'עתידיות', displayTitle: 'עתידיות'))); }),
                     _buildSubMenuTile('פיננסיות', Icons.trending_up, () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const AssetsScreen())); }); }, isPremium: true),
@@ -277,7 +307,15 @@ Widget _buildMenuTile({required IconData icon, required Color color, required St
   return ListTile(
     contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 2),
     leading: CircleAvatar(backgroundColor: color.withValues(alpha: 0.1), child: Icon(icon, color: color, size: 22)),
-    title: Row(children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87)), if (isPremium) ...[const SizedBox(width: 8), const Text('👑', style: TextStyle(fontSize: 16))]]),
+    title: Row(
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87)), 
+        if (isPremium) ...[
+          const SizedBox(width: 8), 
+          Image.asset('assets/icon/crown_icon.png', width: 18, height: 18, errorBuilder: (context, error, stackTrace) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 18))
+        ]
+      ]
+    ),
     trailing: trailing, onTap: onTap,
   );
 }
@@ -300,7 +338,17 @@ Widget _buildSubMenuTile(String title, IconData icon, VoidCallback onTap, {bool 
     onTap: onTap,
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(children: [Icon(icon, size: 18, color: Colors.blueGrey[600]), const SizedBox(width: 12), Text(title, style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w500)), if (isPremium) ...[const SizedBox(width: 8), const Text('👑', style: TextStyle(fontSize: 14))]]),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.blueGrey[600]), 
+          const SizedBox(width: 12), 
+          Text(title, style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w500)), 
+          if (isPremium) ...[
+            const SizedBox(width: 8), 
+            Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (context, error, stackTrace) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 14))
+          ]
+        ]
+      ),
     ),
   );
 }
@@ -413,7 +461,6 @@ void _showMainSettingsBottomSheet(BuildContext context, BudgetProvider budget, b
   );
 }
 
-// 🔔 הפונקציה החדשה: תפריט ניהול התראות כ-BottomSheet פנימי
 void _showNotificationSettingsBottomSheet(BuildContext context, BudgetProvider budget, bool showSavings) {
   showModalBottomSheet(
     context: context, backgroundColor: Colors.white, isScrollControlled: true,
