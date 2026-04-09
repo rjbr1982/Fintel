@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added dashboard_background.png to MainScreen from icon folder)
+// 🔒 STATUS: EDITED (Upgraded Freedom Engine Dialog UI with RichText for inline crown and explicit CTA)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -143,18 +143,28 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         });
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Expanded(
-                              child: Text(
-                                'ההון העצמי נשאב אוטומטית מתיק הנכסים. להזנת חסכונות או השקעות עברו אל ⬅️ ניהול נכסים ',
-                                style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.w600),
+                            const Icon(Icons.touch_app, size: 16, color: Colors.blue),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text.rich(
+                                TextSpan(
+                                  style: const TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.w600, height: 1.4),
+                                  children: [
+                                    const TextSpan(text: 'ההון העצמי נשאב אוטומטית מתיק הנכסים.\nלהזנת חסכונות או השקעות לחצו כאן ל'),
+                                    const TextSpan(text: 'ניהול נכסים ', style: TextStyle(decoration: TextDecoration.underline)),
+                                    WidgetSpan(
+                                      alignment: PlaceholderAlignment.middle,
+                                      child: Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
                           ]
                         ),
                       ),
@@ -469,16 +479,15 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
     return Stack(
       children: [
-        // 🔒 התוספת: עטיפת ה-Scaffold ב-Container עם תמונת הרקע (הנתיב עודכן ל-icon)
         Container(
           decoration: const BoxDecoration(
             image: DecorationImage(
               image: AssetImage('assets/icon/dashboard_background.png'),
-              fit: BoxFit.cover, // יתפרס על כל המסך
+              fit: BoxFit.cover, 
             ),
           ),
           child: Scaffold(
-            backgroundColor: Colors.transparent, // קריטי: חייב להיות שקוף כדי שהתמונה תוצג
+            backgroundColor: Colors.transparent, 
             appBar: const GlobalHeader(),
             body: Center(
               child: SingleChildScrollView(

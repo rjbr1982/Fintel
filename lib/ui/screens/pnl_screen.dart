@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Replaced text emoji crown with crown_icon.png)
+// 🔒 STATUS: EDITED (Unified Freedom Engine Dialog UI with inline crown CTA matching main_screen)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -393,7 +393,7 @@ class PnLScreen extends StatelessWidget {
                   style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ],
-            )
+            ),
           ],
 
           if (isDiverting) ...[
@@ -513,18 +513,28 @@ class PnLScreen extends StatelessWidget {
                         });
                       },
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Expanded(
-                              child: Text(
-                                'ההון העצמי נשאב אוטומטית מתיק הנכסים. להזנת חסכונות או השקעות עברו אל ⬅️ ניהול נכסים ',
-                                style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.w600),
+                            const Icon(Icons.touch_app, size: 16, color: Colors.blue),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text.rich(
+                                TextSpan(
+                                  style: const TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.w600, height: 1.4),
+                                  children: [
+                                    const TextSpan(text: 'ההון העצמי נשאב אוטומטית מתיק הנכסים.\nלהזנת חסכונות או השקעות לחצו כאן ל'),
+                                    const TextSpan(text: 'ניהול נכסים ', style: TextStyle(decoration: TextDecoration.underline)),
+                                    WidgetSpan(
+                                      alignment: PlaceholderAlignment.middle,
+                                      child: Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
                           ]
                         ),
                       ),

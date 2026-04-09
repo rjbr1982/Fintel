@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Replaced text emoji crown with crown_icon.png)
+// 🔒 STATUS: EDITED (Removed redundant premium crown from AppBar title for cleaner UX)
 import 'package:flutter/material.dart';
 import '../../data/academy_content.dart';
 
@@ -62,16 +62,9 @@ class _AcademyScreenState extends State<AcademyScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset('assets/icon/crown_icon.png', width: 24, height: 24, errorBuilder: (_,__,___) => const Text('👑', style: TextStyle(fontSize: 24))),
-            const SizedBox(width: 8),
-            const Text(
-              'אקדמיית Fintel - פרקטיקת השימוש',
-              style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ],
+        title: const Text(
+          'אקדמיית Fintel - פרקטיקת השימוש',
+          style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
       body: Column(
