@@ -1,0 +1,664 @@
+// 🔒 STATUS: EDITED (Replaced text emoji crown with crown_icon.png)
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/budget_provider.dart';
+import '../../services/premium_service.dart';
+import '../widgets/global_header.dart';
+import 'category_drilldown_screen.dart'; 
+import 'reducing_screen.dart'; 
+import 'assets_screen.dart'; 
+import 'main_screen.dart'; 
+import '../../data/database_helper.dart';
+
+class PnLScreen extends StatelessWidget {
+  final bool isCalibrationMode; 
+  
+  const PnLScreen({super.key, this.isCalibrationMode = false});
+
+  // === פונקציית עזר לתמרורי הדרכה ===
+  void _showInfoDialog(BuildContext context, String title, String content) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Theme(
+        data: ThemeData.light(),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold))),
+            ],
+          ),
+          content: Text(content, style: const TextStyle(color: Colors.black87, height: 1.5, fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('הבנתי', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final budget = context.watch<BudgetProvider>();
+
+    final isFutureMode = budget.isFutureMode;
+    final income = budget.totalIncome;
+    final fixed = budget.totalFixedExpenses;
+    final reducing = budget.totalReducingExpenses; 
+    
+    final flowToLiving = budget.disposableIncome; 
+    final futureAllocated = budget.totalFutureExpenses;
+    final flowToFreedom = budget.totalFinancialExpenses;
+    final diversionAmount = budget.financialDiversionAmount;
+
+    final variableAllocated = budget.totalVariableExpenses;
+    final variableDeficit = budget.variableDeficit;
+    
+    final displayVariableAmount = variableDeficit > 0 ? (variableAllocated + variableDeficit) : variableAllocated;
+
+    return Scaffold(
+      backgroundColor: isFutureMode ? const Color(0xFFF0FDF4) : Colors.white,
+      appBar: const GlobalHeader(
+        title: 'תזרים', 
+      ),
+      floatingActionButton: isCalibrationMode ? FloatingActionButton.extended(
+        backgroundColor: const Color(0xFF00C853),
+        onPressed: () async {
+          // --- הזרקת המדד ל-Admin Dashboard ---
+          await DatabaseHelper.instance.updateUserMetric('hasViewedFreedom', true);
+          
+          if (context.mounted) {
+            // ניקוי עמוק של הערימה (Stack) כדי להבטיח הופעה חלקה של האנימציה בדשבורד הראשי
+            Navigator.pushAndRemoveUntil(
+              context, 
+              MaterialPageRoute(builder: (_) => const MainScreen()),
+              (route) => false
+            );
+          }
+        },
+        label: const Text('התקציב שלי מוכן!', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
+        icon: const Icon(Icons.check_circle, color: Colors.white),
+      ) : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      body: Column(
+        children: [
+          if (isCalibrationMode) const _PulsingCalibrationBanner(),
+          
+          _buildFutureToggle(context, budget, isFutureMode),
+          
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (isFutureMode) _buildFutureBadge(),
+
+                _buildRow(context, 'הכנסות', income, Colors.green[900]!, isHeader: true),
+                const Divider(thickness: 2, height: 30, color: Colors.black12),
+
+                _buildSectionLabel('שלב א: בסיס'),
+                _buildRow(context, 'קבועות', fixed, Colors.black),
+                _buildDebtRow(context, reducing, isFutureMode), 
+                
+                const SizedBox(height: 15),
+                _buildSummaryCard(
+                  isFutureMode ? 'תזרים פנוי (ללא חובות!)' : 'תזרים לרמת חיים וחירות פיננסית', 
+                  flowToLiving, 
+                  isFutureMode ? const Color(0xFF00C853) : Colors.blue[900]!
+                ),
+                const SizedBox(height: 25),
+
+                _buildSectionLabel('שלב ב: רמת חיים'),
+                
+                _buildRow(
+                  context, 
+                  'משתנות', 
+                  displayVariableAmount, 
+                  variableDeficit > 0 ? Colors.red[900]! : Colors.black, 
+                  onLongPress: () => _showRatioDialog(context, budget, isVariable: true),
+                  onInfoTap: () => _showInfoDialog(context, 'שליטת מאקרו (משתנות)', "התקציב המשתנה הוא 'קופסה סגורה'. לחיצה ארוכה כאן תאפשר לך לקבוע איזה אחוז מתוך ה'תזרים לרמת חיים' (היתרה שלאחר הבסיס) יוקצה למשתנות.")
+                ),
+                
+                if (variableDeficit > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          'התקציב נמצא בגירעון של ₪${variableDeficit.toStringAsFixed(0)}',
+                          style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                _buildRow(
+                  context, 
+                  'עתידיות', 
+                  futureAllocated, 
+                  Colors.black, 
+                  onLongPress: () => _showRatioDialog(context, budget, isVariable: false),
+                  onInfoTap: () => _showInfoDialog(context, 'מודל המפל (עתידיות)', "שים לב: אחוז ההקצאה לעתידיות (הניתן לשינוי בלחיצה ארוכה) מחושב אך ורק מתוך היתרה שנותרה לאחר הפחתת התקציב המשתנה, ולא מהסכום הכולל. שאר היתרה תופנה לחירות פיננסית.")
+                ),
+
+                const SizedBox(height: 25),
+                
+                _buildSectionLabel('שלב ג: חירות'),
+                _buildFreedomCard(context, flowToFreedom, diversionAmount, isFutureMode, budget),
+
+                const SizedBox(height: 80), 
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFutureToggle(BuildContext context, BudgetProvider budget, bool isFutureMode) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      color: isFutureMode ? const Color(0xFFDCFCE7) : Colors.grey[100],
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isFutureMode ? Icons.auto_awesome : Icons.visibility_outlined,
+                color: isFutureMode ? const Color(0xFF166534) : Colors.black54,
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'הצצה לעולם ללא חובות',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+            ],
+          ),
+          Switch(
+            value: isFutureMode,
+            activeThumbColor: const Color(0xFF00C853),
+            activeTrackColor: const Color(0xFF00C853).withValues(alpha: 0.3),
+            onChanged: (val) {
+              budget.toggleFutureMode(val);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFutureBadge() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF00C853),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Text(
+        'סימולציה: כך ייראה התזרים שלך ביום שאחרי החובות',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+      ),
+    );
+  }
+
+  Widget _buildSectionLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0, right: 4.0),
+      child: Text(text, style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildRow(BuildContext context, String title, double amount, Color color, {bool isHeader = false, VoidCallback? onLongPress, VoidCallback? onInfoTap}) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(
+          builder: (context) => CategoryDrilldownScreen(mainCategory: title, displayTitle: title)
+        ));
+      },
+      onLongPress: onLongPress,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Text(title, style: TextStyle(fontSize: isHeader ? 22 : 17, fontWeight: isHeader ? FontWeight.bold : FontWeight.w600, color: Colors.black)),
+                if (onInfoTap != null) ...[
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: onInfoTap,
+                    child: const Icon(Icons.info_outline, size: 18, color: Colors.blue),
+                  ),
+                ]
+              ],
+            ),
+            Row(
+              children: [
+                Text('₪${amount.toStringAsFixed(0)}', style: TextStyle(fontSize: isHeader ? 22 : 17, fontWeight: FontWeight.bold, color: color)),
+                if (!isHeader) ...[
+                  const SizedBox(width: 10),
+                  const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.black54),
+                ]
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDebtRow(BuildContext context, double amount, bool isFutureMode) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const ReducingScreen()));
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'מנמיכות',
+                  style: TextStyle(
+                    fontSize: 17, 
+                    fontWeight: FontWeight.w600, 
+                    color: Colors.black,
+                    decoration: isFutureMode ? TextDecoration.lineThrough : null
+                  )
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Text(
+                  '₪${amount.toStringAsFixed(0)}', 
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: isFutureMode ? Colors.grey : Colors.red[900])
+                ),
+                const SizedBox(width: 10),
+                const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.black54),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(String title, double amount, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05), 
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color))),
+          Text('₪${amount.toStringAsFixed(0)}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFreedomCard(BuildContext context, double amount, double diversion, bool isFutureMode, BudgetProvider budget) {
+    const color = Color(0xFF00C853); 
+    bool isDiverting = diversion > 0 && !isFutureMode;
+    double passiveReduction = budget.totalPassiveIncome;
+
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('תזרים לחירות פיננסית', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Colors.white)),
+              Text('₪${amount.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white70),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  onPressed: () => _showFreedomSettingsDialog(context, budget),
+                  icon: const Icon(Icons.calculate_outlined, size: 16),
+                  label: const Text('הגדרות וכיול', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white70),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  onPressed: () {
+                    PremiumService.requirePremium(context, () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const AssetsScreen()));
+                    });
+                  },
+                  icon: const Icon(Icons.account_balance_wallet_outlined, size: 16),
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('ניהול נכסים', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 4),
+                      Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          if (passiveReduction > 0) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(Icons.shield, color: Colors.white, size: 14),
+                const SizedBox(width: 6),
+                Text(
+                  'נכסים פסיביים מקזזים ₪${passiveReduction.toStringAsFixed(0)} מיעד המחייה',
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ],
+            )
+          ],
+
+          if (isDiverting) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.bolt, color: Colors.white, size: 14),
+                  const SizedBox(width: 6),
+                  Text(
+                    'מוסט כרגע לחיסול מנמיכות (₪${diversion.toStringAsFixed(0)})',
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showRatioDialog(BuildContext context, BudgetProvider budget, {required bool isVariable}) {
+    double currentVal = isVariable ? budget.variableAllocationRatio : budget.futureAllocationRatio;
+    final controller = TextEditingController(text: (currentVal * 100).toStringAsFixed(1));
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isVariable ? 'אחוז הקצאה למשתנות' : 'אחוז הקצאה לעתידיות'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('הגדר איזה אחוז מהיתרה יוקצה לקטגוריה זו:'),
+            TextField(controller: controller, keyboardType: TextInputType.number, decoration: const InputDecoration(suffixText: '%')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
+          ElevatedButton(
+            onPressed: () {
+              final val = double.tryParse(controller.text);
+              if (val != null) {
+                budget.setAllocationRatios(variable: isVariable ? val / 100 : null, future: isVariable ? null : val / 100);
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('שמור'),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _showFreedomSettingsDialog(BuildContext context, BudgetProvider budget) {
+    final targetCtrl = TextEditingController(
+      text: budget.manualTargetIncome != null ? budget.manualTargetIncome!.toStringAsFixed(0) : ''
+    );
+    final capitalCtrl = TextEditingController(text: budget.initialCapital.toStringAsFixed(0));
+    final yieldCtrl = TextEditingController(text: budget.expectedYield.toStringAsFixed(1));
+    int freq = budget.compoundingFrequency;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Colors.white, surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text('הגדרות מנוע החירות', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: targetCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.black87),
+                      decoration: InputDecoration(
+                        labelText: 'יעד הכנסה פסיבית (ריק = אוטומטי)',
+                        labelStyle: const TextStyle(color: Colors.blueGrey),
+                        hintText: budget.autoTargetIncome.toStringAsFixed(0),
+                        hintStyle: const TextStyle(color: Colors.black38),
+                        helperText: 'מחושב אוטומטית מסך הוצאות המחיה והבסיס שלך.',
+                        helperStyle: const TextStyle(color: Colors.blueGrey, fontSize: 11),
+                        helperMaxLines: 2,
+                        prefixIcon: const Icon(Icons.track_changes, color: Colors.blueGrey),
+                        enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                        focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: capitalCtrl,
+                      readOnly: true, 
+                      style: const TextStyle(color: Colors.black87),
+                      decoration: const InputDecoration(
+                        labelText: 'הון עצמי נוכחי (נשאב מהנכסים)',
+                        labelStyle: TextStyle(color: Colors.blueGrey),
+                        prefixIcon: Icon(Icons.account_balance_wallet, color: Colors.blueGrey),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        PremiumService.requirePremium(context, () {
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const AssetsScreen()));
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'ההון העצמי נשאב אוטומטית מתיק הנכסים. להזנת חסכונות או השקעות עברו אל ⬅️ ניהול נכסים ',
+                                style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                          ]
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: yieldCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: const TextStyle(color: Colors.black87),
+                      decoration: const InputDecoration(
+                        labelText: 'תשואה שנתית נטו (%)',
+                        labelStyle: TextStyle(color: Colors.blueGrey),
+                        prefixIcon: Icon(Icons.trending_up, color: Colors.blueGrey),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
+                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Align(
+                      alignment: Alignment.centerRight,
+                      child: Text('תדירות צבירת ריבית:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                    ),
+                    const SizedBox(height: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.black26),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: freq,
+                          isExpanded: true,
+                          dropdownColor: Colors.white,
+                          style: const TextStyle(color: Colors.black87, fontSize: 16),
+                          icon: const Icon(Icons.arrow_drop_down, color: Colors.black54),
+                          items: const [
+                            DropdownMenuItem<int>(value: 1, child: Text('שנתית (1)')),
+                            DropdownMenuItem<int>(value: 12, child: Text('חודשית (12)')),
+                            DropdownMenuItem<int>(value: 52, child: Text('שבועית (52)')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => freq = val);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('ביטול', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C853)),
+                  onPressed: () {
+                    double? target = double.tryParse(targetCtrl.text);
+                    double yld = double.tryParse(yieldCtrl.text) ?? 4.0;
+                    
+                    budget.setFreedomSettings(
+                      manualTarget: target,
+                      yieldRate: yld,
+                      frequency: freq,
+                    );
+                    Navigator.pop(ctx);
+                  },
+                  child: const Text('שמור הגדרות', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          }
+        );
+      }
+    );
+  }
+}
+
+class _PulsingCalibrationBanner extends StatefulWidget {
+  const _PulsingCalibrationBanner();
+
+  @override
+  State<_PulsingCalibrationBanner> createState() => _PulsingCalibrationBannerState();
+}
+
+class _PulsingCalibrationBannerState extends State<_PulsingCalibrationBanner> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Color?> _colorAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat(reverse: true);
+    _colorAnim = ColorTween(
+      begin: Colors.blue[50], 
+      end: Colors.blue[100]
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _colorAnim,
+      builder: (context, child) {
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _colorAnim.value,
+            border: Border(bottom: BorderSide(color: Colors.blue.withValues(alpha: 0.3), width: 1)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue, size: 28),
+              SizedBox(width: 12), 
+              Expanded(
+                child: Text(
+                  'זהו התקציב הראשוני שלך. אנא עבור על הסעיפים ועדכן סכומים (במיוחד קניות ודיור). כשתסיים, לחץ על הכפתור למטה.',
+                  style: TextStyle(fontSize: 14, color: Colors.blue, fontWeight: FontWeight.bold, height: 1.4),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    );
+  }
+}
