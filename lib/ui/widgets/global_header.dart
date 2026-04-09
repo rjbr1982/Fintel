@@ -100,8 +100,8 @@ class _GlobalHeaderState extends State<GlobalHeader> {
             child: Image.asset(
               _isPremium ? 'assets/icon/premium_icon.png' : 'assets/icon/fintel_icon.png', 
               // אם זה פרימיום, נגדיל ל-38 כדי לפצות על השוליים השקופים. אפשר לשנות את המספר 38 לפי הצורך!
-              width: _isPremium ? 38 : 28, 
-              height: _isPremium ? 38 : 28, 
+              width: _isPremium ? 48 : 28, 
+              height: _isPremium ? 48 : 28, 
               fit: BoxFit.contain, // השתנה מ-cover ל-contain לשמירה על הפרופורציות
               errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
             ),

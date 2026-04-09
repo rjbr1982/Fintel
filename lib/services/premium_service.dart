@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Replaced text emoji crowns with image assets: crown_icon.png & premium_icon.png)
+// 🔒 STATUS: FINAL (Replaced paywall header with custom fintel_pro_banner.jpg)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -173,27 +173,34 @@ class PremiumService {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF121212),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                child: Column(
-                  children: [
-                    Image.asset(
-                      'assets/icon/premium_icon.png', 
-                      width: 72, 
-                      height: 72,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 72),
+              // החלק העליון של חומת התשלום - כעת מציג את הבאנר שלך
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Image.asset(
+                  'assets/icon/fintel_pro_banner.jpg',
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  // למקרה שהתמונה לא תיטען - גיבוי שקט לעיצוב השחור המקורי
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    color: const Color(0xFF121212),
+                    child: Column(
+                      children: [
+                        Image.asset(
+                          'assets/icon/premium_icon.png', 
+                          width: 72, 
+                          height: 72,
+                          errorBuilder: (_,__,___) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 72),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Fintel Pro',
+                          style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Fintel Pro',
-                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2),
-                    ),
-                  ],
+                  ),
                 ),
               ),
               Padding(
