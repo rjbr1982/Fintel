@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed Infinity Pulse UX - Added explanation dialog instead of dead end)
+// 🔒 STATUS: EDITED (Unified Freedom Settings Dialog with PnL screen)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -8,6 +8,8 @@ import '../widgets/global_header.dart';
 import 'pnl_screen.dart'; 
 import 'shopping_screen.dart';
 import 'sinking_funds_screen.dart';
+import '../../services/premium_service.dart';
+import 'assets_screen.dart';
 
 enum RevealState { expectation, reveal, dashboard }
 
@@ -130,6 +132,22 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         prefixIcon: Icon(Icons.account_balance_wallet, color: Colors.blueGrey),
                         enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.black12)),
                         focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.blue)),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        PremiumService.requirePremium(context, () {
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const AssetsScreen()));
+                        });
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 4.0),
+                        child: Text(
+                          'ההון העצמי נשאב אוטומטית מתיק הנכסים. להזנת חסכונות או השקעות עברו אל ⬅️ ניהול נכסים 👑',
+                          style: TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),

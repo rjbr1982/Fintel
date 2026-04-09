@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Reactive stateNotifier for real-time UI updates across the app)
+// 🔒 STATUS: EDITED (Replaced text emoji crowns with image assets for paywall and dialogs)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -110,12 +110,18 @@ class PremiumService {
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Column(
+          title: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('👑', style: TextStyle(fontSize: 56)),
-              SizedBox(height: 16),
-              Text(
+              // שימוש באייקון הכתר הגרפי במקום טקסט
+              Image.asset(
+                'assets/icon/crown_icon.png', 
+                width: 64, 
+                height: 64,
+                errorBuilder: (context, error, stackTrace) => const Text('👑', style: TextStyle(fontSize: 56)),
+              ),
+              const SizedBox(height: 16),
+              const Text(
                 "פיצ'ר פרימיום פתוח!",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 20),
@@ -175,11 +181,17 @@ class PremiumService {
                   color: Color(0xFF121212),
                   borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
-                child: const Column(
+                child: Column(
                   children: [
-                    Text('👑', style: TextStyle(fontSize: 56)),
-                    SizedBox(height: 12),
-                    Text(
+                    // שימוש באייקון הלוגו+כתר המשולב בחומת התשלום
+                    Image.asset(
+                      'assets/icon/premium_icon.png', 
+                      width: 72, 
+                      height: 72,
+                      errorBuilder: (context, error, stackTrace) => const Text('👑', style: TextStyle(fontSize: 56)),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
                       'Fintel Pro',
                       style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2),
                     ),

@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Reactive Header - Listens to PremiumService.stateNotifier for immediate Crown toggle)
+// 🔒 STATUS: EDITED (Replaced Emoji Crown with dynamic custom premium_icon.png)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -97,30 +97,20 @@ class _GlobalHeaderState extends State<GlobalHeader> {
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: Image.asset(
-              'assets/icon/Fintel_Icon.png', 
+              // החלפה דינמית בין האייקון הרגיל לאייקון הפרימיום המעוצב
+              _isPremium ? 'assets/icon/premium_icon.png' : 'assets/icon/Fintel_Icon.png', 
               width: 28, height: 28, fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
             ),
           ),
           const SizedBox(width: 8),
           Flexible(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    widget.title ?? (loc?.get('appTitle') ?? 'דוחכם'),
-                    style: (widget.title != null) 
-                      ? const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)
-                      : TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400]),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (_isPremium) ...[
-                  const SizedBox(width: 6),
-                  const Text('👑', style: TextStyle(fontSize: 16)),
-                ],
-              ],
+            child: Text(
+              widget.title ?? (loc?.get('appTitle') ?? 'דוחכם'),
+              style: (widget.title != null) 
+                ? const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)
+                : TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400]),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
