@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Dynamic icon sizing and scaling to compensate for premium icon transparent padding)
+// 🔒 STATUS: EDITED (Implemented elegant title UX: Contextual Logo & Smart FittedBox scaling)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -94,27 +94,36 @@ class _GlobalHeaderState extends State<GlobalHeader> {
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ClipRRect(
-            // ביטול עיגול פינות לאייקון הפרימיום כדי לא לחתוך בטעות את שפיצי הכתר
-            borderRadius: BorderRadius.circular(_isPremium ? 0 : 6),
-            child: Image.asset(
-              _isPremium ? 'assets/icon/premium_icon.png' : 'assets/icon/fintel_icon.png', 
-              // אם זה פרימיום, נגדיל ל-38 כדי לפצות על השוליים השקופים. אפשר לשנות את המספר 38 לפי הצורך!
-              width: _isPremium ? 48 : 28, 
-              height: _isPremium ? 48 : 28, 
-              fit: BoxFit.contain, // השתנה מ-cover ל-contain לשמירה על הפרופורציות
-              errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+          // הגישה האלגנטית: מציגים לוגו רק במסך הראשי (כאשר אין כותרת ספציפית למסך פנימי)
+          if (widget.title == null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(_isPremium ? 0 : 6),
+              child: Image.asset(
+                _isPremium ? 'assets/icon/premium_icon.png' : 'assets/icon/fintel_icon.png', 
+                width: 50, 
+                height: 50, 
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
+            const SizedBox(width: 8),
+          ],
+          
+          // ניהול הכותרת באמצעות FittedBox - מתכווץ אוטומטית רק אם יש צורך כדי למנוע חיתוך
           Flexible(
-            child: Text(
-              widget.title ?? (loc?.get('appTitle') ?? 'דוחכם'),
-              style: (widget.title != null) 
-                ? const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold)
-                : TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.grey[400]),
-              overflow: TextOverflow.ellipsis,
-            ),
+            child: widget.title != null 
+              ? FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    widget.title!,
+                    style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                )
+              : Text(
+                  loc?.get('appTitle') ?? 'Fintel',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: Colors.black87),
+                ),
           ),
         ],
       ),

@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Replaced fintel_icon case-sensitivity for cross-platform safety)
+// 🔒 STATUS: EDITED (Removed wallet fallback icon to enforce brand identity)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -303,7 +303,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: 36,
                       height: 36,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.account_balance_wallet, color: Colors.blue, size: 36),
                     ),
                   ),
                   const SizedBox(width: 12),
