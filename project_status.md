@@ -3,12 +3,10 @@
 **Environment Status:** Production (`dohaham`) is fully synced with Sandbox (`fintel_playground`).
 
 ## 🟢 Completed Milestones
-* [x] **Merge Conflict Resolution:** Successfully resolved git marker conflicts in core services and routing.
-* [x] **Visual Identity Upgrade:** Completely replaced legacy UI elements with custom, branded PNG assets (`fintel_icon`, `premium_icon`, `crown_icon`, `fintel_pro_banner`).
-* [x] **Reactive Premium Header:** Built a stateful `GlobalHeader` that listens to `PremiumService` and scales the premium icon perfectly (48px rule) in real-time.
-* [x] **Strategic Paywall Placement:** Opened the 'Reducing Expenses' screen to free users while locking the 'Sniper/Time Machine' features with an embedded, highly-converting teaser card.
-* [x] **Unified User Experience:** Standardized the Freedom Engine settings dialog across the Main Dashboard and the PnL screen.
-* [x] **Production Deployment:** Successfully migrated the stable codebase to the live Production environment using targeted Hosting deployment.
+* [x] **Asset Pipeline Stabilization:** Fixed critical rendering bugs in the asset pipeline caused by uppercase extensions (`.jpg`) and case-mismatches. All core brand assets are now standard PNGs.
+* [x] **Dashboard UI Enhancement:** Successfully integrated `dashboard_background.png` into the main PnL/Freedom Engine view.
+* [x] **Header UX Overhaul:** Resolved long-title overflow issues in deep navigation screens by implementing a Contextual Logo strategy and `FittedBox` scaling.
+* [x] **Login Screen Cleanup:** Removed generic `errorBuilder` fallbacks to enforce brand presence during Google Auth flow.
 
 ## 🟡 Active / Pending Tasks (Backlog)
 * **Payment Gateway Integration:** Replace the dummy URL in `HybridBillingEngine.webPaymentUrl` with the actual Meshulam checkout link.
@@ -17,3 +15,8 @@
 
 ## 🔴 Known Issues / Technical Debt
 * None currently. The codebase is fully Linter-compliant (0 issues).
+
+## 🧠 Strategic Decision Log
+* **Date:** April 2026
+* **Decision:** Contextual Header & Uniform Scaling.
+* **Reason:** Replaced hardcoded 48px padding compensation with uniform 50px rendering for both `fintel_icon` and `premium_icon`. To solve text-overflow with long Hebrew titles, the logo is now completely hidden on sub-screens, providing the text `FittedBox` with ~30% more horizontal real estate.
