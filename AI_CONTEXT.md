@@ -1,19 +1,30 @@
-# Fintel - AI Context & Architecture Guidelines
+# Fintel Project Context (AI Bridge)
 
-## 1. Project Overview
-**Name:** Fintel (דוחכם)
-**Core Concept:** Financial Intelligence application based on the Dohaham methodology.
-**Current Phase:** Gamma (Pre-launch/Production testing).
-**Environments:** `fintel_playground` (Sandbox/Dev), `dohaham` (Production).
+## 🎯 Mission
+Fintel (Dohaham) - A high-end financial intelligence system focused on the Israeli market, helping users achieve financial freedom through "The Freedom Engine" and "Debt Sniper" algorithms.
 
-## 2. Recent Architectural Updates (April 2026)
-* **Visual Asset Standardization:** Enforced strict lowercase `snake_case` for all assets (e.g., `fintel_icon.png`, `dashboard_background.png`) to prevent cross-platform Case-Sensitivity crashes and `errorBuilder` UI fallbacks.
-* **Dashboard Background:** Applied `dashboard_background.png` specifically to `main_screen.dart` using a transparent Scaffold over a decorated Container.
-* **Contextual Header UX:** Upgraded `GlobalHeader` to display the large brand logo (50px) only on the main dashboard. Deep screens hide the logo to free up space, and titles are wrapped in a `FittedBox` to gracefully scale down long Hebrew titles (like "אקדמיית Fintel") instead of truncating them.
-* **Premium State:** Reverted complex premium icon padding math; both standard and premium icons now render uniformly at 50px.
-* **Authentication UI:** Cleaned `login_screen.dart` to directly call the correct brand PNG without fallback overrides.
+## 🛠 Tech Stack
+- **Frontend:** Flutter (Web/PWA focus).
+- **Backend:** Firebase (Auth, Firestore, Hosting).
+- **Automation:** Make.com (Webhooks for billing/notifications).
+- **State Management:** Provider.
 
-## 3. Strict Coding Policies
-* **Zero Warnings:** Code must pass `flutter analyze` with 0 issues. Unused imports or variables are strictly prohibited.
-* **Deployment Protocol:** Production UI/Client updates are deployed using `firebase deploy --only hosting`.
-* **State Updates:** Use `context.watch` for UI rebuilding and `context.read` for callbacks.
+## 📐 Architecture Rules (The Constitution)
+1. **Hebrew First:** All UI is RTL and Hebrew (Israel) by default.
+2. **Lean Architecture:** Minimal dependencies, no excessive packages.
+3. **Responsive Scaling:** Unified codebase for Mobile, Tablet, and Desktop.
+4. **Security:** No hardcoded API keys. All sensitive data via Firestore/Secrets.
+5. **Real-time Sync:** Real-time listeners for Premium status and data updates.
+
+## 🔑 Core Services
+- **PremiumService:** Handles Paywall logic, Founders' gifts, and Real-time Premium toggling.
+- **AdminService:** Provides God-mode tools for the owner (Golden Key, User metrics, Sandbox toggles).
+- **DatabaseHelper:** Singleton for Firestore CRUD and the Account Wipe Protocol.
+- **NotificationService:** Handles periodic reminders and smart shopping alerts.
+
+## 🧬 Key Features Implemented
+- **Golden Key:** Manual Premium upgrade via Admin Dashboard with immediate effect.
+- **Freedom Engine:** Goal-based calculation of financial independence year.
+- **Split Paywall:** Adaptive pricing (Lifetime for Web/IL, Subscription for App Stores).
+- **Legal Gate:** Mandatory terms and privacy consent during onboarding.
+- **Responsive PWA:** Manifest and index settings optimized for "Add to Home Screen" experience.

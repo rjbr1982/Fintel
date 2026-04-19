@@ -1,22 +1,27 @@
-# Fintel - Project Status Report
-**Date:** April 2026
-**Environment Status:** Production (`dohaham`) is fully synced with Sandbox (`fintel_playground`).
+# Project Status: Fintel (Dohaham)
+**Version:** 12.89 (Gamma Release Candidate)
+**Status:** Ready for Production Deployment
 
-## 🟢 Completed Milestones
-* [x] **Asset Pipeline Stabilization:** Fixed critical rendering bugs in the asset pipeline caused by uppercase extensions (`.jpg`) and case-mismatches. All core brand assets are now standard PNGs.
-* [x] **Dashboard UI Enhancement:** Successfully integrated `dashboard_background.png` into the main PnL/Freedom Engine view.
-* [x] **Header UX Overhaul:** Resolved long-title overflow issues in deep navigation screens by implementing a Contextual Logo strategy and `FittedBox` scaling.
-* [x] **Login Screen Cleanup:** Removed generic `errorBuilder` fallbacks to enforce brand presence during Google Auth flow.
+## ✅ Completed in Last Session
+- **Admin Dashboard v2:** Implemented responsive GridView, user screener, and the "Golden Key" (Manual Premium Toggle).
+- **GlobalHeader Revamp:** Added a Drawer/Bottom-Sheet containing Legal terms, Privacy Policy, and Account Wipe Protocol.
+- **Responsive UI:** Integrated `ConstrainedBox` and scaling logic into `MainScreen` and `PnLScreen` for optimal Desktop viewing.
+- **Shopping Sync:** Successfully migrated the advanced `ShoppingProvider` from Sandbox to the main project, including notification hooks.
+- **Bug Fixes:** Resolved parameter mismatches in `GlobalHeader` (showBackButton and Drawer logic).
+- **PWA Config:** Updated `manifest.json` and `index.html` with mobile-native behavior and cache-busting logic.
 
-## 🟡 Active / Pending Tasks (Backlog)
-* **Payment Gateway Integration:** Replace the dummy URL in `HybridBillingEngine.webPaymentUrl` with the actual Meshulam checkout link.
-* **Mobile Native Billing:** Implement RevenueCat (`purchases_flutter`) inside the `HybridBillingEngine` for iOS/Android native payments.
-* **Gamma Monitoring:** Monitor early user behavior through the Admin Dashboard triggers (Bottlenecks, Churn, Success metrics).
+## 🚧 Pending / Next Steps
+1. **Mission 2 (Billing Loop):** Waiting for Grow (PayMe) API credentials. Once received, need to configure the Make.com webhook.
+2. **Production Deploy:** Run `flutter build web --release` and `firebase deploy --only hosting`.
+3. **User Onboarding:** Send the Hosting URL to early adopters (Alpha/Gamma group) and guide them on "Add to Home Screen".
 
-## 🔴 Known Issues / Technical Debt
-* None currently. The codebase is fully Linter-compliant (0 issues).
+## 🛡 Security & Compliance
+- **Account Wipe:** Tested and active (Users can delete all data and auth).
+- **Legal:** Terms of use and privacy policy active in Drawer and Onboarding.
+- **Firestore Rules:** Secure (Only owners can access their own data).
 
-## 🧠 Strategic Decision Log
-* **Date:** April 2026
-* **Decision:** Contextual Header & Uniform Scaling.
-* **Reason:** Replaced hardcoded 48px padding compensation with uniform 50px rendering for both `fintel_icon` and `premium_icon`. To solve text-overflow with long Hebrew titles, the logo is now completely hidden on sub-screens, providing the text `FittedBox` with ~30% more horizontal real estate.
+## 📊 Current Metrics Tracking
+- `isPremium`: Manual/Auto toggle.
+- `hasViewedFreedom`: Tracks onboarding progress.
+- `hasCompletedShopping`: Telemetry for smart reminders.
+- `generation`: Founders (Alpha/Beta) vs. Regular users.
