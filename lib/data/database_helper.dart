@@ -1,20 +1,18 @@
-// 🔒 STATUS: EDITED (Updated updateUserMetric to dynamic to support FCM Tokens)
+// 🔒 STATUS: EDITED (Added createdAt protection and Account Wipe logic)
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'expense_model.dart';
 import 'debt_model.dart';
-import 'asset_model.dart'; 
+import 'asset_model.dart';
 import 'shopping_model.dart';
 import 'checking_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
-
   DatabaseHelper._init();
 
   FirebaseFirestore get _db => FirebaseFirestore.instance;
-
   String get _uid => FirebaseAuth.instance.currentUser?.uid ?? 'unauthenticated';
 
   CollectionReference _userCollection(String collectionName) {
@@ -26,22 +24,31 @@ class DatabaseHelper {
   // ==========================================
   // רשומת משתמש שורשית (Root User Document & Metrics)
   // ==========================================
-  
   Future<void> initializeUserRoot({required String email, String generation = 'Regular', String country = 'Unknown'}) async {
     if (_uid == 'unauthenticated') return;
-    
-    await _db.collection('users').doc(_uid).set({
-      'email': email,
-      'generation': generation,
-      'country': country,
-      'lastActive': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+
+    final docRef = _db.collection('users').doc(_uid);
+    final docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+      // יצירה ראשונית כולל חותמת זמן מוגנת למייסדים (סעיף 3 אסטרטגיה)
+      await docRef.set({
+        'email': email,
+        'generation': generation,
+        'country': country,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastActive': FieldValue.serverTimestamp(),
+      });
+    } else {
+      // עדכון כניסה חוזרת ללא דריסת שעת היצירה
+      await docRef.set({
+        'lastActive': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
   }
 
-  // 🔒 תמיכה בערכים דינמיים (bool, String) לצורך שמירת טוקנים ומדדים
   Future<void> updateUserMetric(String metricKey, dynamic value) async {
     if (_uid == 'unauthenticated') return;
-
     await _db.collection('users').doc(_uid).set({
       'metrics': {
         metricKey: value
@@ -50,7 +57,6 @@ class DatabaseHelper {
     }, SetOptions(merge: true));
   }
 
-  // בדיקה האם המשתמש כבר אישר את תנאי השימוש בעבר
   Future<bool> hasAcceptedTerms() async {
     if (_uid == 'unauthenticated') return false;
     try {
@@ -68,9 +74,27 @@ class DatabaseHelper {
   }
 
   // ==========================================
+  // מחיקת חשבון לצמיתות (Account Wipe Protocol)
+  // ==========================================
+  Future<void> deleteUserAccountAndData() async {
+    if (_uid == 'unauthenticated') return;
+    try {
+      // 1. מחיקת כלל הנתונים מכל הקולקציות
+      await clearAllData();
+      
+      // 2. מחיקת מסמך המשתמש הראשי
+      await _db.collection('users').doc(_uid).delete();
+      
+      // 3. מחיקת המשתמש מ-Firebase Auth
+      await FirebaseAuth.instance.currentUser?.delete();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // ==========================================
   // משיכת נתוני השורש (לצורכי חומת תשלום והרשאות)
   // ==========================================
-  
   Future<Map<String, dynamic>?> getUserRootData() async {
     if (_uid == 'unauthenticated') return null;
     try {
@@ -91,7 +115,6 @@ class DatabaseHelper {
   // ==========================================
   // 🔄 REAL-TIME STREAMS (SaaS Sync)
   // ==========================================
-  
   Stream<List<Expense>> streamExpenses() {
     return _userCollection('expenses').snapshots().map((snap) =>
         snap.docs.map((doc) => Expense.fromMap(doc.data() as Map<String, dynamic>)).toList());
@@ -139,10 +162,9 @@ class DatabaseHelper {
   // ==========================================
   // הגדרות
   // ==========================================
-  
   Future<void> saveSetting(String key, double value) async {
     await _userCollection('app_settings').doc(key).set({
-      'key': key, 
+      'key': key,
       'value': value
     });
   }
@@ -166,7 +188,6 @@ class DatabaseHelper {
   // ==========================================
   // איפוס נתונים
   // ==========================================
-  
   Future<void> _deleteCollection(String collectionName) async {
     final snapshot = await _userCollection(collectionName).get();
     final batch = _db.batch();
@@ -183,16 +204,15 @@ class DatabaseHelper {
     await _deleteCollection('assets');
     await _deleteCollection('shopping_items');
     await _deleteCollection('family_members');
-    await _deleteCollection('withdrawals'); 
-    await _deleteCollection('checking_history'); 
-    await _deleteCollection('salary_records'); 
-    await _deleteCollection('planned_withdrawals'); 
+    await _deleteCollection('withdrawals');
+    await _deleteCollection('checking_history');
+    await _deleteCollection('salary_records');
+    await _deleteCollection('planned_withdrawals');
   }
 
   // ==========================================
   // CRUD פעולות
   // ==========================================
-
   Future<int> insertFamilyMember(FamilyMember fm) async {
     final id = fm.id ?? _generateId();
     final map = fm.toMap();
@@ -200,17 +220,17 @@ class DatabaseHelper {
     await _userCollection('family_members').doc(id.toString()).set(map);
     return id;
   }
-  
+
   Future<List<FamilyMember>> getFamilyMembers() async {
     final snap = await _userCollection('family_members').get();
     return snap.docs.map((doc) => FamilyMember.fromMap(doc.data() as Map<String, dynamic>)).toList();
   }
-  
+
   Future<int> updateFamilyMember(FamilyMember fm) async {
     await _userCollection('family_members').doc(fm.id.toString()).update(fm.toMap());
     return fm.id ?? 0;
   }
-  
+
   Future<int> deleteFamilyMember(int id) async {
     await _userCollection('family_members').doc(id.toString()).delete();
     return id;
@@ -321,7 +341,6 @@ class DatabaseHelper {
       final snap = await _userCollection('withdrawals')
           .where('expenseId', isEqualTo: expenseId)
           .get();
-      
       final items = snap.docs.map((doc) => Withdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
       items.sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
       return items;
@@ -352,7 +371,7 @@ class DatabaseHelper {
   }
 
   // ==========================================
-  // CRUD למנוע שכר 
+  // CRUD למנוע שכר
   // ==========================================
   Future<List<SalaryRecord>> getSalaryRecords() async {
     final snap = await _userCollection('salary_records').get();

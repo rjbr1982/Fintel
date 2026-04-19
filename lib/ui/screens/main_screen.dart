@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Upgraded Freedom Engine Dialog UI with RichText for inline crown and explicit CTA)
+// 🔒 STATUS: EDITED (Added Responsive Desktop Scaling & Freedom Telemetry Injection)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -10,6 +10,7 @@ import 'shopping_screen.dart';
 import 'sinking_funds_screen.dart';
 import '../../services/premium_service.dart';
 import 'assets_screen.dart';
+import '../../data/database_helper.dart'; 
 
 enum RevealState { expectation, reveal, dashboard }
 
@@ -55,7 +56,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // === פונקציית עזר לתמרורי הדרכה ===
   void _showInfoDialog(BuildContext context, String title, String content) {
     showDialog(
       context: context,
@@ -292,7 +292,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildQuickAction(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap, {bool isPremium = false}) {
+  Widget _buildQuickAction(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap, {bool isPremium = false, double iconSize = 28, double textSize = 13}) {
     return Expanded(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -300,13 +300,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               shape: const CircleBorder(),
-              padding: const EdgeInsets.all(18),
+              padding: EdgeInsets.all(iconSize * 0.65), // Dynamic padding
               backgroundColor: color.withValues(alpha: 0.1),
               foregroundColor: color,
               elevation: 0,
             ),
             onPressed: onTap,
-            child: Icon(icon, size: 28),
+            child: Icon(icon, size: iconSize),
           ),
           const SizedBox(height: 10),
           Row(
@@ -315,11 +315,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: TextStyle(fontSize: textSize, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
               if (isPremium) ...[
                 const SizedBox(width: 4),
-                Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                Image.asset('assets/icon/crown_icon.png', width: textSize, height: textSize, errorBuilder: (_,__,___) => const SizedBox.shrink()),
               ]
             ],
           ),
@@ -354,9 +354,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   elevation: 8,
                 ),
                 onPressed: () {
+                  DatabaseHelper.instance.updateUserMetric('hasViewedFreedom', true);
+                  
                   setState(() => _currentState = RevealState.reveal);
                   
-                  // אם הגענו למצב נצח/אין יעד אפשרי - מחשבים מראש שחרור לדשבורד
                   if (targetYear == null) {
                     Future.delayed(const Duration(seconds: 4), () {
                       if (mounted && _currentState == RevealState.reveal) {
@@ -379,7 +380,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         color: const Color(0xFF121212),
         child: Center(
           child: targetYear == null
-            // === מצב נצח (Infinity) ===
             ? TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0.0, end: 1.0),
                 duration: const Duration(seconds: 2),
@@ -411,7 +411,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   );
                 },
               )
-            // === מצב תקין (ספירת שנים) ===
             : TweenAnimationBuilder<double>(
                 tween: Tween(begin: DateTime.now().year.toDouble(), end: targetYear.toDouble()),
                 duration: const Duration(seconds: 3),
@@ -463,7 +462,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     final budget = context.watch<BudgetProvider>();
 
     int? monthsToFreedom = budget.calculateMonthsToFreedom();
-    
     String yearText = "∞";
     int? targetYear;
 
@@ -476,6 +474,19 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         yearText = targetYear.toString();
       }
     }
+
+    // === Responsive Screen Calculus ===
+    double screenWidth = MediaQuery.of(context).size.width;
+    bool isDesktop = screenWidth > 600;
+    
+    // Dynamic values based on screen width
+    double cardWidth = isDesktop ? (screenWidth * 0.4).clamp(350.0, 480.0) : 280.0;
+    double cardVPadding = isDesktop ? 60.0 : 40.0;
+    double yearFontSize = isDesktop ? 96.0 : 64.0;
+    double titleFontSize = isDesktop ? 20.0 : 16.0;
+    double targetFontSize = isDesktop ? 22.0 : 16.0;
+    double actionIconSize = isDesktop ? 36.0 : 28.0;
+    double actionTextSize = isDesktop ? 16.0 : 13.0;
 
     return Stack(
       children: [
@@ -503,8 +514,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         alignment: Alignment.center,
                         children: [
                           Container(
-                            width: 280,
-                            padding: const EdgeInsets.symmetric(vertical: 40),
+                            width: cardWidth, // Responsive Width
+                            padding: EdgeInsets.symmetric(vertical: cardVPadding), // Responsive Padding
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(40),
@@ -520,18 +531,18 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                   mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Text('שנת החירות הפיננסית', style: TextStyle(fontSize: 16, color: Colors.blueGrey, fontWeight: FontWeight.w600)),
+                                    Text('שנת החירות הפיננסית', style: TextStyle(fontSize: titleFontSize, color: Colors.blueGrey, fontWeight: FontWeight.w600)),
                                     const SizedBox(width: 6),
                                     InkWell(
                                       onTap: () => _showInfoDialog(context, 'מנוע החירות', 'שנה זו מחושבת אוטומטית על ידי שילוב התזרים הפנוי שלך, תיק הנכסים הקיים, והתשואה שהגדרת למנוע ההשקעות. לחץ על אייקון המטרה (🎯) כדי לכייל את התשואה והיעד.'),
-                                      child: const Icon(Icons.info_outline, size: 18, color: Colors.blueGrey),
+                                      child: Icon(Icons.info_outline, size: titleFontSize + 2, color: Colors.blueGrey),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
                                   yearText,
-                                  style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: Color(0xFF121212), height: 1.1),
+                                  style: TextStyle(fontSize: yearFontSize, fontWeight: FontWeight.w900, color: const Color(0xFF121212), height: 1.1),
                                 ),
                                 if (targetYear == null) ...[
                                   const SizedBox(height: 12),
@@ -540,12 +551,12 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                       backgroundColor: Colors.amber[600],
                                       foregroundColor: Colors.black87,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 24 : 16, vertical: isDesktop ? 12 : 8),
                                       elevation: 0,
                                     ),
                                     onPressed: () => _showFreedomSettingsDialog(context, budget),
-                                    icon: const Icon(Icons.settings, size: 16),
-                                    label: const Text('כייל מנוע חירות', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    icon: Icon(Icons.settings, size: isDesktop ? 20 : 16),
+                                    label: Text('כייל מנוע חירות', style: TextStyle(fontWeight: FontWeight.bold, fontSize: actionTextSize)),
                                   ),
                                 ],
                               ],
@@ -562,7 +573,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   shape: const CircleBorder(),
-                                  padding: const EdgeInsets.all(14),
+                                  padding: EdgeInsets.all(isDesktop ? 18 : 14),
                                   backgroundColor: Colors.blueGrey[900],
                                   foregroundColor: Colors.white,
                                   elevation: 4,
@@ -573,7 +584,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                   }
                                   _showFamilyDrilldown(context, budget, targetYear);
                                 },
-                                child: const Icon(Icons.family_restroom, size: 24),
+                                child: Icon(Icons.family_restroom, size: isDesktop ? 30 : 24),
                               ),
                             ),
                           ),
@@ -584,49 +595,49 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: isDesktop ? 14 : 10),
                                 backgroundColor: Colors.amber[600],
                                 foregroundColor: Colors.black87,
                                 elevation: 4,
                               ),
                               onPressed: () => _showFreedomSettingsDialog(context, budget),
-                              icon: const Icon(Icons.track_changes, size: 18),
+                              icon: Icon(Icons.track_changes, size: isDesktop ? 22 : 18),
                               label: Text(
                                 '${loc?.get('currency_symbol') ?? '₪'}${budget.targetPassiveIncome.toStringAsFixed(0)}', 
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: targetFontSize)
                               ),
                             ),
                           ),
                         ],
                       ),
 
-                      const SizedBox(height: 50),
+                      SizedBox(height: isDesktop ? 80 : 50), 
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildQuickAction(
-                            context, 
-                            'מרכז חסכונות', 
-                            Icons.savings, 
-                            Colors.green, 
-                            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SinkingFundsScreen()))
-                          ),
-                          _buildQuickAction(
-                            context, 
-                            'רשימת קניות', 
-                            Icons.shopping_cart_outlined, 
-                            Colors.blueGrey[900]!, 
-                            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ShoppingScreen()))
-                          ),
-                        ],
+                      Container(
+                        constraints: BoxConstraints(maxWidth: isDesktop ? 600 : double.infinity), 
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildQuickAction(
+                              context, 'מרכז חסכונות', Icons.savings, Colors.green, 
+                              () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SinkingFundsScreen())),
+                              iconSize: actionIconSize, textSize: actionTextSize
+                            ),
+                            _buildQuickAction(
+                              context, 'רשימת קניות', Icons.shopping_cart_outlined, Colors.blueGrey[900]!, 
+                              () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ShoppingScreen())),
+                              iconSize: actionIconSize, textSize: actionTextSize
+                            ),
+                          ],
+                        ),
                       ),
 
                       if (budget.expectedYield <= 4.0)
                         Padding(
                           padding: const EdgeInsets.only(top: 40.0),
                           child: Container(
+                            constraints: const BoxConstraints(maxWidth: 500), 
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: Colors.orange.withValues(alpha: 0.1),

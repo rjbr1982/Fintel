@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Unified Freedom Engine Dialog UI with inline crown CTA matching main_screen)
+// 🔒 STATUS: EDITED (Wrapped body in BoxConstraints for optimal Desktop UI viewing)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -15,7 +15,6 @@ class PnLScreen extends StatelessWidget {
   
   const PnLScreen({super.key, this.isCalibrationMode = false});
 
-  // === פונקציית עזר לתמרורי הדרכה ===
   void _showInfoDialog(BuildContext context, String title, String content) {
     showDialog(
       context: context,
@@ -70,11 +69,9 @@ class PnLScreen extends StatelessWidget {
       floatingActionButton: isCalibrationMode ? FloatingActionButton.extended(
         backgroundColor: const Color(0xFF00C853),
         onPressed: () async {
-          // --- הזרקת המדד ל-Admin Dashboard ---
           await DatabaseHelper.instance.updateUserMetric('hasViewedFreedom', true);
           
           if (context.mounted) {
-            // ניקוי עמוק של הערימה (Stack) כדי להבטיח הופעה חלקה של האנימציה בדשבורד הראשי
             Navigator.pushAndRemoveUntil(
               context, 
               MaterialPageRoute(builder: (_) => const MainScreen()),
@@ -86,78 +83,84 @@ class PnLScreen extends StatelessWidget {
         icon: const Icon(Icons.check_circle, color: Colors.white),
       ) : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      body: Column(
-        children: [
-          if (isCalibrationMode) const _PulsingCalibrationBanner(),
-          
-          _buildFutureToggle(context, budget, isFutureMode),
-          
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                if (isFutureMode) _buildFutureBadge(),
+      
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800), // Max width for Desktop
+          child: Column(
+            children: [
+              if (isCalibrationMode) const _PulsingCalibrationBanner(),
+              
+              _buildFutureToggle(context, budget, isFutureMode),
+              
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    if (isFutureMode) _buildFutureBadge(),
 
-                _buildRow(context, 'הכנסות', income, Colors.green[900]!, isHeader: true),
-                const Divider(thickness: 2, height: 30, color: Colors.black12),
+                    _buildRow(context, 'הכנסות', income, Colors.green[900]!, isHeader: true),
+                    const Divider(thickness: 2, height: 30, color: Colors.black12),
 
-                _buildSectionLabel('שלב א: בסיס'),
-                _buildRow(context, 'קבועות', fixed, Colors.black),
-                _buildDebtRow(context, reducing, isFutureMode), 
-                
-                const SizedBox(height: 15),
-                _buildSummaryCard(
-                  isFutureMode ? 'תזרים פנוי (ללא חובות!)' : 'תזרים לרמת חיים וחירות פיננסית', 
-                  flowToLiving, 
-                  isFutureMode ? const Color(0xFF00C853) : Colors.blue[900]!
-                ),
-                const SizedBox(height: 25),
-
-                _buildSectionLabel('שלב ב: רמת חיים'),
-                
-                _buildRow(
-                  context, 
-                  'משתנות', 
-                  displayVariableAmount, 
-                  variableDeficit > 0 ? Colors.red[900]! : Colors.black, 
-                  onLongPress: () => _showRatioDialog(context, budget, isVariable: true),
-                  onInfoTap: () => _showInfoDialog(context, 'שליטת מאקרו (משתנות)', "התקציב המשתנה הוא 'קופסה סגורה'. לחיצה ארוכה כאן תאפשר לך לקבוע איזה אחוז מתוך ה'תזרים לרמת חיים' (היתרה שלאחר הבסיס) יוקצה למשתנות.")
-                ),
-                
-                if (variableDeficit > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          'התקציב נמצא בגירעון של ₪${variableDeficit.toStringAsFixed(0)}',
-                          style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                      ],
+                    _buildSectionLabel('שלב א: בסיס'),
+                    _buildRow(context, 'קבועות', fixed, Colors.black),
+                    _buildDebtRow(context, reducing, isFutureMode), 
+                    
+                    const SizedBox(height: 15),
+                    _buildSummaryCard(
+                      isFutureMode ? 'תזרים פנוי (ללא חובות!)' : 'תזרים לרמת חיים וחירות פיננסית', 
+                      flowToLiving, 
+                      isFutureMode ? const Color(0xFF00C853) : Colors.blue[900]!
                     ),
-                  ),
-                  
-                _buildRow(
-                  context, 
-                  'עתידיות', 
-                  futureAllocated, 
-                  Colors.black, 
-                  onLongPress: () => _showRatioDialog(context, budget, isVariable: false),
-                  onInfoTap: () => _showInfoDialog(context, 'מודל המפל (עתידיות)', "שים לב: אחוז ההקצאה לעתידיות (הניתן לשינוי בלחיצה ארוכה) מחושב אך ורק מתוך היתרה שנותרה לאחר הפחתת התקציב המשתנה, ולא מהסכום הכולל. שאר היתרה תופנה לחירות פיננסית.")
+                    const SizedBox(height: 25),
+
+                    _buildSectionLabel('שלב ב: רמת חיים'),
+                    
+                    _buildRow(
+                      context, 
+                      'משתנות', 
+                      displayVariableAmount, 
+                      variableDeficit > 0 ? Colors.red[900]! : Colors.black, 
+                      onLongPress: () => _showRatioDialog(context, budget, isVariable: true),
+                      onInfoTap: () => _showInfoDialog(context, 'שליטת מאקרו (משתנות)', "התקציב המשתנה הוא 'קופסה סגורה'. לחיצה ארוכה כאן תאפשר לך לקבוע איזה אחוז מתוך ה'תזרים לרמת חיים' (היתרה שלאחר הבסיס) יוקצה למשתנות.")
+                    ),
+                    
+                    if (variableDeficit > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              'התקציב נמצא בגירעון של ₪${variableDeficit.toStringAsFixed(0)}',
+                              style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                    _buildRow(
+                      context, 
+                      'עתידיות', 
+                      futureAllocated, 
+                      Colors.black, 
+                      onLongPress: () => _showRatioDialog(context, budget, isVariable: false),
+                      onInfoTap: () => _showInfoDialog(context, 'מודל המפל (עתידיות)', "שים לב: אחוז ההקצאה לעתידיות (הניתן לשינוי בלחיצה ארוכה) מחושב אך ורק מתוך היתרה שנותרה לאחר הפחתת התקציב המשתנה, ולא מהסכום הכולל. שאר היתרה תופנה לחירות פיננסית.")
+                    ),
+
+                    const SizedBox(height: 25),
+                    
+                    _buildSectionLabel('שלב ג: חירות'),
+                    _buildFreedomCard(context, flowToFreedom, diversionAmount, isFutureMode, budget),
+
+                    const SizedBox(height: 80), 
+                  ],
                 ),
-
-                const SizedBox(height: 25),
-                
-                _buildSectionLabel('שלב ג: חירות'),
-                _buildFreedomCard(context, flowToFreedom, diversionAmount, isFutureMode, budget),
-
-                const SizedBox(height: 80), 
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -1,15 +1,15 @@
-// 🔒 STATUS: EDITED (Integrated Local Notifications Engine & Centralized Post-Auth Legal Gate)
+// 🔒 STATUS: EDITED (Added forceUSNotifier to AppGlobals for Admin Sandbox testing)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb; 
 import 'package:local_auth/local_auth.dart'; 
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // 🔔 תשתית התראות מקומיות
+import 'package:intl/intl.dart' hide TextDirection; 
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:firebase_core/firebase_core.dart'; 
 import 'package:firebase_auth/firebase_auth.dart'; 
-import 'package:google_sign_in/google_sign_in.dart'; // הוסף כדי לאפשר ניתוק כפוי
+import 'package:google_sign_in/google_sign_in.dart'; 
 import 'firebase_options.dart';                    
 
 import 'providers/budget_provider.dart';
@@ -22,9 +22,8 @@ import 'ui/screens/onboarding_screen.dart';
 import 'data/database_helper.dart'; 
 import 'utils/app_localizations.dart';
 import 'services/premium_service.dart';
-import 'services/notification_service.dart'; // 🔔 הזרקת שירות ההתראות
+import 'services/notification_service.dart'; 
 
-// 🔔 מופע גלובלי של מנהל ההתראות
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 void main() async {
@@ -34,14 +33,10 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // אתחול מנוע החיוב ההיברידי (Web/Native)
   await HybridBillingEngine.init();
 
-  // 🔔 אתחול מערכת ההתראות המרכזית (כולל אזורי זמן והרשאות)
   if (!kIsWeb) {
     await NotificationService.instance.init();
-    
-    // קריאה ראשונית לתזמון התראות התפעול (1 לחודש)
     await NotificationService.instance.scheduleMonthlyRollover();
   }
 
@@ -68,10 +63,12 @@ void main() async {
   );
 }
 
-// 🧠 מנהל זיכרון גלובלי לסשן נוכחי (למניעת כפילויות בניווט פנימי)
 class AppGlobals {
   static bool hasCompletedColdBoot = false;
   static bool hasAuthenticatedSession = false;
+  
+  // Dev Sandbox State
+  static final ValueNotifier<bool> forceUSNotifier = ValueNotifier(false);
   
   static void resetSession() {
     hasAuthenticatedSession = false;
@@ -83,42 +80,58 @@ class FintelApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Fintel - דוחכם',
-      debugShowCheckedModeBanner: false,
-      
-      supportedLocales: const [
-        Locale('he', 'IL'), 
-        Locale('en', 'US'),
-      ],
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      locale: const Locale('he', 'IL'), 
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppGlobals.forceUSNotifier,
+      builder: (context, forceUS, child) {
+        return MaterialApp(
+          title: 'Fintel - דוחכם',
+          debugShowCheckedModeBanner: false,
+          
+          supportedLocales: const [
+            Locale('en', 'US'),
+            Locale('he', 'IL'), 
+          ],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          
+          // Force locale if switch is on, otherwise use resolution callback
+          locale: forceUS ? const Locale('en', 'US') : null,
+          localeResolutionCallback: (deviceLocale, supportedLocales) {
+            if (deviceLocale != null) {
+              for (var supportedLocale in supportedLocales) {
+                if (supportedLocale.languageCode == deviceLocale.languageCode) {
+                  return deviceLocale;
+                }
+              }
+            }
+            return const Locale('he', 'IL'); // Default fallback to Hebrew
+          },
 
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        primaryColor: const Color(0xFF00A3FF),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF00A3FF),
-          secondary: Color(0xFF00FF85),
-          error: Color(0xFFFF4B4B),
-          surface: Color(0xFF1E1E1E),
-        ),
-        fontFamily: 'Heebo',
-        useMaterial3: true,
-      ),
-      
-      home: const AppBootstrapper(),
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: const Color(0xFF121212),
+            primaryColor: const Color(0xFF00A3FF),
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF00A3FF),
+              secondary: Color(0xFF00FF85),
+              error: Color(0xFFFF4B4B),
+              surface: Color(0xFF1E1E1E),
+            ),
+            fontFamily: 'Heebo',
+            useMaterial3: true,
+          ),
+          
+          home: const AppBootstrapper(),
+        );
+      }
     );
   }
 }
 
-// 🎬 שער 1: ניהול האתחול הראשוני עם דילוג חכם בניווט פנימי
 class AppBootstrapper extends StatefulWidget {
   const AppBootstrapper({super.key});
 
@@ -153,7 +166,6 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
   }
 }
 
-// 🔒 שער 2: מאזין לסטטוס ההתחברות מול הענן
 class AuthStreamGate extends StatelessWidget {
   const AuthStreamGate({super.key});
 
@@ -170,14 +182,12 @@ class AuthStreamGate extends StatelessWidget {
           return PostLoginRouter(key: const ValueKey('post_login_router'), user: snapshot.data!);
         }
 
-        // המשתמש אכן מנותק, העבר למסך ההתחברות הנקי
         return const LoginScreen(key: ValueKey('login_screen'));
       },
     );
   }
 }
 
-// 🏦 שער 3: חוויית הבנק, סינון משפטי וניתוב פנימי
 class PostLoginRouter extends StatefulWidget {
   final User user;
   const PostLoginRouter({super.key, required this.user});
@@ -190,7 +200,7 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
   bool _isProcessing = true;
   bool _needsOnboarding = false;
   bool _authFailed = false; 
-  bool _needsLegalConsent = false; // דגל הבוחן האם המשתמש טרם אישר תנאים
+  bool _needsLegalConsent = false; 
   late bool _isInitialAuthRun; 
 
   @override
@@ -201,70 +211,77 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
   }
 
   Future<void> _processLogin() async {
-    setState(() {
-      _isProcessing = true;
-      _authFailed = false;
-      _needsLegalConsent = false;
-    });
+    try {
+      setState(() {
+        _isProcessing = true;
+        _authFailed = false;
+        _needsLegalConsent = false;
+      });
 
-    // 1. קודם כל: בדיקת תנאי שימוש (Legal Consent)
-    final hasAcceptedTerms = await DatabaseHelper.instance.hasAcceptedTerms();
-    if (!hasAcceptedTerms) {
-      if (mounted) {
-        setState(() {
-          _needsLegalConsent = true;
-          _isProcessing = false;
-        });
+      final hasAcceptedTerms = await DatabaseHelper.instance.hasAcceptedTerms();
+      if (!hasAcceptedTerms) {
+        if (mounted) {
+          setState(() {
+            _needsLegalConsent = true;
+            _isProcessing = false;
+          });
+        }
+        return; 
       }
-      return; // עוצרים הכל עד שיאשר
-    }
 
-    // 2. רק אם אישר, ממשיכים לעיבוד הרגיל
-    final expenses = await DatabaseHelper.instance.getExpenses();
-    _needsOnboarding = expenses.isEmpty;
+      final expenses = await DatabaseHelper.instance.getExpenses();
+      _needsOnboarding = expenses.isEmpty;
 
-    if (_isInitialAuthRun) {
-      double useBioNum = await DatabaseHelper.instance.getSetting('use_biometric') ?? 0.0;
-      bool useBiometric = useBioNum == 1.0;
-
-      await Future.delayed(const Duration(milliseconds: 2500));
-
-      if (!kIsWeb && useBiometric) {
-        final LocalAuthentication auth = LocalAuthentication();
-        bool canCheckBiometrics = false;
+      if (_isInitialAuthRun) {
         try {
-          canCheckBiometrics = await auth.canCheckBiometrics || await auth.isDeviceSupported();
-        } catch (e) {
-          debugPrint('Biometric check error: $e');
-        }
+          double useBioNum = await DatabaseHelper.instance.getSetting('use_biometric') ?? 0.0;
+          bool useBiometric = useBioNum == 1.0;
 
-        if (canCheckBiometrics) {
-          try {
-            bool authenticated = await auth.authenticate(
-              localizedReason: 'אנא אמת את זהותך כדי לגשת לנתונים הפיננסיים',
-              options: const AuthenticationOptions(
-                stickyAuth: true,
-                biometricOnly: true,
-              ),
-            );
-            if (!authenticated) {
-              if (mounted) setState(() => _authFailed = true);
-              return;
+          if (!kIsWeb && useBiometric) {
+            await Future.delayed(const Duration(milliseconds: 1500));
+            final LocalAuthentication auth = LocalAuthentication();
+            bool canCheckBiometrics = false;
+            try {
+              canCheckBiometrics = await auth.canCheckBiometrics || await auth.isDeviceSupported();
+            } catch (e) {
+              debugPrint('Biometric check error: $e');
             }
-          } catch (e) {
-            debugPrint('Authentication error: $e');
+
+            if (canCheckBiometrics) {
+              try {
+                bool authenticated = await auth.authenticate(
+                  localizedReason: 'אנא אמת את זהותך כדי לגשת לנתונים הפיננסיים',
+                  options: const AuthenticationOptions(
+                    stickyAuth: true,
+                    biometricOnly: true,
+                  ),
+                );
+                if (!authenticated) {
+                  if (mounted) setState(() => _authFailed = true);
+                  return;
+                }
+              } catch (e) {
+                debugPrint('Authentication error: $e');
+              }
+            }
           }
+        } catch (e) {
+          debugPrint('Settings error during login: $e');
         }
+        AppGlobals.hasAuthenticatedSession = true;
+      } else {
+        await Future.delayed(const Duration(milliseconds: 800));
       }
+
+      PremiumService.startSnapshotListener();
       
-      AppGlobals.hasAuthenticatedSession = true;
-
-    } else {
-      await Future.delayed(const Duration(milliseconds: 1000));
-    }
-
-    if (mounted) {
-      setState(() => _isProcessing = false);
+    } catch (e) {
+      debugPrint('CRITICAL: Login process failed safely. Error: $e');
+      _needsOnboarding = false; // שחרור במקרה חירום
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
     }
   }
 
@@ -292,68 +309,8 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
       );
     }
 
-    // אם טרם אישר תנאים, חסום אותו במסך ייעודי (Post-Auth Legal Gate)
     if (_needsLegalConsent) {
-      return Scaffold(
-        backgroundColor: Colors.grey.shade100,
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Card(
-                color: Colors.white,
-                elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.gavel_rounded, size: 48, color: Colors.blueGrey),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'עדכון חשוב בנושא פרטיות',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'לפני שנתחיל להשתמש ב-Fintel, חשוב לנו לוודא שהפרטיות שלך והמידע הפיננסי שלך מוגנים כראוי.\n\nהאפליקציה אינה מהווה ייעוץ פיננסי, והמידע שלך מאובטח בענן (Google) ולא מועבר לאיש.',
-                        style: TextStyle(fontSize: 15, color: Colors.black87, height: 1.5),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00A3FF),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 32),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () async {
-                          await DatabaseHelper.instance.updateUserMetric('hasAcceptedTerms', true);
-                          // חוזרים למסלול העיבוד הרגיל עכשיו כשיש אישור
-                          _processLogin();
-                        },
-                        child: const Text('קראתי, ואני מאשר/ת את התנאים', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      ),
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: () async {
-                          AppGlobals.resetSession();
-                          try { await GoogleSignIn().disconnect(); } catch (_) {}
-                          await FirebaseAuth.instance.signOut();
-                        },
-                        child: const Text('סרב והתנתק מהחשבון', style: TextStyle(color: Colors.blueGrey)),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
+      return const FullLegalGateScreen();
     }
 
     Widget currentScreen;
@@ -374,6 +331,137 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
       switchInCurve: Curves.easeOut,
       switchOutCurve: Curves.easeIn,
       child: currentScreen,
+    );
+  }
+}
+
+class FullLegalGateScreen extends StatefulWidget {
+  const FullLegalGateScreen({super.key});
+
+  @override
+  State<FullLegalGateScreen> createState() => _FullLegalGateScreenState();
+}
+
+class _FullLegalGateScreenState extends State<FullLegalGateScreen> {
+  bool isChecked = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+      body: SafeArea(
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
+            margin: const EdgeInsets.all(24.0),
+            child: Card(
+              color: Colors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'תנאי שימוש ומדיניות פרטיות',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: const SingleChildScrollView(
+                          physics: BouncingScrollPhysics(),
+                          child: Text(
+                            '''תנאי שימוש באפליקציית Fintel (דוחכם)
+
+1. הסכמה לתנאים: השימוש באפליקציית Fintel ("האפליקציה") מהווה את הסכמתך המלאה לתנאים המפורטים להלן ולמדיניות הפרטיות. 
+2. מהות השירות ואי-תלות (Disclaimer): האפליקציה מהווה כלי טכנולוגי לניהול תקציב, תכנון תזרים ומעקב אחר נכסים. המידע, הנתונים והתחזיות המופקים על ידי "מנוע החירות" או כל רכיב אחר במערכת ניתנים כמות שהם (AS IS). אין באמור באפליקציה משום ייעוץ פיננסי, פנסיוני, השקעות או מס, ואין בו כדי להחליף ייעוץ מקצועי ואישי. האחריות על כל החלטה כלכלית או השקעה חלה על המשתמש בלבד.
+3. הגבלת אחריות: מפתחי האפליקציה אינם אחראים לכל נזק, הפסד או אובדן כספי, ישיר או עקיף, העלול להיגרם כתוצאה מהסתמכות על חישובי המערכת, שיבושים בקווי תקשורת, הפסקות זמניות בשירותי הענן (Firebase), או תקלות במערכת ההפעלה של המכשיר.
+4. אבטחה אישית: על המשתמש לנקוט בכל האמצעים לשמירת אבטחת מכשירו (נעילת מסך, ביומטריה). מפתחי האפליקציה לא יהיו אחראים לחשיפת מידע פיננסי שנגרמה עקב מסירת פרטי ההזדהות (Google Auth) לצד ג' או גישה פיזית למכשיר פתוח.
+5. קניין רוחני: מתודולוגיית "דוחכם", שפת המותג, אלגוריתם ה"צלף", ומנוע "הזרימה" הינם קניין רוחני בלעדי. אין להעתיק, לשכפל או להפיץ רכיבים אלו ללא אישור מראש ובכתב.
+
+מדיניות פרטיות ואבטחת מידע
+
+1. איסוף מידע וסנכרון ענן: המערכת פועלת באמצעות טכנולוגיית סנכרון ענן בזמן אמת (Firebase של חברת Google). המידע הפיננסי המוזן על ידך (הכנסות, הוצאות, נכסים) נשמר תחת מזהה המשתמש שלך, במטרה לאפשר סנכרון רציף בין מכשירים וגיבוי מלא.
+2. הזדהות ללא סיסמאות: למען ביטחונך, האפליקציה אינה שומרת או מנהלת מאגר סיסמאות מקומי. ההזדהות מבוצעת באמצעות שרתי Google (OAuth), כך שפרטי ההתחברות שלך לעולם אינם חשופים למפתחי האפליקציה.
+3. שימוש במידע אישי: האפליקציה אוספת את כתובת הדואר האלקטרוני, השם המלא ותמונת הפרופיל שלך המשויכים לחשבון ה-Google. נתונים אלו נועדו לזיהוי בעלי המידע ולמתן שירות אישי, וכן לצורך שליחת עדכונים מערכתיים או הצעות רלוונטיות, הניתנים להסרה בכל עת. המידע הפיננסי שלך פרטי ולעולם לא יימכר לצדדים שלישיים.
+4. גלישה בטוחה והצפנה: התקשורת בין האפליקציה לשרתי הענן מאובטחת ומוצפנת בסטנדרטים בינלאומיים מתקדמים (HTTPS/TLS). הגישה למסד הנתונים חסומה ברמת השרת (Security Rules) ומורשית אך ורק לבעל החשבון המאומת.
+5. הגנת המכשיר המקומי: האפליקציה מציעה מנגנון נעילה ביומטרית (טביעת אצבע/זיהוי פנים) כשכבת הגנה נוספת. באחריות המשתמש להפעיל מנגנון זה דרך מסך ההגדרות למניעת גישה לא מורשית.''',
+                            style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.6),
+                            textAlign: TextAlign.right,
+                            textDirection: TextDirection.rtl,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.shade100),
+                      ),
+                      child: CheckboxListTile(
+                        value: isChecked,
+                        activeColor: const Color(0xFF00A3FF),
+                        title: const Text(
+                          'קראתי ואני מסכים/ה לתנאי השימוש ולמדיניות הפרטיות',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                        ),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        onChanged: (val) {
+                          setState(() => isChecked = val ?? false);
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () async {
+                            AppGlobals.resetSession();
+                            try { await GoogleSignIn().disconnect(); } catch (_) {}
+                            await FirebaseAuth.instance.signOut();
+                          },
+                          child: const Text('סרב והתנתק', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isChecked ? const Color(0xFF00A3FF) : Colors.grey,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: isChecked ? () async {
+                            await DatabaseHelper.instance.updateUserMetric('hasAcceptedTerms', true);
+                            
+                            if (context.mounted) {
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(builder: (context) => const AppBootstrapper()),
+                                (Route<dynamic> route) => false,
+                              );
+                            }
+                          } : null,
+                          child: const Text('אשר והמשך', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

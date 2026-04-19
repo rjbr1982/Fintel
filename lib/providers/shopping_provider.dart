@@ -6,7 +6,6 @@ import '../services/notification_service.dart'; // 🔔 הזרקת שירות ה
 
 class ShoppingProvider with ChangeNotifier {
   List<ShoppingItem> _items = [];
-
   List<ShoppingItem> get items => _items;
 
   List<String> get availableCategories {
@@ -47,8 +46,8 @@ class ShoppingProvider with ChangeNotifier {
     double total = 0.0;
     for (var item in _items) {
       final lastDate = item.lastPurchaseDateTime;
-      if (lastDate != null && 
-          lastDate.month == _targetMonth.month && 
+      if (lastDate != null &&
+          lastDate.month == _targetMonth.month &&
           lastDate.year == _targetMonth.year) {
         total += (item.price * item.quantity);
       }
@@ -84,7 +83,6 @@ class ShoppingProvider with ChangeNotifier {
         performedAny = true;
       }
     }
-    
     notifyListeners();
 
     // 🔔 חיווט למנוע ההתראות: אם בוצעה קנייה, תזמן התראה לעוד 6 ימים לקנייה הבאה
@@ -108,7 +106,7 @@ class ShoppingProvider with ChangeNotifier {
 
     // 2. טעינת הרשימה המעודכנת
     _items = await db.getShoppingItems();
-    
+
     // 3. מזרק קטלוג אוטומטי (Auto-Seed) אם הרשימה ריקה לחלוטין
     if (_items.isEmpty) {
       await seedDefaultItems();
@@ -121,7 +119,6 @@ class ShoppingProvider with ChangeNotifier {
         _items[i] = _items[i].copyWith(isChecked: true);
       }
     }
-
     notifyListeners();
   }
 
