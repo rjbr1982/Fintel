@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed deprecated activeColor to activeThumbColor)
+// 🔒 STATUS: EDITED (Fixed deprecated activeColor to activeThumbColor, Removed unnecessary non-null assertion)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/asset_provider.dart';
@@ -55,7 +55,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
+    final loc = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Colors.white,

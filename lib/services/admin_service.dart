@@ -1,5 +1,7 @@
-// 🔒 STATUS: EDITED (Added adminNotes field and update method)
+// 🔒 STATUS: EDITED (Added adminNotes field, update method, and Double-Lock Admin Security)
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:developer' as dev;
 
 class AdminUserRecord {
   final String uid;
@@ -29,6 +31,20 @@ class AdminUserRecord {
 
 class AdminService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  // 🛡️ מנעול אדמין כפול (הובא מארגז החול - סעיף 13.1.2 לחוקה)
+  static Future<bool> isCurrentUserAdmin() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    try {
+      final adminDoc = await _db.collection('admins').doc(user.uid).get();
+      return adminDoc.exists;
+    } catch (e) {
+      dev.log("Admin Check Error: $e");
+      return false;
+    }
+  }
 
   static Future<bool> isCommercialLaunch() async {
     final doc = await _db.collection('system').doc('config').get();

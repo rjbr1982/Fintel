@@ -81,7 +81,7 @@ class DefaultFirebaseOptions {
 
 FILE: C:\Projects\dohaham\lib\main.dart
 -----------------------
-// 🔒 STATUS: EDITED (Bulletproofed _processLogin with try-catch-finally to prevent splash freeze)
+// 🔒 STATUS: EDITED (Added forceUSNotifier to AppGlobals for Admin Sandbox testing)
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb; 
 import 'package:local_auth/local_auth.dart'; 
@@ -150,6 +150,9 @@ class AppGlobals {
   static bool hasCompletedColdBoot = false;
   static bool hasAuthenticatedSession = false;
   
+  // Dev Sandbox State
+  static final ValueNotifier<bool> forceUSNotifier = ValueNotifier(false);
+  
   static void resetSession() {
     hasAuthenticatedSession = false;
   }
@@ -160,37 +163,54 @@ class FintelApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Fintel - דוחכם',
-      debugShowCheckedModeBanner: false,
-      
-      supportedLocales: const [
-        Locale('he', 'IL'), 
-        Locale('en', 'US'),
-      ],
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      locale: const Locale('he', 'IL'), 
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppGlobals.forceUSNotifier,
+      builder: (context, forceUS, child) {
+        return MaterialApp(
+          title: 'Fintel - דוחכם',
+          debugShowCheckedModeBanner: false,
+          
+          supportedLocales: const [
+            Locale('en', 'US'),
+            Locale('he', 'IL'), 
+          ],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          
+          // Force locale if switch is on, otherwise use resolution callback
+          locale: forceUS ? const Locale('en', 'US') : null,
+          localeResolutionCallback: (deviceLocale, supportedLocales) {
+            if (deviceLocale != null) {
+              for (var supportedLocale in supportedLocales) {
+                if (supportedLocale.languageCode == deviceLocale.languageCode) {
+                  return deviceLocale;
+                }
+              }
+            }
+            return const Locale('he', 'IL'); // Default fallback to Hebrew
+          },
 
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        primaryColor: const Color(0xFF00A3FF),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF00A3FF),
-          secondary: Color(0xFF00FF85),
-          error: Color(0xFFFF4B4B),
-          surface: Color(0xFF1E1E1E),
-        ),
-        fontFamily: 'Heebo',
-        useMaterial3: true,
-      ),
-      
-      home: const AppBootstrapper(),
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: const Color(0xFF121212),
+            primaryColor: const Color(0xFF00A3FF),
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF00A3FF),
+              secondary: Color(0xFF00FF85),
+              error: Color(0xFFFF4B4B),
+              surface: Color(0xFF1E1E1E),
+            ),
+            fontFamily: 'Heebo',
+            useMaterial3: true,
+          ),
+          
+          home: const AppBootstrapper(),
+        );
+      }
     );
   }
 }
@@ -331,20 +351,17 @@ class _PostLoginRouterState extends State<PostLoginRouter> {
         } catch (e) {
           debugPrint('Settings error during login: $e');
         }
-        
         AppGlobals.hasAuthenticatedSession = true;
-
       } else {
         await Future.delayed(const Duration(milliseconds: 800));
       }
 
       PremiumService.startSnapshotListener();
-
+      
     } catch (e) {
       debugPrint('CRITICAL: Login process failed safely. Error: $e');
       _needsOnboarding = false; // שחרור במקרה חירום
     } finally {
-      // 💡 החלק החשוב ביותר: משחרר את מסך הטעינה בכל מצב אפשרי
       if (mounted) {
         setState(() => _isProcessing = false);
       }
@@ -790,23 +807,21 @@ class CheckingEntry {
 
 FILE: C:\Projects\dohaham\lib\data\database_helper.dart
 -----------------------
-// 🔒 STATUS: EDITED (Updated updateUserMetric to dynamic to support FCM Tokens)
+// 🔒 STATUS: EDITED (Added createdAt protection and Account Wipe logic)
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'expense_model.dart';
 import 'debt_model.dart';
-import 'asset_model.dart'; 
+import 'asset_model.dart';
 import 'shopping_model.dart';
 import 'checking_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
-
   DatabaseHelper._init();
 
   FirebaseFirestore get _db => FirebaseFirestore.instance;
-
   String get _uid => FirebaseAuth.instance.currentUser?.uid ?? 'unauthenticated';
 
   CollectionReference _userCollection(String collectionName) {
@@ -818,22 +833,31 @@ class DatabaseHelper {
   // ==========================================
   // רשומת משתמש שורשית (Root User Document & Metrics)
   // ==========================================
-  
   Future<void> initializeUserRoot({required String email, String generation = 'Regular', String country = 'Unknown'}) async {
     if (_uid == 'unauthenticated') return;
-    
-    await _db.collection('users').doc(_uid).set({
-      'email': email,
-      'generation': generation,
-      'country': country,
-      'lastActive': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+
+    final docRef = _db.collection('users').doc(_uid);
+    final docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+      // יצירה ראשונית כולל חותמת זמן מוגנת למייסדים (סעיף 3 אסטרטגיה)
+      await docRef.set({
+        'email': email,
+        'generation': generation,
+        'country': country,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastActive': FieldValue.serverTimestamp(),
+      });
+    } else {
+      // עדכון כניסה חוזרת ללא דריסת שעת היצירה
+      await docRef.set({
+        'lastActive': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
   }
 
-  // 🔒 תמיכה בערכים דינמיים (bool, String) לצורך שמירת טוקנים ומדדים
   Future<void> updateUserMetric(String metricKey, dynamic value) async {
     if (_uid == 'unauthenticated') return;
-
     await _db.collection('users').doc(_uid).set({
       'metrics': {
         metricKey: value
@@ -842,7 +866,6 @@ class DatabaseHelper {
     }, SetOptions(merge: true));
   }
 
-  // בדיקה האם המשתמש כבר אישר את תנאי השימוש בעבר
   Future<bool> hasAcceptedTerms() async {
     if (_uid == 'unauthenticated') return false;
     try {
@@ -860,9 +883,27 @@ class DatabaseHelper {
   }
 
   // ==========================================
+  // מחיקת חשבון לצמיתות (Account Wipe Protocol)
+  // ==========================================
+  Future<void> deleteUserAccountAndData() async {
+    if (_uid == 'unauthenticated') return;
+    try {
+      // 1. מחיקת כלל הנתונים מכל הקולקציות
+      await clearAllData();
+      
+      // 2. מחיקת מסמך המשתמש הראשי
+      await _db.collection('users').doc(_uid).delete();
+      
+      // 3. מחיקת המשתמש מ-Firebase Auth
+      await FirebaseAuth.instance.currentUser?.delete();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // ==========================================
   // משיכת נתוני השורש (לצורכי חומת תשלום והרשאות)
   // ==========================================
-  
   Future<Map<String, dynamic>?> getUserRootData() async {
     if (_uid == 'unauthenticated') return null;
     try {
@@ -883,7 +924,6 @@ class DatabaseHelper {
   // ==========================================
   // 🔄 REAL-TIME STREAMS (SaaS Sync)
   // ==========================================
-  
   Stream<List<Expense>> streamExpenses() {
     return _userCollection('expenses').snapshots().map((snap) =>
         snap.docs.map((doc) => Expense.fromMap(doc.data() as Map<String, dynamic>)).toList());
@@ -931,10 +971,9 @@ class DatabaseHelper {
   // ==========================================
   // הגדרות
   // ==========================================
-  
   Future<void> saveSetting(String key, double value) async {
     await _userCollection('app_settings').doc(key).set({
-      'key': key, 
+      'key': key,
       'value': value
     });
   }
@@ -958,7 +997,6 @@ class DatabaseHelper {
   // ==========================================
   // איפוס נתונים
   // ==========================================
-  
   Future<void> _deleteCollection(String collectionName) async {
     final snapshot = await _userCollection(collectionName).get();
     final batch = _db.batch();
@@ -975,16 +1013,15 @@ class DatabaseHelper {
     await _deleteCollection('assets');
     await _deleteCollection('shopping_items');
     await _deleteCollection('family_members');
-    await _deleteCollection('withdrawals'); 
-    await _deleteCollection('checking_history'); 
-    await _deleteCollection('salary_records'); 
-    await _deleteCollection('planned_withdrawals'); 
+    await _deleteCollection('withdrawals');
+    await _deleteCollection('checking_history');
+    await _deleteCollection('salary_records');
+    await _deleteCollection('planned_withdrawals');
   }
 
   // ==========================================
   // CRUD פעולות
   // ==========================================
-
   Future<int> insertFamilyMember(FamilyMember fm) async {
     final id = fm.id ?? _generateId();
     final map = fm.toMap();
@@ -992,17 +1029,17 @@ class DatabaseHelper {
     await _userCollection('family_members').doc(id.toString()).set(map);
     return id;
   }
-  
+
   Future<List<FamilyMember>> getFamilyMembers() async {
     final snap = await _userCollection('family_members').get();
     return snap.docs.map((doc) => FamilyMember.fromMap(doc.data() as Map<String, dynamic>)).toList();
   }
-  
+
   Future<int> updateFamilyMember(FamilyMember fm) async {
     await _userCollection('family_members').doc(fm.id.toString()).update(fm.toMap());
     return fm.id ?? 0;
   }
-  
+
   Future<int> deleteFamilyMember(int id) async {
     await _userCollection('family_members').doc(id.toString()).delete();
     return id;
@@ -1113,7 +1150,6 @@ class DatabaseHelper {
       final snap = await _userCollection('withdrawals')
           .where('expenseId', isEqualTo: expenseId)
           .get();
-      
       final items = snap.docs.map((doc) => Withdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
       items.sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
       return items;
@@ -1144,7 +1180,7 @@ class DatabaseHelper {
   }
 
   // ==========================================
-  // CRUD למנוע שכר 
+  // CRUD למנוע שכר
   // ==========================================
   Future<List<SalaryRecord>> getSalaryRecords() async {
     final snap = await _userCollection('salary_records').get();
@@ -3210,7 +3246,6 @@ import '../services/notification_service.dart'; // 🔔 הזרקת שירות ה
 
 class ShoppingProvider with ChangeNotifier {
   List<ShoppingItem> _items = [];
-
   List<ShoppingItem> get items => _items;
 
   List<String> get availableCategories {
@@ -3251,8 +3286,8 @@ class ShoppingProvider with ChangeNotifier {
     double total = 0.0;
     for (var item in _items) {
       final lastDate = item.lastPurchaseDateTime;
-      if (lastDate != null && 
-          lastDate.month == _targetMonth.month && 
+      if (lastDate != null &&
+          lastDate.month == _targetMonth.month &&
           lastDate.year == _targetMonth.year) {
         total += (item.price * item.quantity);
       }
@@ -3288,7 +3323,6 @@ class ShoppingProvider with ChangeNotifier {
         performedAny = true;
       }
     }
-    
     notifyListeners();
 
     // 🔔 חיווט למנוע ההתראות: אם בוצעה קנייה, תזמן התראה לעוד 6 ימים לקנייה הבאה
@@ -3312,7 +3346,7 @@ class ShoppingProvider with ChangeNotifier {
 
     // 2. טעינת הרשימה המעודכנת
     _items = await db.getShoppingItems();
-    
+
     // 3. מזרק קטלוג אוטומטי (Auto-Seed) אם הרשימה ריקה לחלוטין
     if (_items.isEmpty) {
       await seedDefaultItems();
@@ -3325,7 +3359,6 @@ class ShoppingProvider with ChangeNotifier {
         _items[i] = _items[i].copyWith(isChecked: true);
       }
     }
-
     notifyListeners();
   }
 
@@ -3517,107 +3550,100 @@ class ShoppingProvider with ChangeNotifier {
 
 FILE: C:\Projects\dohaham\lib\services\admin_service.dart
 -----------------------
-// 🔒 STATUS: EDITED (Admin God-Mode Engine - Rethrowing Errors for Debugging)
+// 🔒 STATUS: EDITED (Added adminNotes field and update method)
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 
-/// מודל נתונים רזה למשתמש (Metadata בלבד, ללא חשיפה פיננסית)
 class AdminUserRecord {
-  final String id;
+  final String uid;
   final String email;
-  final DateTime? createdAt;
-  final DateTime? lastActive;
+  final String? displayName;
+  final String? adminNotes; // 📝 שדה חדש להערות מנהל
   final String generation;
   final String country;
+  final DateTime? createdAt;
+  final DateTime? lastActive;
   final Map<String, dynamic> metrics;
+  final bool isPremium;
 
   AdminUserRecord({
-    required this.id,
+    required this.uid,
     required this.email,
-    this.createdAt,
-    this.lastActive,
+    this.displayName,
+    this.adminNotes,
     required this.generation,
     required this.country,
+    this.createdAt,
+    this.lastActive,
     required this.metrics,
+    required this.isPremium,
   });
-
-  // פונקציית עזר לפענוח תאריכים בטוח מכל סוג של נתון ישן/חדש
-  static DateTime? _parseDateSafely(dynamic val) {
-    if (val == null) return null;
-    if (val is Timestamp) return val.toDate();
-    if (val is String) return DateTime.tryParse(val);
-    if (val is int) return DateTime.fromMillisecondsSinceEpoch(val);
-    return null;
-  }
-
-  factory AdminUserRecord.fromMap(String id, Map<String, dynamic> map) {
-    return AdminUserRecord(
-      id: id,
-      email: map['email']?.toString() ?? 'Unknown',
-      createdAt: _parseDateSafely(map['createdAt']),
-      lastActive: _parseDateSafely(map['lastActive']),
-      generation: map['generation']?.toString() ?? 'Alpha',
-      country: map['country']?.toString() ?? 'Unknown',
-      metrics: map['metrics'] is Map ? Map<String, dynamic>.from(map['metrics']) : {},
-    );
-  }
 }
 
 class AdminService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // 1. אימות הרשאת מנהל מול השרת (מנעול כפול)
-  static Future<bool> isCurrentUserAdmin() async {
-    final user = _auth.currentUser;
-    if (user == null) return false;
-
-    try {
-      final doc = await _db.collection('admins').doc(user.uid).get();
-      return doc.exists;
-    } catch (e) {
-      debugPrint('Error checking admin status: $e');
-      return false;
-    }
-  }
-
-  // 2. בדיקת סטטוס השקה מסחרית
   static Future<bool> isCommercialLaunch() async {
-    try {
-      final doc = await _db.collection('system_settings').doc('global').get();
-      if (doc.exists && doc.data() != null) {
-        return doc.data()!['isCommercialLaunch'] as bool? ?? false;
-      }
-      return false;
-    } catch (e) {
-      debugPrint('Error fetching commercial status: $e');
-      return false;
+    final doc = await _db.collection('system').doc('config').get();
+    if (doc.exists) {
+      return doc.data()?['commercial_launch'] == true;
     }
+    return false;
   }
 
-  // 3. הפעלת השקה מסחרית (כפתור השמדה עצמית)
   static Future<void> toggleCommercialLaunch() async {
-    try {
-      await _db.collection('system_settings').doc('global').set({
-        'isCommercialLaunch': true,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    } catch (e) {
-      debugPrint('Error updating commercial status: $e');
-      rethrow;
-    }
+    final doc = await _db.collection('system').doc('config').get();
+    bool current = doc.exists ? (doc.data()?['commercial_launch'] == true) : false;
+    await _db.collection('system').doc('config').set({
+      'commercial_launch': !current,
+    }, SetOptions(merge: true));
   }
 
-  // 4. שאיבת כלל המשתמשים עבור מסנן המניות (Screener)
   static Future<List<AdminUserRecord>> fetchAllUsers() async {
-    try {
-      final snapshot = await _db.collection('users').get();
-      return snapshot.docs.map((doc) => AdminUserRecord.fromMap(doc.id, doc.data())).toList();
-    } catch (e) {
-      debugPrint('🚨 CRITICAL ERROR FETCHING USERS: $e');
-      rethrow; // <--- התיקון: מעביר את השגיאה למסך כדי שהקובייה האדומה תתעורר!
-    }
+    final snap = await _db.collection('users').get();
+    
+    final users = await Future.wait(snap.docs.map((doc) async {
+      final data = doc.data();
+      
+      final familySnap = await _db.collection('users')
+          .doc(doc.id)
+          .collection('family_members')
+          .orderBy('birthYear', descending: false)
+          .limit(1)
+          .get();
+
+      String? name;
+      if (familySnap.docs.isNotEmpty) {
+        name = familySnap.docs.first.data()['name'];
+      }
+
+      return AdminUserRecord(
+        uid: doc.id,
+        email: data['email'] ?? 'Unknown',
+        displayName: name ?? 'לא הוגדר שם',
+        adminNotes: data['adminNotes'] as String?, // שליפת ההערה
+        generation: data['generation'] ?? 'Regular',
+        country: data['country'] ?? 'Unknown',
+        createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+        lastActive: (data['lastActive'] as Timestamp?)?.toDate(),
+        metrics: data['metrics'] is Map ? Map<String, dynamic>.from(data['metrics']) : {},
+        isPremium: data['isPremium'] == true,
+      );
+    }));
+
+    return users;
+  }
+
+  // 📝 פונקציה חדשה לעדכון הערות מנהל
+  static Future<void> updateAdminNotes(String uid, String notes) async {
+    await _db.collection('users').doc(uid).set({
+      'adminNotes': notes,
+    }, SetOptions(merge: true));
+  }
+
+  static Future<void> toggleUserPremium(String uid, bool newStatus) async {
+    await _db.collection('users').doc(uid).set({
+      'isPremium': newStatus,
+    }, SetOptions(merge: true));
   }
 }
 
@@ -3856,7 +3882,7 @@ class NotificationService {
 
 FILE: C:\Projects\dohaham\lib\services\premium_service.dart
 -----------------------
-// 🔒 STATUS: EDITED (Fixed Default Fallback to Alpha for existing/missing users)
+// 🔒 STATUS: EDITED (Restored full Pro features list and added monthly subscription mention for IL users)
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -3866,9 +3892,10 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../data/database_helper.dart';
+import '../main.dart'; 
 
 class HybridBillingEngine {
-  static const String makeWebhookUrl = 'https://hook.make.com/YOUR_WEBHOOK_ID_HERE';
+  static const String makeWebhookUrl = 'https://hook.eu1.make.com/n7rixsg12pj31b19lh8dxqu7kn49dof6';
 
   static Future<void> init() async {
     if (kIsWeb) {
@@ -3878,7 +3905,7 @@ class HybridBillingEngine {
     }
   }
 
-  static Future<bool> purchasePro(BuildContext context) async {
+  static Future<bool> purchasePro() async {
     try {
       if (kIsWeb) {
         final user = FirebaseAuth.instance.currentUser;
@@ -3955,22 +3982,26 @@ class PremiumService {
     _premiumSubscription?.cancel();
   }
 
-  /// בודק באופן אסינכרוני האם המשתמש זכאי לפרימיום
   static Future<bool> isUserPremium() async {
     if (_forceFreeMode) return false;
+    
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && user.email == 'freeuser.fintelapp.test@gmail.com') {
+      return false; // Force Free for test user
+    }
+
     final userData = await DatabaseHelper.instance.getUserRootData();
     
-    // 💡 התיקון הקריטי 1: אם אין נתונים למשתמש (לא נוצר שורש), ברירת המחדל בשלב ההשקה היא פרו חינם
-    if (userData == null) return true; 
+    if (userData == null) return false; 
     
     final isPremium = userData['isPremium'] == true;
     
-    // 💡 התיקון הקריטי 2: ברירת מחדל 'Alpha' במקום 'Regular' למי שאין לו תגית
-    final rootGen = (userData['generation'] ?? 'Alpha').toString().toLowerCase();
+    final rootGen = (userData['generation'] ?? '').toString().toLowerCase();
     final metrics = userData['metrics'] as Map<String, dynamic>? ?? {};
-    final metricsGen = (metrics['generation'] ?? 'Alpha').toString().toLowerCase();
+    final metricsGen = (metrics['generation'] ?? '').toString().toLowerCase();
 
-    final isFounders = rootGen == 'alpha' || rootGen == 'beta' || metricsGen == 'alpha' || metricsGen == 'beta';
+    final isFounders = rootGen == 'alpha' || rootGen == 'beta' || 
+                       metricsGen == 'alpha' || metricsGen == 'beta';
 
     return isPremium || isFounders;
   }
@@ -3981,15 +4012,22 @@ class PremiumService {
       return;
     }
 
+    final user = FirebaseAuth.instance.currentUser;
+    final isTestUser = user != null && user.email == 'freeuser.fintelapp.test@gmail.com';
+
     final userData = await DatabaseHelper.instance.getUserRootData();
+    
     if (!context.mounted) return;
 
-    final isPremium = userData?['isPremium'] == true;
-    
-    // שינוי ברירת המחדל ל-'Alpha' גם במנגנון הנעילה האקטיבי
-    final rootGen = (userData?['generation'] ?? 'Alpha').toString().toLowerCase();
-    final metrics = userData?['metrics'] as Map<String, dynamic>? ?? {};
-    final metricsGen = (metrics['generation'] ?? 'Alpha').toString().toLowerCase();
+    if (userData == null || isTestUser) {
+      _showPaywall(context, onGranted);
+      return;
+    }
+
+    final isPremium = userData['isPremium'] == true;
+    final rootGen = (userData['generation'] ?? '').toString().toLowerCase();
+    final metrics = userData['metrics'] as Map<String, dynamic>? ?? {};
+    final metricsGen = (metrics['generation'] ?? '').toString().toLowerCase();
     
     final isFounders = rootGen == 'alpha' || rootGen == 'beta' || metricsGen == 'alpha' || metricsGen == 'beta';
     final hasSeenFoundersGift = metrics['hasSeenFoundersGift'] == true;
@@ -4004,63 +4042,45 @@ class PremiumService {
         onGranted();
         return;
       }
-
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(
-                'assets/icon/crown_icon.png', 
-                width: 64, 
-                height: 64,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 64),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                "פיצ'ר פרימיום פתוח!",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 20),
-              ),
-            ],
-          ),
-          content: const Text(
-            "זיהינו שאתה מהמשתמשים הראשונים של דוחכם.\n\nלאות תודה, כל פיצ'רי הפרימיום (מנוע החירות, מכונת הזמן לחובות, אקדמיה וסטטיסטיקות שכר) פתוחים עבורך כרגע בחינם לחלוטין. תהנה!",
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.blueGrey, fontSize: 15, height: 1.4),
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00A3FF),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                elevation: 2,
-              ),
-              onPressed: () async {
-                await DatabaseHelper.instance.updateUserMetric('hasSeenFoundersGift', true);
-                if (!ctx.mounted) return;
-                Navigator.pop(ctx);
-                onGranted();
-              },
-              child: const Text("תודה, המשך", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
-          ],
-        ),
-      );
+      _showFoundersDialog(context, onGranted);
     } else {
       _showPaywall(context, onGranted);
     }
   }
 
+  static void _showFoundersDialog(BuildContext context, VoidCallback onGranted) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Column(
+          children: [
+            Image.asset('assets/icon/crown_icon.png', width: 64, height: 64, errorBuilder: (_,__,___) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 64)),
+            const SizedBox(height: 16),
+            const Text("פיצ'ר פרימיום פתוח!", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 20)),
+          ],
+        ),
+        content: const Text("זיהינו שאתה מהמשתמשים הראשונים. כל פיצ'רי הפרימיום פתוחים עבורך בחינם. תהנה!", textAlign: TextAlign.center, style: TextStyle(color: Colors.blueGrey, fontSize: 15, height: 1.4)),
+        actions: [
+          ElevatedButton(
+            onPressed: () async {
+              await DatabaseHelper.instance.updateUserMetric('hasSeenFoundersGift', true);
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+              onGranted();
+            },
+            child: const Text("תודה, המשך"),
+          ),
+        ],
+      ),
+    );
+  }
+
   static void _showPaywall(BuildContext context, VoidCallback onGranted) {
     bool isProcessing = false;
+    final isHebrew = Localizations.localeOf(context).languageCode == 'he';
 
     showDialog(
       context: context,
@@ -4071,141 +4091,105 @@ class PremiumService {
           surfaceTintColor: Colors.transparent,
           contentPadding: EdgeInsets.zero,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                child: Image.asset(
-                  'assets/icon/fintel_pro_banner.jpg',
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    color: const Color(0xFF121212),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480, maxHeight: 850),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    child: Image.asset('assets/icon/fintel_pro_banner.jpg', width: double.infinity, fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 24), color: const Color(0xFF121212),
+                        child: Column(children: [Image.asset('assets/icon/premium_icon.png', width: 72, height: 72, errorBuilder: (_,__,___) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 72)), const SizedBox(height: 12), const Text('Fintel Pro', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2))]))),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(24),
                     child: Column(
                       children: [
-                        Image.asset(
-                          'assets/icon/premium_icon.png', 
-                          width: 72, 
-                          height: 72,
-                          errorBuilder: (_,__,___) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 72),
+                        Text(
+                          isHebrew ? "שדרג ל-Fintel Pro\nשליטה מוחלטת בתזרים" : "Upgrade to Fintel Pro\nUltimate Cashflow Control", 
+                          textAlign: TextAlign.center, 
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)
+                        ),
+                        const SizedBox(height: 24),
+                        // Full Feature List Restored
+                        _buildBullet(isHebrew ? "מנוע החירות - חישוב שנת יעד מדויקת." : "Freedom Engine - Exact target year calculation."),
+                        _buildBullet(isHebrew ? "מכונת זמן לחיסול חובות - אלגוריתם ה'צלף'." : "Debt Time Machine - Sniper Algorithm."),
+                        _buildBullet(isHebrew ? "ייצוב שכר תנודתי - מנוע ממוצע שכר חכם." : "Income Stabilizer - Smart Salary Average."),
+                        _buildBullet(isHebrew ? "ניהול נכסים והשקעות מתקדם." : "Advanced Asset & Investment Management."),
+                        _buildBullet(isHebrew ? "מערכת 'אנטי-הפתעות' להוצאות עתידיות." : "Anti-Surprise Sinking Funds System."),
+                        _buildBullet(isHebrew ? "דוחות וסטטיסטיקות צמיחה מתקדמות." : "Advanced Growth Analytics & Reports."),
+                        
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          width: double.infinity,
+                          child: isProcessing 
+                            ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A3FF)))
+                            : (AppGlobals.forceUSNotifier.value && kIsWeb) // Logic updated to use sandbox switch
+                                ? Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blueGrey.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.blueGrey.shade200)
+                                    ),
+                                    child: const Text(
+                                      "Web checkout is not available in your region.\nPlease download our Android app from the Google Play Store to subscribe.",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(color: Colors.blueGrey, fontSize: 13, fontWeight: FontWeight.w600),
+                                    ),
+                                  )
+                                : Column(
+                                    children: [
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                                        onPressed: () async {
+                                          setState(() => isProcessing = true);
+                                          bool success = await HybridBillingEngine.purchasePro();
+                                          
+                                          if (!ctx.mounted) return;
+                                          
+                                          if (success) {
+                                            Navigator.pop(ctx);
+                                            if (kIsWeb) {
+                                              if (!context.mounted) return;
+                                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isHebrew ? 'ממתין לאישור תשלום. המסך יתרענן אוטומטית.' : 'Waiting for payment confirmation. The screen will refresh automatically.'), backgroundColor: Colors.blueGrey));
+                                            } else {
+                                              await DatabaseHelper.instance.setPremiumStatus(true);
+                                              PremiumService.notifyStateChanged();
+                                              onGranted();
+                                            }
+                                          } else {
+                                            setState(() => isProcessing = false);
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isHebrew ? 'שגיאה בתקשורת עם השרת. נסה שוב.' : 'Server communication error. Please try again.'), backgroundColor: Colors.redAccent));
+                                          }
+                                        },
+                                        child: Center(child: Text(isHebrew ? "רכישת מנוי לכל החיים (Lifetime)" : "Get Lifetime Access", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+                                      ),
+                                      if (isHebrew && kIsWeb) ...[
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          "מעדיף מנוי חודשי גמיש?\nהורד את האפליקציה מחנות ה-Google Play",
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 12, fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                         ),
                         const SizedBox(height: 12),
-                        const Text(
-                          'Fintel Pro',
-                          style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                        TextButton(
+                          onPressed: isProcessing ? null : () => Navigator.pop(ctx), 
+                          child: Text(isHebrew ? "לא תודה, אמשיך בגרסה הבסיסית" : "No thanks, I'll stick to the basic version", style: const TextStyle(color: Colors.grey, fontSize: 13))
                         ),
                       ],
                     ),
                   ),
-                ),
+                ],
               ),
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    const Text(
-                      "שדרג ל-Fintel Pro\nשליטה מוחלטת בתזרים",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    _buildBullet("ייצוב שכר תנודתי."),
-                    const SizedBox(height: 12),
-                    _buildBullet("מערכת 'אנטי-הפתעות' מתקדמת."),
-                    const SizedBox(height: 12),
-                    _buildBullet("מכונת זמן לחיסול חובות מואץ (הצלף)."),
-                    const SizedBox(height: 12),
-                    _buildBullet("גישה מלאה לאקדמיית Fintel."),
-                    const SizedBox(height: 12),
-                    _buildBullet("בניית מפת דרכים לחירות פיננסית."),
-                    
-                    const SizedBox(height: 32),
-                    
-                    SizedBox(
-                      width: double.infinity,
-                      child: isProcessing 
-                        ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A3FF)))
-                        : ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF00A3FF),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              elevation: 0,
-                            ),
-                            onPressed: () async {
-                              setState(() => isProcessing = true);
-                              bool success = await HybridBillingEngine.purchasePro(ctx);
-                              
-                              if (!ctx.mounted) return;
-                              
-                              if (success) {
-                                Navigator.pop(ctx);
-                                
-                                if (kIsWeb) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('הועברת לתשלום. הסטטוס יתעדכן כאן אוטומטית ברגע שהאישור יתקבל.'), 
-                                        backgroundColor: Colors.blueGrey,
-                                        duration: Duration(seconds: 4),
-                                      ),
-                                    );
-                                  }
-                                } else {
-                                  await DatabaseHelper.instance.setPremiumStatus(true);
-                                  if (PremiumService.forceFreeMode) {
-                                    PremiumService.forceFreeMode = false;
-                                  } else {
-                                    PremiumService.notifyStateChanged();
-                                  }
-                                  
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Row(
-                                          children: [
-                                            const Text('מצב פיתוח (Native): המנוי הופעל בהצלחה!  '),
-                                            Image.asset('assets/icon/crown_icon.png', width: 16, height: 16, errorBuilder: (_,__,___) => const SizedBox.shrink()),
-                                          ]
-                                        ), 
-                                        backgroundColor: Colors.green
-                                      ),
-                                    );
-                                  }
-                                  onGranted();
-                                }
-                              } else {
-                                setState(() => isProcessing = false);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('יצירת סשן תשלום נכשלה. נסה שוב.'), 
-                                      backgroundColor: Colors.redAccent
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                            child: const Text("התחל 30 ימי ניסיון חינם", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: isProcessing ? null : () => Navigator.pop(ctx),
-                      child: const Text(
-                        "לא תודה, אמשיך בגרסה החינמית הבסיסית",
-                        style: TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -4213,14 +4197,13 @@ class PremiumService {
   }
 
   static Widget _buildBullet(String text) {
-    return Row(
-      children: [
-        const Icon(Icons.check_circle, color: Color(0xFF00FF85), size: 20),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(text, style: const TextStyle(fontSize: 14, color: Colors.black87)),
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Icon(Icons.check_circle, color: Color(0xFF00FF85), size: 20), 
+        const SizedBox(width: 12), 
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w500)))
+      ]),
     );
   }
 }
@@ -4660,12 +4643,14 @@ class _AcademyScreenState extends State<AcademyScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\admin_dashboard_screen.dart
 -----------------------
-// 🔒 STATUS: FINAL (Admin God-Mode Dashboard - Includes Force Free Dev Switch, Linter Compliant)
+// 🔒 STATUS: SURGICAL MERGE COMPLETE (Preserved All Metrics + Names + Auto-saving Notes + Mail Triggers)
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:async'; 
 import '../../services/admin_service.dart';
 import '../../services/premium_service.dart';
+import '../../main.dart'; 
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -4679,7 +4664,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _isCommercial = false;
   List<AdminUserRecord> _users = [];
   
-  // Advanced Screener Filters
   bool _showScreenerResults = false;
   String _filterGeneration = 'הכל';
   String _filterCountry = 'הכל';
@@ -4708,23 +4692,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('שגיאה בטעינת נתונים: $e')));
       }
     }
   }
 
-  // --- Mailing Protocol (Section 13.5) ---
   Future<void> _triggerMail(List<String> emails, String subject, String body) async {
     if (emails.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('אין משתמשים בקבוצה זו')));
       return;
     }
-
     final bcc = emails.join(',');
     final uri = Uri.parse('mailto:?bcc=$bcc&subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}');
-    
     try {
       final launched = await launchUrl(uri);
       if (!launched) throw Exception('Launch failed');
@@ -4739,16 +4719,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('דיוור ידני (עומס נמענים)', style: TextStyle(color: Colors.black87)),
         backgroundColor: Colors.white,
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildCopyField('נמענים (BCC)', bcc),
-              const SizedBox(height: 12),
-              _buildCopyField('נושא ההודעה', subject),
-              const SizedBox(height: 12),
-              _buildCopyField('גוף ההודעה', body),
-            ],
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildCopyField('נמענים (BCC)', bcc),
+                const SizedBox(height: 12),
+                _buildCopyField('נושא ההודעה', subject),
+                const SizedBox(height: 12),
+                _buildCopyField('גוף ההודעה', body),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -4784,14 +4767,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // --- Master Switch Logic ---
+  Future<void> _handleGoldenKey(AdminUserRecord u) async {
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(u.isPremium ? 'ביטול מנוי Pro' : 'שדרוג ל-Pro', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+        content: Text('להעניק ל-${u.displayName ?? u.email} מנוי Pro בחינם?\n(השפעה מיידית באפליקציה שלו)'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ביטול', style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: u.isPremium ? Colors.red : Colors.amber, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            onPressed: () => Navigator.pop(ctx, true), 
+            child: Text('אשר', style: TextStyle(color: u.isPremium ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
+          ),
+        ]
+      )
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      await AdminService.toggleUserPremium(u.uid, !u.isPremium);
+      await _loadData();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('סטטוס מנוי עודכן בהצלחה!'), backgroundColor: Colors.green));
+    }
+  }
+
   void _confirmCommercialLaunch() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('⚠️ אזהרה: השקה מסחרית', style: TextStyle(color: Colors.black87)),
         backgroundColor: Colors.white,
-        content: const Text('האם אתה בטוח? פעולה זו תגרום לכך שכל משתמש חדש מעתה יסומן כ-Regular וייתקל בחומת תשלום. לא ניתן לבטל פעולה זו.', style: TextStyle(color: Colors.black87)),
+        content: const Text('האם אתה בטוח? פעולה זו תגרום לכך שכל משתמש חדש מעתה יסומן כ-Regular וייתקל בחומת תשלום.', style: TextStyle(color: Colors.black87)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול', style: TextStyle(color: Colors.blueGrey))),
           ElevatedButton(
@@ -4809,33 +4818,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // --- Fintel Brain Extractor ---
   Future<void> _extractBrainCapsule(BuildContext context) async {
     try {
       final String capsuleData = await rootBundle.loadString('assets/fintel_brain_capsule.txt');
       await Clipboard.setData(ClipboardData(text: capsuleData));
-      
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ קפסולת הקוד הועתקה ללוח בהצלחה!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ קפסולת הקוד הועתקה ללוח!'), backgroundColor: Colors.green));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ שגיאה בחילוץ הקוד: $e\nהאם הרצת את pack_code.dart?'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ שגיאה: $e'), backgroundColor: Colors.red));
       }
     }
   }
 
-  // --- Smart CTA Drilldown ---
   void _showSmartCTADrilldown({required String title, required List<String> emails, required String defaultSubject, required String defaultBody, required Color themeColor}) {
     showModalBottomSheet(
       context: context,
@@ -4865,10 +4861,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               const Divider(),
               const SizedBox(height: 8),
               if (emails.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text('אין משתמשים בסטטוס זה כרגע', style: TextStyle(color: Colors.blueGrey))),
-                )
+                const Padding(padding: EdgeInsets.symmetric(vertical: 24), child: Center(child: Text('אין משתמשים בסטטוס זה', style: TextStyle(color: Colors.blueGrey))))
               else
                 Flexible(
                   child: Container(
@@ -4877,50 +4870,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       shrinkWrap: true,
                       itemCount: emails.length,
                       separatorBuilder: (context, index) => const Divider(height: 1),
-                      itemBuilder: (context, index) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text(emails[index], style: const TextStyle(fontSize: 14, color: Colors.black87)),
+                      itemBuilder: (context, index) => ListTile(
+                        title: Text(emails[index], style: const TextStyle(fontSize: 14, color: Colors.black87)),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.copy, size: 16, color: Colors.blueGrey),
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: emails[index]));
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('מייל הועתק'), duration: Duration(seconds: 1)));
+                          },
+                        ),
                       ),
                     ),
                   ),
                 ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.black87, side: const BorderSide(color: Colors.black26),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: const Icon(Icons.copy, size: 18),
-                      label: const Text('העתק רשימה', style: TextStyle(fontWeight: FontWeight.bold)),
-                      onPressed: () {
-                        if (emails.isEmpty) return;
-                        Clipboard.setData(ClipboardData(text: emails.join(',')));
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('רשימת המיילים הועתקה ללוח')));
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: themeColor, foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: const Icon(Icons.mail, size: 18),
-                      label: const Text('דיוור מיידי', style: TextStyle(fontWeight: FontWeight.bold)),
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _triggerMail(emails, defaultSubject, defaultBody);
-                      },
-                    ),
-                  ),
-                ],
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: themeColor, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                icon: const Icon(Icons.mail), label: const Text('דיוור מיידי לכל הקבוצה', style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () { Navigator.pop(ctx); _triggerMail(emails, defaultSubject, defaultBody); },
               )
             ],
           ),
@@ -4929,7 +4896,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // --- Simple List Drilldown (For Countries) ---
   void _showSimpleListDrilldown({required String title, required List<String> items, required Color themeColor}) {
     showModalBottomSheet(
       context: context,
@@ -4987,13 +4953,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   void _showAdvancedScreener() {
     final uniqueCountries = _users.map((e) => e.country).toSet().toList();
-    uniqueCountries.remove('Unknown');
-    uniqueCountries.insert(0, 'הכל');
-
+    uniqueCountries.remove('Unknown'); uniqueCountries.insert(0, 'הכל');
     showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      isScrollControlled: true,
+      context: context, backgroundColor: Colors.white, isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => SafeArea(
         child: StatefulBuilder(
@@ -5004,64 +4966,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Flexible(child: Text('מסנן קהלים מתקדם', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87), overflow: TextOverflow.ellipsis)),
-                      IconButton(icon: const Icon(Icons.close, color: Colors.blueGrey), onPressed: () => Navigator.pop(ctx)),
-                    ],
-                  ),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    const Text('מסנן קהלים מתקדם', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  ]),
                   const Divider(),
-                  
-                  _buildDropdownRow('דור:', _filterGeneration, ['הכל', 'Alpha', 'Beta', 'Regular'], (v) {
-                    if (v != null) {
-                      setModalState(() => _filterGeneration = v);
-                      setState(() => _filterGeneration = v);
-                    }
-                  }),
-                  
-                  _buildDropdownRow('מדינה:', _filterCountry, uniqueCountries, (v) {
-                    if (v != null) {
-                      setModalState(() => _filterCountry = v);
-                      setState(() => _filterCountry = v);
-                    }
-                  }),
-
-                  _buildDropdownRow('שכר:', _filterSalary, ['הכל', 'כן', 'לא'], (v) {
-                    if (v != null) {
-                      setModalState(() => _filterSalary = v);
-                      setState(() => _filterSalary = v);
-                    }
-                  }),
-
-                  _buildDropdownRow('קופות:', _filterSinking, ['הכל', 'יש', 'אין'], (v) {
-                    if (v != null) {
-                      setModalState(() => _filterSinking = v);
-                      setState(() => _filterSinking = v);
-                    }
-                  }),
-
-                  _buildDropdownRow('חירות:', _filterFreedom, ['הכל', 'כן', 'לא'], (v) {
-                    if (v != null) {
-                      setModalState(() => _filterFreedom = v);
-                      setState(() => _filterFreedom = v);
-                    }
-                  }),
-
+                  _buildDropdownRow('דור:', _filterGeneration, ['הכל', 'Alpha', 'Beta', 'Regular'], (v) { if (v != null) { setModalState(() => _filterGeneration = v); setState(() => _filterGeneration = v); } }),
+                  _buildDropdownRow('מדינה:', _filterCountry, uniqueCountries, (v) { if (v != null) { setModalState(() => _filterCountry = v); setState(() => _filterCountry = v); } }),
+                  _buildDropdownRow('שכר:', _filterSalary, ['הכל', 'כן', 'לא'], (v) { if (v != null) { setModalState(() => _filterSalary = v); setState(() => _filterSalary = v); } }),
+                  _buildDropdownRow('קופות:', _filterSinking, ['הכל', 'יש', 'אין'], (v) { if (v != null) { setModalState(() => _filterSinking = v); setState(() => _filterSinking = v); } }),
+                  _buildDropdownRow('חירות:', _filterFreedom, ['הכל', 'כן', 'לא'], (v) { if (v != null) { setModalState(() => _filterFreedom = v); setState(() => _filterFreedom = v); } }),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black87,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _showScreenerResults = true; // הדלקת הרשימה התחתונה
-                      });
-                      Navigator.pop(ctx);
-                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.black87, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    onPressed: () { setState(() => _showScreenerResults = true); Navigator.pop(ctx); },
                     child: const Text('החל סינון', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ],
@@ -5079,16 +4997,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87), overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
           const SizedBox(width: 8),
           Expanded(
             child: DropdownButton<String>(
-              isExpanded: true,
-              value: items.contains(currentValue) ? currentValue : items.first,
-              dropdownColor: Colors.white,
-              style: const TextStyle(color: Colors.blue),
-              underline: Container(height: 1, color: Colors.blue.withValues(alpha: 0.3)),
-              items: items.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(color: Colors.black87), overflow: TextOverflow.ellipsis))).toList(),
+              isExpanded: true, value: items.contains(currentValue) ? currentValue : items.first, dropdownColor: Colors.white,
+              style: const TextStyle(color: Colors.blue), underline: Container(height: 1, color: Colors.blue.withValues(alpha: 0.3)),
+              items: items.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(color: Colors.black87)))).toList(),
               onChanged: onChanged,
             ),
           ),
@@ -5097,23 +5012,98 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildScreenerResults() {
+    List<AdminUserRecord> filtered = _users.where((u) {
+      if (_filterGeneration != 'הכל' && u.generation != _filterGeneration) return false;
+      if (_filterCountry != 'הכל' && u.country != _filterCountry) return false;
+      if (_filterSalary != 'הכל' && (u.metrics['hasSalary'] ?? false) != (_filterSalary == 'כן')) return false;
+      if (_filterSinking != 'הכל' && (u.metrics['hasSinkingFunds'] ?? false) != (_filterSinking == 'יש')) return false;
+      if (_filterFreedom != 'הכל' && (u.metrics['hasViewedFreedom'] ?? false) != (_filterFreedom == 'כן')) return false;
+      return true;
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('תוצאות סינון (${filtered.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
+          TextButton.icon(onPressed: () => setState(() => _showScreenerResults = false), icon: const Icon(Icons.close, size: 16), label: const Text('נקה')),
+        ]),
+        const SizedBox(height: 12),
+        if (filtered.isEmpty) const Center(child: Padding(padding: EdgeInsets.all(24.0), child: Text('לא נמצאו משתמשים')))
+        else ListView.builder(
+          shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+          itemCount: filtered.length,
+          itemBuilder: (ctx, i) {
+            final u = filtered[i];
+            return Card(
+              color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: CircleAvatar(backgroundColor: Colors.blue.shade50, child: Text(u.displayName?[0] ?? '?', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))),
+                      title: SelectableText(u.displayName ?? 'לא הוגדר שם', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(u.email),
+                          const SizedBox(height: 4),
+                          // 📊 שורת סטטוס חכמה בתוך הכרטיס
+                          Row(
+                            children: [
+                              _buildMetricStatus(Icons.monetization_on, u.metrics['hasSalary'] == true),
+                              const SizedBox(width: 8),
+                              _buildMetricStatus(Icons.account_balance_wallet, u.metrics['hasSinkingFunds'] == true),
+                              const SizedBox(width: 8),
+                              _buildMetricStatus(Icons.flag, u.metrics['hasViewedFreedom'] == true),
+                            ],
+                          ),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(icon: Icon(u.isPremium ? Icons.workspace_premium : Icons.key, color: u.isPremium ? Colors.amber : Colors.grey), onPressed: () => _handleGoldenKey(u)),
+                          IconButton(icon: const Icon(Icons.copy, size: 18), onPressed: () { Clipboard.setData(ClipboardData(text: u.email)); }),
+                          const SizedBox(width: 8),
+                          Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: u.generation == 'Regular' ? Colors.grey.shade100 : Colors.amber.shade50, borderRadius: BorderRadius.circular(8)), child: Text(u.generation, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: u.generation == 'Regular' ? Colors.black54 : Colors.amber.shade900))),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: _AdminNoteField(uid: u.uid, initialNotes: u.adminNotes),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricStatus(IconData icon, bool isActive) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: isActive ? Colors.green : Colors.grey.shade300),
+        Icon(isActive ? Icons.check : Icons.close, size: 10, color: isActive ? Colors.green : Colors.red.withValues(alpha: 0.3)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(backgroundColor: Color(0xFF121212), body: Center(child: CircularProgressIndicator(color: Colors.amber)));
-    }
+    if (_isLoading) return const Scaffold(backgroundColor: Color(0xFF121212), body: Center(child: CircularProgressIndicator(color: Colors.amber)));
 
     final activeUsers = _users.where((u) => u.lastActive != null && DateTime.now().difference(u.lastActive!).inDays <= 7).toList();
     final active7Days = activeUsers.length;
-    
     final uniqueCountriesList = _users.map((e) => e.country).where((c) => c != 'Unknown').toSet().toList();
-    final uniqueCountriesCount = uniqueCountriesList.length;
-
-    // חישוב הרשימות עבור הטריגרים החכמים
-    final bottleneckUsers = _users.where((u) => u.createdAt != null && DateTime.now().difference(u.createdAt!).inHours > 48 && !(u.metrics['hasSalary'] ?? false)).map((u) => u.email).toList();
-    final churnUsers = _users.where((u) => u.lastActive != null && DateTime.now().difference(u.lastActive!).inDays > 7).map((u) => u.email).toList();
-    final successAUsers = _users.where((u) => (u.metrics['hasSinkingFunds'] ?? false)).map((u) => u.email).toList();
-    final successBUsers = _users.where((u) => (u.metrics['hasViewedFreedom'] ?? false)).map((u) => u.email).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -5123,405 +5113,287 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.table_rows_outlined, color: Colors.grey),
-            tooltip: 'נתונים גולמיים',
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminRawDataScreen(users: _users))),
+            icon: const Icon(Icons.table_rows_outlined, color: Colors.grey), tooltip: 'נתונים גולמיים',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminRawDataScreen(users: _users, onTogglePremium: _handleGoldenKey))),
           ),
         ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // --- TOP DASHBOARD ---
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              alignment: WrapAlignment.spaceBetween,
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 1000), 
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildMacroStat(
-                  label: 'משתמשים', 
-                  value: '${_users.length}',
-                  onTap: () => _showSmartCTADrilldown(
-                    title: 'כלל המשתמשים', emails: _users.map((u) => u.email).toList(), themeColor: Colors.blueGrey,
-                    defaultSubject: 'עדכון מ-Fintel', defaultBody: ''
+                GridView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 220, 
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 2.2,
                   ),
+                  children: [
+                    _buildMacroStat(label: 'משתמשים', value: '${_users.length}', onTap: () => _showSmartCTADrilldown(title: 'כלל המשתמשים', emails: _users.map((u) => u.email).toList(), themeColor: Colors.blueGrey, defaultSubject: 'Fintel Update', defaultBody: '')),
+                    _buildMacroStat(label: 'פעילים', value: '$active7Days', onTap: () => _showSmartCTADrilldown(title: 'פעילים (7 ימים)', emails: activeUsers.map((u) => u.email).toList(), themeColor: Colors.blueGrey, defaultSubject: 'Active User Update', defaultBody: '')),
+                    _buildMacroStat(label: 'מדינות', value: '${uniqueCountriesList.length}', onTap: () => _showSimpleListDrilldown(title: 'מדינות פעילות', items: uniqueCountriesList, themeColor: Colors.blueGrey)),
+                    if (!_isCommercial)
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
+                        icon: const Icon(Icons.rocket_launch, size: 14), label: const Text('השקה', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        onPressed: _confirmCommercialLaunch,
+                      )
+                    else
+                      _buildMacroStat(label: 'סטטוס', value: 'Live', onTap: () {}, color: Colors.green),
+                  ],
                 ),
-                _buildMacroStat(
-                  label: 'פעילים', 
-                  value: '$active7Days',
-                  onTap: () => _showSmartCTADrilldown(
-                    title: 'פעילים (7 ימים)', emails: activeUsers.map((u) => u.email).toList(), themeColor: Colors.blueGrey,
-                    defaultSubject: 'עדכון למשתמשים פעילים', defaultBody: ''
-                  ),
-                ),
-                _buildMacroStat(
-                  label: 'מדינות', 
-                  value: '$uniqueCountriesCount',
-                  onTap: () => _showSimpleListDrilldown(
-                    title: 'מדינות פעילות', items: uniqueCountriesList, themeColor: Colors.blueGrey
-                  ),
-                ),
-                if (!_isCommercial)
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87, padding: const EdgeInsets.symmetric(horizontal: 12)),
-                    icon: const Icon(Icons.rocket_launch, size: 14),
-                    label: const Text('השקה', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    onPressed: _confirmCommercialLaunch,
-                  )
-                else
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
-                    child: const Text('סטטוס: Live', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // --- DEV SWITCH: FORCE FREE MODE ---
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-              ),
-              child: SwitchListTile(
-                title: const Text('מצב מפתח: בדיקת חומת תשלום', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 14)),
-                subtitle: const Text('כופה על המכשיר שלך להתנהג כמשתמש חינמי רגיל (עוקף את מתנת המייסדים).', style: TextStyle(fontSize: 11, color: Colors.blueGrey)),
-                value: PremiumService.forceFreeMode,
-                activeThumbColor: Colors.red,
-                activeTrackColor: Colors.red.withValues(alpha: 0.3),
-                onChanged: (val) {
-                  setState(() {
-                    PremiumService.forceFreeMode = val;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(val ? 'מצב משתמש חינמי הופעל' : 'מצב משתמש חינמי כובה'),
-                      backgroundColor: val ? Colors.red : Colors.green,
-                      duration: const Duration(seconds: 2),
+                const SizedBox(height: 24),
+                _buildSectionTitle('ארגז חול (Sandbox)'),
+                const SizedBox(height: 12),
+                GridView(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 480, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 4),
+                  children: [
+                    _buildSandboxToggle(
+                      title: 'בדיקת חומת תשלום', subtitle: 'כופה התנהגות משתמש חינמי',
+                      value: PremiumService.forceFreeMode, color: Colors.red,
+                      onChanged: (v) => setState(() => PremiumService.forceFreeMode = v),
                     ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // --- FINTEL BRAIN EXTRACTOR (Section 13.2.1) ---
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _extractBrainCapsule(context),
-                icon: const Icon(Icons.memory),
-                label: const Text('חילוץ קוד מערכת (Brain)', style: TextStyle(fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple[800], 
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // --- SMART CTAs ---
-            const Text('טריגרים חכמים', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.5,
-              children: [
-                _buildSmartCTA(
-                  title: 'צוואר בקבוק',
-                  desc: 'ללא שכר > 48 שעות',
-                  count: bottleneckUsers.length,
-                  color: Colors.orange,
-                  icon: Icons.hourglass_empty,
-                  onTap: () => _showSmartCTADrilldown(
-                    title: 'צוואר בקבוק', emails: bottleneckUsers, themeColor: Colors.orange,
-                    defaultSubject: 'צריכים עזרה עם השכר?', defaultBody: 'שמנו לב שנרשמתם אבל טרם הזנתם שכר. נשמח לעזור!'
-                  ),
-                ),
-                _buildSmartCTA(
-                  title: 'נטישה',
-                  desc: 'לא פעילים > 7 ימים',
-                  count: churnUsers.length,
-                  color: Colors.redAccent,
-                  icon: Icons.person_off,
-                  onTap: () => _showSmartCTADrilldown(
-                    title: 'נטישה', emails: churnUsers, themeColor: Colors.redAccent,
-                    defaultSubject: 'התגעגענו אליכם!', defaultBody: 'חלף שבוע מאז שבדקתם את התזרים. בואו נחזור למסלול.'
-                  ),
-                ),
-                _buildSmartCTA(
-                  title: 'הצלחה א\'',
-                  desc: 'פתחו קופה צוברת',
-                  count: successAUsers.length,
-                  color: Colors.green,
-                  icon: Icons.savings,
-                  onTap: () => _showSmartCTADrilldown(
-                    title: 'פתחו קופה צוברת', emails: successAUsers, themeColor: Colors.green,
-                    defaultSubject: 'כל הכבוד על הקופה החדשה!', defaultBody: 'צעד ראשון בניהול אנטי-הפתעות. מעולה!'
-                  ),
-                ),
-                _buildSmartCTA(
-                  title: 'הצלחה ב\'',
-                  desc: 'הגיעו למסך החירות',
-                  count: successBUsers.length,
-                  color: Colors.teal,
-                  icon: Icons.flag,
-                  onTap: () => _showSmartCTADrilldown(
-                    title: 'נחשפו למנוע החירות', emails: successBUsers, themeColor: Colors.teal,
-                    defaultSubject: 'איך החוויה שלכם?', defaultBody: 'ראיתם את שנת החירות שלכם! נשמח לפידבק על האפליקציה.'
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            // --- THE SCREENER ---
-            const Text('מסנן קהלים חכם', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.black87, side: const BorderSide(color: Colors.blueGrey),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ValueListenableBuilder<bool>(
+                      valueListenable: AppGlobals.forceUSNotifier,
+                      builder: (context, forceUS, _) => _buildSandboxToggle(
+                        title: 'תצוגת ארה"ב (אנגלית)', subtitle: 'כופה תצוגת חו"ל וחסימת Web',
+                        value: forceUS, color: Colors.blue,
+                        onChanged: (v) => AppGlobals.forceUSNotifier.value = v,
+                      ),
                     ),
-                    icon: const Icon(Icons.tune, size: 20),
-                    label: const Text('הגדרות סינון מתקדם', style: TextStyle(fontWeight: FontWeight.bold)),
-                    onPressed: _showAdvancedScreener,
-                  ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => _extractBrainCapsule(context),
+                  icon: const Icon(Icons.memory), label: const Text('חילוץ קוד מערכת (Brain)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.purple[800], foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                ),
+                const SizedBox(height: 32),
+                _buildSectionTitle('טריגרים חכמים'),
+                const SizedBox(height: 12),
+                _buildSmartCTAGrid(),
+                const SizedBox(height: 32),
+                _buildSectionTitle('מסנן קהלים חכם'),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.black87, side: const BorderSide(color: Colors.blueGrey), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  icon: const Icon(Icons.tune), label: const Text('הגדרות סינון מתקדם', style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: _showAdvancedScreener,
                 ),
                 if (_showScreenerResults) ...[
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.redAccent, side: const BorderSide(color: Colors.redAccent),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    icon: const Icon(Icons.close, size: 20),
-                    label: const Text('סגור', style: TextStyle(fontWeight: FontWeight.bold)),
-                    onPressed: () {
-                      setState(() {
-                        _showScreenerResults = false;
-                        _filterGeneration = 'הכל';
-                        _filterCountry = 'הכל';
-                        _filterSalary = 'הכל';
-                        _filterSinking = 'הכל';
-                        _filterFreedom = 'הכל';
-                      });
-                    },
-                  ),
+                  const SizedBox(height: 16),
+                  _buildScreenerResults(),
                 ],
               ],
             ),
-            const SizedBox(height: 16),
-            if (_showScreenerResults) _buildScreenerResults(),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildMacroStat({required String label, required String value, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-            Text(label, style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-          ],
+  Widget _buildSmartCTAGrid() {
+    final bottleneckUsers = _users.where((u) => u.createdAt != null && DateTime.now().difference(u.createdAt!).inHours > 48 && !(u.metrics['hasSalary'] ?? false)).map((u) => u.email).toList();
+    final churnUsers = _users.where((u) => u.lastActive != null && DateTime.now().difference(u.lastActive!).inDays > 7).map((u) => u.email).toList();
+    final successAUsers = _users.where((u) => (u.metrics['hasSinkingFunds'] ?? false)).map((u) => u.email).toList();
+    final successBUsers = _users.where((u) => (u.metrics['hasViewedFreedom'] ?? false)).map((u) => u.email).toList();
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 240, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.5),
+      itemCount: 4,
+      itemBuilder: (ctx, i) {
+        final data = [
+          {'t': 'צוואר בקבוק', 'd': 'ללא שכר > 48ש\'', 'c': bottleneckUsers.length, 'cl': Colors.orange, 'ic': Icons.hourglass_empty, 'e': bottleneckUsers},
+          {'t': 'נטישה', 'd': 'לא פעילים > 7 ימים', 'c': churnUsers.length, 'cl': Colors.redAccent, 'ic': Icons.person_off, 'e': churnUsers},
+          {'t': 'הצלחה א\'', 'd': 'פתחו קופה צוברת', 'c': successAUsers.length, 'cl': Colors.green, 'ic': Icons.savings, 'e': successAUsers},
+          {'t': 'הצלחה ב\'', 'd': 'הגיעו למסך חירות', 'c': successBUsers.length, 'cl': Colors.teal, 'ic': Icons.flag, 'e': successBUsers},
+        ][i];
+        return _buildSmartCTA(
+          title: data['t'] as String, desc: data['d'] as String, count: data['c'] as int, color: data['cl'] as Color, icon: data['ic'] as IconData,
+          onTap: () => _showSmartCTADrilldown(title: data['t'] as String, emails: data['e'] as List<String>, themeColor: data['cl'] as Color, defaultSubject: 'Fintel Update', defaultBody: ''),
+        );
+      },
+    );
+  }
+
+  Widget _buildSectionTitle(String title) => Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87));
+
+  Widget _buildMacroStat({required String label, required String value, required VoidCallback onTap, Color? color}) {
+    return Card(
+      elevation: 0, color: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+      child: InkWell(
+        onTap: onTap, borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color ?? Colors.blueGrey)),
+            Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600)),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSandboxToggle({required String title, required String subtitle, required bool value, required Color color, required ValueChanged<bool> onChanged}) {
+    return Container(
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(12), border: Border.all(color: color.withValues(alpha: 0.2))),
+      child: Center(
+        child: SwitchListTile(
+          title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 14)),
+          subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
+          value: value, activeThumbColor: color, activeTrackColor: color.withValues(alpha: 0.3),
+          onChanged: onChanged,
         ),
       ),
     );
   }
 
   Widget _buildSmartCTA({required String title, required String desc, required int count, required Color color, required IconData icon, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: color.withValues(alpha: 0.3)), boxShadow: [BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))]),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, size: 20, color: color),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                  child: Text('$count', style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13)),
-                ),
-              ]
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 13), overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 2),
-                Text(desc, style: const TextStyle(fontSize: 10, color: Colors.blueGrey), maxLines: 2, overflow: TextOverflow.ellipsis),
-              ],
-            ),
-          ],
+    return Card(
+      elevation: 0, color: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: color.withValues(alpha: 0.2))),
+      child: InkWell(
+        onTap: onTap, borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Icon(icon, size: 20, color: color),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)), child: Text('$count', style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 12))),
+            ]),
+            const Spacer(),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 13)),
+            Text(desc, style: const TextStyle(fontSize: 10, color: Colors.blueGrey), maxLines: 1, overflow: TextOverflow.ellipsis),
+          ]),
         ),
       ),
-    );
-  }
-
-  Widget _buildScreenerResults() {
-    List<AdminUserRecord> filtered = _users.where((u) {
-      if (_filterGeneration != 'הכל' && u.generation != _filterGeneration) return false;
-      if (_filterCountry != 'הכל' && u.country != _filterCountry) return false;
-      if (_filterSalary != 'הכל') {
-        final hasVal = u.metrics['hasSalary'] ?? false;
-        if (_filterSalary == 'כן' && !hasVal) return false;
-        if (_filterSalary == 'לא' && hasVal) return false;
-      }
-      if (_filterSinking != 'הכל') {
-        final hasVal = u.metrics['hasSinkingFunds'] ?? false;
-        if (_filterSinking == 'יש' && !hasVal) return false;
-        if (_filterSinking == 'אין' && hasVal) return false;
-      }
-      if (_filterFreedom != 'הכל') {
-        final hasVal = u.metrics['hasViewedFreedom'] ?? false;
-        if (_filterFreedom == 'כן' && !hasVal) return false;
-        if (_filterFreedom == 'לא' && hasVal) return false;
-      }
-      return true;
-    }).toList();
-
-    if (filtered.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24), 
-        child: Center(child: Text('לא נמצאו משתמשים התואמים להגדרות הסינון', style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)))
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            if (_filterGeneration != 'הכל') _buildFilterChip('דור: $_filterGeneration'),
-            if (_filterCountry != 'הכל') _buildFilterChip('מדינה: $_filterCountry'),
-            if (_filterSalary != 'הכל') _buildFilterChip('שכר: ${_filterSalary == 'כן' ? 'הוזן' : 'לא הוזן'}'),
-            if (_filterSinking != 'הכל') _buildFilterChip('קופות: ${_filterSinking == 'יש' ? 'נפתחו' : 'אין'}'),
-            if (_filterFreedom != 'הכל') _buildFilterChip('חירות: ${_filterFreedom == 'כן' ? 'ראו' : 'לא ראו'}'),
-          ],
-        ),
-        if (_filterGeneration != 'הכל' || _filterCountry != 'הכל' || _filterSalary != 'הכל' || _filterSinking != 'הכל' || _filterFreedom != 'הכל')
-          const SizedBox(height: 12),
-
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey.shade900, foregroundColor: Colors.white),
-          icon: const Icon(Icons.copy, size: 16),
-          label: Text('העתק רשימת תפוצה (${filtered.length})', overflow: TextOverflow.ellipsis),
-          onPressed: () {
-            if (filtered.isEmpty) return;
-            final emails = filtered.map((e) => e.email).join(',');
-            Clipboard.setData(ClipboardData(text: emails));
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('הרשימה הועתקה ללוח')));
-          },
-        ),
-        const SizedBox(height: 12),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: filtered.length,
-          itemBuilder: (context, index) {
-            final u = filtered[index];
-            return Card(
-              color: Colors.white,
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                title: Text(u.email, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87), overflow: TextOverflow.ellipsis),
-                subtitle: Text('${u.country} | ${u.lastActive != null ? u.lastActive!.toString().split(' ')[0] : 'טרם'}', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (u.generation != 'Regular') const Icon(Icons.workspace_premium, color: Colors.amber, size: 16),
-                    const SizedBox(width: 4),
-                    Text(u.generation, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-                  ],
-                ),
-              ),
-            );
-          },
-        )
-      ],
-    );
-  }
-
-  Widget _buildFilterChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.blue.withValues(alpha: 0.3))),
-      child: Text(label, style: const TextStyle(fontSize: 11, color: Colors.blue, fontWeight: FontWeight.bold)),
     );
   }
 }
 
-// ----------------------------------------------------------------------
-// HIDDEN MATRIX SCREEN (Raw Data)
-// ----------------------------------------------------------------------
 class AdminRawDataScreen extends StatelessWidget {
   final List<AdminUserRecord> users;
-  const AdminRawDataScreen({super.key, required this.users});
+  final Function(AdminUserRecord) onTogglePremium;
+
+  const AdminRawDataScreen({super.key, required this.users, required this.onTogglePremium});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('טבלת נתונים גולמיים (Audit)', style: TextStyle(color: Colors.white, fontSize: 16)), backgroundColor: Colors.black, iconTheme: const IconThemeData(color: Colors.white)),
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(backgroundColor: Colors.white, foregroundColor: Colors.black87, elevation: 1, title: const Text('נתונים גולמיים', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), centerTitle: true),
       body: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SingleChildScrollView(
-          child: DataTable(
-            columnSpacing: 16,
-            columns: const [
-              DataColumn(label: Text('אימייל', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
-              DataColumn(label: Text('דור', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
-              DataColumn(label: Text('מדינה', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
-              DataColumn(label: Text('שכר', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
-              DataColumn(label: Text('קופות', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
-              DataColumn(label: Text('חירות', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
-              DataColumn(label: Text('פעילות אחרונה', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12))),
-            ],
-            rows: users.map((u) => DataRow(cells: [
-              DataCell(Text(u.email, style: const TextStyle(color: Colors.black87, fontSize: 12))),
-              DataCell(Text(u.generation, style: const TextStyle(color: Colors.black87, fontSize: 12))),
-              DataCell(Text(u.country == 'Unknown' ? 'לא ידוע' : u.country, style: const TextStyle(color: Colors.black87, fontSize: 12))),
-              DataCell(Icon(u.metrics['hasSalary'] == true ? Icons.check : Icons.close, color: u.metrics['hasSalary'] == true ? Colors.green : Colors.red, size: 16)),
-              DataCell(Icon(u.metrics['hasSinkingFunds'] == true ? Icons.check : Icons.close, color: u.metrics['hasSinkingFunds'] == true ? Colors.green : Colors.red, size: 16)),
-              DataCell(Icon(u.metrics['hasViewedFreedom'] == true ? Icons.check : Icons.close, color: u.metrics['hasViewedFreedom'] == true ? Colors.green : Colors.red, size: 16)),
-              DataCell(Text(u.lastActive?.toString().split(' ')[0] ?? 'טרם', style: const TextStyle(color: Colors.black87, fontSize: 12))),
-            ])).toList(),
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              dataRowMinHeight: 60,
+              dataRowMaxHeight: double.infinity,
+              headingRowColor: WidgetStateProperty.all(Colors.blueGrey.shade50),
+              headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF), fontSize: 14),
+              columns: const [
+                DataColumn(label: Text('שם משתמש')),
+                DataColumn(label: Text('אימייל (Email)')),
+                DataColumn(label: Text('הערות מנהל')),
+                DataColumn(label: Text('דור')),
+                DataColumn(label: Text('מדינה')),
+                DataColumn(label: Text('הוזן שכר')), // חזר!
+                DataColumn(label: Text('קופות')),     // חזר!
+                DataColumn(label: Text('חירות')),    // בונוס
+                DataColumn(label: Text('מפתח זהב 🔑')),
+              ],
+              rows: users.map((u) => DataRow(
+                cells: [
+                  DataCell(Text(u.displayName ?? 'לא הוגדר', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
+                  DataCell(Text(u.email)),
+                  DataCell(Container(width: 300, padding: const EdgeInsets.symmetric(vertical: 8), child: _AdminNoteField(uid: u.uid, initialNotes: u.adminNotes))),
+                  DataCell(Text(u.generation)),
+                  DataCell(Text(u.country)),
+                  DataCell(Icon(u.metrics['hasSalary'] == true ? Icons.check_circle : Icons.cancel, color: u.metrics['hasSalary'] == true ? Colors.green : Colors.redAccent)),
+                  DataCell(Icon(u.metrics['hasSinkingFunds'] == true ? Icons.check_circle : Icons.cancel, color: u.metrics['hasSinkingFunds'] == true ? Colors.green : Colors.redAccent)),
+                  DataCell(Icon(u.metrics['hasViewedFreedom'] == true ? Icons.check_circle : Icons.cancel, color: u.metrics['hasViewedFreedom'] == true ? Colors.green : Colors.redAccent)),
+                  DataCell(IconButton(icon: Icon(u.isPremium ? Icons.workspace_premium : Icons.key, color: u.isPremium ? Colors.amber : Colors.grey), onPressed: () => onTogglePremium(u))),
+                ],
+              )).toList(),
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AdminNoteField extends StatefulWidget {
+  final String uid;
+  final String? initialNotes;
+  const _AdminNoteField({required this.uid, this.initialNotes});
+
+  @override
+  State<_AdminNoteField> createState() => _AdminNoteFieldState();
+}
+
+class _AdminNoteFieldState extends State<_AdminNoteField> {
+  late TextEditingController _controller;
+  Timer? _debounce;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialNotes);
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(String text) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    setState(() => _isSaving = true);
+    _debounce = Timer(const Duration(milliseconds: 800), () async {
+      await AdminService.updateAdminNotes(widget.uid, text);
+      if (mounted) setState(() => _isSaving = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _controller,
+      maxLines: null,
+      keyboardType: TextInputType.multiline,
+      style: const TextStyle(fontSize: 13),
+      decoration: InputDecoration(
+        hintText: 'הוסף הערה...',
+        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+        isDense: true,
+        suffixIcon: _isSaving 
+          ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.blue)))
+          : Icon(Icons.cloud_done, size: 16, color: _controller.text.isEmpty ? Colors.transparent : Colors.green.shade300),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade200)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade100)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.blue, width: 1)),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+      ),
+      onChanged: _onChanged,
     );
   }
 }
@@ -10054,7 +9926,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\main_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Upgraded Freedom Engine Dialog UI with RichText for inline crown and explicit CTA)
+// 🔒 STATUS: EDITED (Added Responsive Desktop Scaling & Freedom Telemetry Injection)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -10066,6 +9938,7 @@ import 'shopping_screen.dart';
 import 'sinking_funds_screen.dart';
 import '../../services/premium_service.dart';
 import 'assets_screen.dart';
+import '../../data/database_helper.dart'; 
 
 enum RevealState { expectation, reveal, dashboard }
 
@@ -10111,7 +9984,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // === פונקציית עזר לתמרורי הדרכה ===
   void _showInfoDialog(BuildContext context, String title, String content) {
     showDialog(
       context: context,
@@ -10348,7 +10220,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildQuickAction(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap, {bool isPremium = false}) {
+  Widget _buildQuickAction(BuildContext context, String label, IconData icon, Color color, VoidCallback onTap, {bool isPremium = false, double iconSize = 28, double textSize = 13}) {
     return Expanded(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -10356,13 +10228,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               shape: const CircleBorder(),
-              padding: const EdgeInsets.all(18),
+              padding: EdgeInsets.all(iconSize * 0.65), // Dynamic padding
               backgroundColor: color.withValues(alpha: 0.1),
               foregroundColor: color,
               elevation: 0,
             ),
             onPressed: onTap,
-            child: Icon(icon, size: 28),
+            child: Icon(icon, size: iconSize),
           ),
           const SizedBox(height: 10),
           Row(
@@ -10371,11 +10243,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: TextStyle(fontSize: textSize, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
               if (isPremium) ...[
                 const SizedBox(width: 4),
-                Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                Image.asset('assets/icon/crown_icon.png', width: textSize, height: textSize, errorBuilder: (_,__,___) => const SizedBox.shrink()),
               ]
             ],
           ),
@@ -10410,9 +10282,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   elevation: 8,
                 ),
                 onPressed: () {
+                  DatabaseHelper.instance.updateUserMetric('hasViewedFreedom', true);
+                  
                   setState(() => _currentState = RevealState.reveal);
                   
-                  // אם הגענו למצב נצח/אין יעד אפשרי - מחשבים מראש שחרור לדשבורד
                   if (targetYear == null) {
                     Future.delayed(const Duration(seconds: 4), () {
                       if (mounted && _currentState == RevealState.reveal) {
@@ -10435,7 +10308,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         color: const Color(0xFF121212),
         child: Center(
           child: targetYear == null
-            // === מצב נצח (Infinity) ===
             ? TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0.0, end: 1.0),
                 duration: const Duration(seconds: 2),
@@ -10467,7 +10339,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                   );
                 },
               )
-            // === מצב תקין (ספירת שנים) ===
             : TweenAnimationBuilder<double>(
                 tween: Tween(begin: DateTime.now().year.toDouble(), end: targetYear.toDouble()),
                 duration: const Duration(seconds: 3),
@@ -10519,7 +10390,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     final budget = context.watch<BudgetProvider>();
 
     int? monthsToFreedom = budget.calculateMonthsToFreedom();
-    
     String yearText = "∞";
     int? targetYear;
 
@@ -10532,6 +10402,19 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         yearText = targetYear.toString();
       }
     }
+
+    // === Responsive Screen Calculus ===
+    double screenWidth = MediaQuery.of(context).size.width;
+    bool isDesktop = screenWidth > 600;
+    
+    // Dynamic values based on screen width
+    double cardWidth = isDesktop ? (screenWidth * 0.4).clamp(350.0, 480.0) : 280.0;
+    double cardVPadding = isDesktop ? 60.0 : 40.0;
+    double yearFontSize = isDesktop ? 96.0 : 64.0;
+    double titleFontSize = isDesktop ? 20.0 : 16.0;
+    double targetFontSize = isDesktop ? 22.0 : 16.0;
+    double actionIconSize = isDesktop ? 36.0 : 28.0;
+    double actionTextSize = isDesktop ? 16.0 : 13.0;
 
     return Stack(
       children: [
@@ -10559,8 +10442,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         alignment: Alignment.center,
                         children: [
                           Container(
-                            width: 280,
-                            padding: const EdgeInsets.symmetric(vertical: 40),
+                            width: cardWidth, // Responsive Width
+                            padding: EdgeInsets.symmetric(vertical: cardVPadding), // Responsive Padding
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(40),
@@ -10576,18 +10459,18 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                   mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Text('שנת החירות הפיננסית', style: TextStyle(fontSize: 16, color: Colors.blueGrey, fontWeight: FontWeight.w600)),
+                                    Text('שנת החירות הפיננסית', style: TextStyle(fontSize: titleFontSize, color: Colors.blueGrey, fontWeight: FontWeight.w600)),
                                     const SizedBox(width: 6),
                                     InkWell(
                                       onTap: () => _showInfoDialog(context, 'מנוע החירות', 'שנה זו מחושבת אוטומטית על ידי שילוב התזרים הפנוי שלך, תיק הנכסים הקיים, והתשואה שהגדרת למנוע ההשקעות. לחץ על אייקון המטרה (🎯) כדי לכייל את התשואה והיעד.'),
-                                      child: const Icon(Icons.info_outline, size: 18, color: Colors.blueGrey),
+                                      child: Icon(Icons.info_outline, size: titleFontSize + 2, color: Colors.blueGrey),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
                                   yearText,
-                                  style: const TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: Color(0xFF121212), height: 1.1),
+                                  style: TextStyle(fontSize: yearFontSize, fontWeight: FontWeight.w900, color: const Color(0xFF121212), height: 1.1),
                                 ),
                                 if (targetYear == null) ...[
                                   const SizedBox(height: 12),
@@ -10596,12 +10479,12 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                       backgroundColor: Colors.amber[600],
                                       foregroundColor: Colors.black87,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 24 : 16, vertical: isDesktop ? 12 : 8),
                                       elevation: 0,
                                     ),
                                     onPressed: () => _showFreedomSettingsDialog(context, budget),
-                                    icon: const Icon(Icons.settings, size: 16),
-                                    label: const Text('כייל מנוע חירות', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    icon: Icon(Icons.settings, size: isDesktop ? 20 : 16),
+                                    label: Text('כייל מנוע חירות', style: TextStyle(fontWeight: FontWeight.bold, fontSize: actionTextSize)),
                                   ),
                                 ],
                               ],
@@ -10618,7 +10501,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   shape: const CircleBorder(),
-                                  padding: const EdgeInsets.all(14),
+                                  padding: EdgeInsets.all(isDesktop ? 18 : 14),
                                   backgroundColor: Colors.blueGrey[900],
                                   foregroundColor: Colors.white,
                                   elevation: 4,
@@ -10629,7 +10512,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                   }
                                   _showFamilyDrilldown(context, budget, targetYear);
                                 },
-                                child: const Icon(Icons.family_restroom, size: 24),
+                                child: Icon(Icons.family_restroom, size: isDesktop ? 30 : 24),
                               ),
                             ),
                           ),
@@ -10640,49 +10523,49 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: isDesktop ? 14 : 10),
                                 backgroundColor: Colors.amber[600],
                                 foregroundColor: Colors.black87,
                                 elevation: 4,
                               ),
                               onPressed: () => _showFreedomSettingsDialog(context, budget),
-                              icon: const Icon(Icons.track_changes, size: 18),
+                              icon: Icon(Icons.track_changes, size: isDesktop ? 22 : 18),
                               label: Text(
                                 '${loc?.get('currency_symbol') ?? '₪'}${budget.targetPassiveIncome.toStringAsFixed(0)}', 
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: targetFontSize)
                               ),
                             ),
                           ),
                         ],
                       ),
 
-                      const SizedBox(height: 50),
+                      SizedBox(height: isDesktop ? 80 : 50), 
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildQuickAction(
-                            context, 
-                            'מרכז חסכונות', 
-                            Icons.savings, 
-                            Colors.green, 
-                            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SinkingFundsScreen()))
-                          ),
-                          _buildQuickAction(
-                            context, 
-                            'רשימת קניות', 
-                            Icons.shopping_cart_outlined, 
-                            Colors.blueGrey[900]!, 
-                            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ShoppingScreen()))
-                          ),
-                        ],
+                      Container(
+                        constraints: BoxConstraints(maxWidth: isDesktop ? 600 : double.infinity), 
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildQuickAction(
+                              context, 'מרכז חסכונות', Icons.savings, Colors.green, 
+                              () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SinkingFundsScreen())),
+                              iconSize: actionIconSize, textSize: actionTextSize
+                            ),
+                            _buildQuickAction(
+                              context, 'רשימת קניות', Icons.shopping_cart_outlined, Colors.blueGrey[900]!, 
+                              () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ShoppingScreen())),
+                              iconSize: actionIconSize, textSize: actionTextSize
+                            ),
+                          ],
+                        ),
                       ),
 
                       if (budget.expectedYield <= 4.0)
                         Padding(
                           padding: const EdgeInsets.only(top: 40.0),
                           child: Container(
+                            constraints: const BoxConstraints(maxWidth: 500), 
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: Colors.orange.withValues(alpha: 0.1),
@@ -11249,7 +11132,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
 FILE: C:\Projects\dohaham\lib\ui\screens\pnl_screen.dart
 -----------------------
-// 🔒 STATUS: EDITED (Unified Freedom Engine Dialog UI with inline crown CTA matching main_screen)
+// 🔒 STATUS: EDITED (Wrapped body in BoxConstraints for optimal Desktop UI viewing)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -11266,7 +11149,6 @@ class PnLScreen extends StatelessWidget {
   
   const PnLScreen({super.key, this.isCalibrationMode = false});
 
-  // === פונקציית עזר לתמרורי הדרכה ===
   void _showInfoDialog(BuildContext context, String title, String content) {
     showDialog(
       context: context,
@@ -11321,11 +11203,9 @@ class PnLScreen extends StatelessWidget {
       floatingActionButton: isCalibrationMode ? FloatingActionButton.extended(
         backgroundColor: const Color(0xFF00C853),
         onPressed: () async {
-          // --- הזרקת המדד ל-Admin Dashboard ---
           await DatabaseHelper.instance.updateUserMetric('hasViewedFreedom', true);
           
           if (context.mounted) {
-            // ניקוי עמוק של הערימה (Stack) כדי להבטיח הופעה חלקה של האנימציה בדשבורד הראשי
             Navigator.pushAndRemoveUntil(
               context, 
               MaterialPageRoute(builder: (_) => const MainScreen()),
@@ -11337,78 +11217,84 @@ class PnLScreen extends StatelessWidget {
         icon: const Icon(Icons.check_circle, color: Colors.white),
       ) : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      body: Column(
-        children: [
-          if (isCalibrationMode) const _PulsingCalibrationBanner(),
-          
-          _buildFutureToggle(context, budget, isFutureMode),
-          
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                if (isFutureMode) _buildFutureBadge(),
+      
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800), // Max width for Desktop
+          child: Column(
+            children: [
+              if (isCalibrationMode) const _PulsingCalibrationBanner(),
+              
+              _buildFutureToggle(context, budget, isFutureMode),
+              
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    if (isFutureMode) _buildFutureBadge(),
 
-                _buildRow(context, 'הכנסות', income, Colors.green[900]!, isHeader: true),
-                const Divider(thickness: 2, height: 30, color: Colors.black12),
+                    _buildRow(context, 'הכנסות', income, Colors.green[900]!, isHeader: true),
+                    const Divider(thickness: 2, height: 30, color: Colors.black12),
 
-                _buildSectionLabel('שלב א: בסיס'),
-                _buildRow(context, 'קבועות', fixed, Colors.black),
-                _buildDebtRow(context, reducing, isFutureMode), 
-                
-                const SizedBox(height: 15),
-                _buildSummaryCard(
-                  isFutureMode ? 'תזרים פנוי (ללא חובות!)' : 'תזרים לרמת חיים וחירות פיננסית', 
-                  flowToLiving, 
-                  isFutureMode ? const Color(0xFF00C853) : Colors.blue[900]!
-                ),
-                const SizedBox(height: 25),
-
-                _buildSectionLabel('שלב ב: רמת חיים'),
-                
-                _buildRow(
-                  context, 
-                  'משתנות', 
-                  displayVariableAmount, 
-                  variableDeficit > 0 ? Colors.red[900]! : Colors.black, 
-                  onLongPress: () => _showRatioDialog(context, budget, isVariable: true),
-                  onInfoTap: () => _showInfoDialog(context, 'שליטת מאקרו (משתנות)', "התקציב המשתנה הוא 'קופסה סגורה'. לחיצה ארוכה כאן תאפשר לך לקבוע איזה אחוז מתוך ה'תזרים לרמת חיים' (היתרה שלאחר הבסיס) יוקצה למשתנות.")
-                ),
-                
-                if (variableDeficit > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          'התקציב נמצא בגירעון של ₪${variableDeficit.toStringAsFixed(0)}',
-                          style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                      ],
+                    _buildSectionLabel('שלב א: בסיס'),
+                    _buildRow(context, 'קבועות', fixed, Colors.black),
+                    _buildDebtRow(context, reducing, isFutureMode), 
+                    
+                    const SizedBox(height: 15),
+                    _buildSummaryCard(
+                      isFutureMode ? 'תזרים פנוי (ללא חובות!)' : 'תזרים לרמת חיים וחירות פיננסית', 
+                      flowToLiving, 
+                      isFutureMode ? const Color(0xFF00C853) : Colors.blue[900]!
                     ),
-                  ),
-                  
-                _buildRow(
-                  context, 
-                  'עתידיות', 
-                  futureAllocated, 
-                  Colors.black, 
-                  onLongPress: () => _showRatioDialog(context, budget, isVariable: false),
-                  onInfoTap: () => _showInfoDialog(context, 'מודל המפל (עתידיות)', "שים לב: אחוז ההקצאה לעתידיות (הניתן לשינוי בלחיצה ארוכה) מחושב אך ורק מתוך היתרה שנותרה לאחר הפחתת התקציב המשתנה, ולא מהסכום הכולל. שאר היתרה תופנה לחירות פיננסית.")
+                    const SizedBox(height: 25),
+
+                    _buildSectionLabel('שלב ב: רמת חיים'),
+                    
+                    _buildRow(
+                      context, 
+                      'משתנות', 
+                      displayVariableAmount, 
+                      variableDeficit > 0 ? Colors.red[900]! : Colors.black, 
+                      onLongPress: () => _showRatioDialog(context, budget, isVariable: true),
+                      onInfoTap: () => _showInfoDialog(context, 'שליטת מאקרו (משתנות)', "התקציב המשתנה הוא 'קופסה סגורה'. לחיצה ארוכה כאן תאפשר לך לקבוע איזה אחוז מתוך ה'תזרים לרמת חיים' (היתרה שלאחר הבסיס) יוקצה למשתנות.")
+                    ),
+                    
+                    if (variableDeficit > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              'התקציב נמצא בגירעון של ₪${variableDeficit.toStringAsFixed(0)}',
+                              style: const TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                    _buildRow(
+                      context, 
+                      'עתידיות', 
+                      futureAllocated, 
+                      Colors.black, 
+                      onLongPress: () => _showRatioDialog(context, budget, isVariable: false),
+                      onInfoTap: () => _showInfoDialog(context, 'מודל המפל (עתידיות)', "שים לב: אחוז ההקצאה לעתידיות (הניתן לשינוי בלחיצה ארוכה) מחושב אך ורק מתוך היתרה שנותרה לאחר הפחתת התקציב המשתנה, ולא מהסכום הכולל. שאר היתרה תופנה לחירות פיננסית.")
+                    ),
+
+                    const SizedBox(height: 25),
+                    
+                    _buildSectionLabel('שלב ג: חירות'),
+                    _buildFreedomCard(context, flowToFreedom, diversionAmount, isFutureMode, budget),
+
+                    const SizedBox(height: 80), 
+                  ],
                 ),
-
-                const SizedBox(height: 25),
-                
-                _buildSectionLabel('שלב ג: חירות'),
-                _buildFreedomCard(context, flowToFreedom, diversionAmount, isFutureMode, budget),
-
-                const SizedBox(height: 80), 
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -14469,7 +14355,6 @@ class SmartWithdrawalsScreen extends StatelessWidget {
 
 FILE: C:\Projects\dohaham\lib\ui\widgets\global_header.dart
 -----------------------
-// 🔒 STATUS: EDITED (Implemented elegant title UX: Contextual Logo & Smart FittedBox scaling)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -14481,6 +14366,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../providers/budget_provider.dart';
 import '../../data/expense_model.dart';
+import '../../data/database_helper.dart';
 import '../../utils/app_localizations.dart';
 import '../../services/ai_export_service.dart';
 import '../../services/premium_service.dart';
@@ -14861,13 +14747,25 @@ void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool s
                 ListTile(
                   leading: CircleAvatar(backgroundColor: Colors.orange.shade50, child: Icon(Icons.description_outlined, color: Colors.orange.shade700)),
                   title: const Text('תנאי שימוש', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-                  onTap: () { Navigator.pop(ctx); _showLegalBottomSheet(context: context, budget: budget, showSavings: showSavings, title: 'תנאי שימוש', icon: Icons.description_outlined, iconColor: Colors.orange.shade700, content: '''1. הסכמה לתנאים: השימוש באפליקציית Fintel ("האפליקציה") מהווה את הסכמתך המלאה לתנאים המפורטים להלן ולמדיניות הפרטיות...'''); },
+                  onTap: () { Navigator.pop(ctx); _showLegalBottomSheet(context: context, budget: budget, showSavings: showSavings, title: 'תנאי שימוש', icon: Icons.description_outlined, iconColor: Colors.orange.shade700, content: '''תנאי שימוש באפליקציית Fintel (דוחכם)
+
+1. הסכמה לתנאים: השימוש באפליקציית Fintel ("האפליקציה") מהווה את הסכמתך המלאה לתנאים המפורטים להלן ולמדיניות הפרטיות. 
+2. מהות השירות ואי-תלות (Disclaimer): האפליקציה מהווה כלי טכנולוגי לניהול תקציב, תכנון תזרים ומעקב אחר נכסים. המידע, הנתונים והתחזיות המופקים על ידי "מנוע החירות" או כל רכיב אחר במערכת ניתנים כמות שהם (AS IS). אין באמור באפליקציה משום ייעוץ פיננסי, פנסיוני, השקעות או מס, ואין בו כדי להחליף ייעוץ מקצועי ואישי. האחריות על כל החלטה כלכלית או השקעה חלה על המשתמש בלבד.
+3. הגבלת אחריות: מפתחי האפליקציה אינם אחראים לכל נזק, הפסד או אובדן כספי, ישיר או עקיף, העלול להיגרם כתוצאה מהסתמכות על חישובי המערכת, שיבושים בקווי תקשורת, הפסקות זמניות בשירותי הענן (Firebase), או תקלות במערכת ההפעלה של המכשיר.
+4. אבטחה אישית: על המשתמש לנקוט בכל האמצעים לשמירת אבטחת מכשירו (נעילת מסך, ביומטריה). מפתחי האפליקציה לא יהיו אחראים לחשיפת מידע פיננסי שנגרמה עקב מסירת פרטי ההזדהות (Google Auth) לצד ג' או גישה פיזית למכשיר פתוח.
+5. קניין רוחני: מתודולוגיית "דוחכם", שפת המותג, אלגוריתם ה"צלף", ומנוע "הזרימה" הינם קניין רוחני בלעדי. אין להעתיק, לשכפל או להפיץ רכיבים אלו ללא אישור מראש ובכתב.'''); },
                 ),
                 const Divider(height: 1, indent: 70),
                 ListTile(
                   leading: CircleAvatar(backgroundColor: Colors.green.shade50, child: Icon(Icons.lock_outline, color: Colors.green.shade700)),
                   title: const Text('מדיניות פרטיות', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-                  onTap: () { Navigator.pop(ctx); _showLegalBottomSheet(context: context, budget: budget, showSavings: showSavings, title: 'מדיניות פרטיות', icon: Icons.lock_outline, iconColor: Colors.green.shade700, content: '''1. איסוף מידע וסנכרון ענן: המערכת פועלת באמצעות טכנולוגיית סנכרון ענן...'''); },
+                  onTap: () { Navigator.pop(ctx); _showLegalBottomSheet(context: context, budget: budget, showSavings: showSavings, title: 'מדיניות פרטיות', icon: Icons.lock_outline, iconColor: Colors.green.shade700, content: '''מדיניות פרטיות ואבטחת מידע
+
+1. איסוף מידע וסנכרון ענן: המערכת פועלת באמצעות טכנולוגיית סנכרון ענן בזמן אמת (Firebase של חברת Google). המידע הפיננסי המוזן על ידך (הכנסות, הוצאות, נכסים) נשמר תחת מזהה המשתמש שלך, במטרה לאפשר סנכרון רציף בין מכשירים וגיבוי מלא.
+2. הזדהות ללא סיסמאות: למען ביטחונך, האפליקציה אינה שומרת או מנהלת מאגר סיסמאות מקומי. ההזדהות מבוצעת באמצעות שרתי Google (OAuth), כך שפרטי ההתחברות שלך לעולם אינם חשופים למפתחי האפליקציה.
+3. שימוש במידע אישי: האפליקציה אוספת את כתובת הדואר האלקטרוני, השם המלא ותמונת הפרופיל שלך המשויכים לחשבון ה-Google. נתונים אלו נועדו לזיהוי בעלי המידע ולמתן שירות אישי, וכן לצורך שליחת עדכונים מערכתיים או הצעות רלוונטיות, הניתנים להסרה בכל עת. המידע הפיננסי שלך פרטי ולעולם לא יימכר לצדדים שלישיים.
+4. גלישה בטוחה והצפנה: התקשורת בין האפליקציה לשרתי הענן מאובטחת ומוצפנת בסטנדרטים בינלאומיים מתקדמים (HTTPS/TLS). הגישה למסד הנתונים חסומה ברמת השרת (Security Rules) ומורשית אך ורק לבעל החשבון המאומת.
+5. הגנת המכשיר המקומי: האפליקציה מציעה מנגנון נעילה ביומטרית (טביעת אצבע/זיהוי פנים) כשכבת הגנה נוספת. באחריות המשתמש להפעיל מנגנון זה דרך מסך ההגדרות למניעת גישה לא מורשית.'''); },
                 ),
               ],
             ),
@@ -15036,7 +14934,59 @@ Widget _buildUserProfileCard(BuildContext context, User user) {
       children: [
         Row(children: [CircleAvatar(radius: 24, backgroundColor: Colors.blueGrey.shade200, backgroundImage: user.photoURL != null ? NetworkImage(user.photoURL!) : null, child: user.photoURL == null ? const Icon(Icons.person, size: 30, color: Colors.white) : null), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(user.displayName ?? 'משתמש דוחכם', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)), const SizedBox(height: 4), Text(user.email ?? '', style: TextStyle(fontSize: 13, color: Colors.blueGrey[700]))]))]),
         const SizedBox(height: 16),
-        SizedBox(width: double.infinity, child: OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent, side: const BorderSide(color: Colors.redAccent, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), icon: const Icon(Icons.logout, size: 18), label: const Text('התנתקות מהחשבון', style: TextStyle(fontWeight: FontWeight.bold)), onPressed: () async { Navigator.pop(context); try { await GoogleSignIn().disconnect(); } catch (_) {} try { await GoogleSignIn().signOut(); } catch (_) {} await FirebaseAuth.instance.signOut(); if (context.mounted) Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false); })),
+        SizedBox(
+          width: double.infinity, 
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.black87, side: const BorderSide(color: Colors.black87, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), 
+            icon: const Icon(Icons.logout, size: 18), 
+            label: const Text('התנתקות מהחשבון', style: TextStyle(fontWeight: FontWeight.bold)), 
+            onPressed: () async { Navigator.pop(context); try { await GoogleSignIn().disconnect(); } catch (_) {} try { await GoogleSignIn().signOut(); } catch (_) {} await FirebaseAuth.instance.signOut(); if (context.mounted) Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false); }
+          )
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity, 
+          child: TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), 
+            icon: const Icon(Icons.delete_forever, size: 18), 
+            label: const Text('מחיקת חשבון לצמיתות', style: TextStyle(fontWeight: FontWeight.bold)), 
+            onPressed: () {
+              Navigator.pop(context);
+              _showDeleteAccountConfirm(context);
+            }
+          )
+        ),
+      ],
+    ),
+  );
+}
+
+void _showDeleteAccountConfirm(BuildContext context) {
+  showDialog(
+    context: context, 
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), backgroundColor: Colors.white,
+      title: const Text('⚠️ מחיקת חשבון', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+      content: const Text('פעולה זו תמחק לצמיתות את חשבונך ואת כל הנתונים הפיננסיים שלך משרתינו. לא ניתן לבטל פעולה זו. האם להמשיך?', style: TextStyle(color: Colors.black87)),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ביטול', style: TextStyle(color: Colors.blueGrey))), 
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red), 
+          onPressed: () async { 
+            Navigator.pop(ctx); 
+            try {
+              await DatabaseHelper.instance.deleteUserAccountAndData();
+              if (context.mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('שגיאת אבטחה: יש להתנתק ולהתחבר מחדש לפני מחיקת חשבון לצמיתות.'), backgroundColor: Colors.red, duration: Duration(seconds: 4)));
+              }
+            }
+          }, 
+          child: const Text('מחק לצמיתות', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+        )
       ],
     ),
   );

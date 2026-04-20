@@ -1,3 +1,4 @@
+// 🔒 STATUS: EDITED (Removed unnecessary null-aware operator for localization)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -121,7 +122,7 @@ class _GlobalHeaderState extends State<GlobalHeader> {
                   ),
                 )
               : Text(
-                  loc?.get('appTitle') ?? 'Fintel',
+                  loc.get('appTitle'),
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: Colors.black87),
                 ),
           ),

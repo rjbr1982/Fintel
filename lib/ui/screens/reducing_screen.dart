@@ -1,4 +1,4 @@
-// 🔒 STATUS: FINAL (Replaced text emoji crown with crown_icon.png)
+// 🔒 STATUS: EDITED (Replaced text emoji crown with crown_icon.png, Removed unnecessary null-aware operator)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/debt_provider.dart';
@@ -88,7 +88,7 @@ class _ReducingScreenState extends State<ReducingScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: GlobalHeader(
-        title: loc?.get('debts_title') ?? 'מכונת זמן פיננסית',
+        title: loc.get('debts_title'),
       ),
       floatingActionButton: _isLoadingPremium ? null : FloatingActionButton(
         onPressed: () => _showDebtDialog(context, debtProvider),

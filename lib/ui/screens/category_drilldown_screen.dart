@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
+// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding, Removed dead null-aware expressions)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -853,8 +853,8 @@ class CategoryDrilldownScreen extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Text('${loc?.get('currency_symbol') ?? '₪'}${(total).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue)),
-                              Text('${loc?.get('currency_symbol') ?? '₪'}${(total * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                              Text('${loc.get('currency_symbol')}${(total).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue)),
+                              Text('${loc.get('currency_symbol')}${(total * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                             ],
                           ),
                           const SizedBox(width: 8),
@@ -1734,8 +1734,8 @@ class SpecificExpensesScreen extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text('${loc?.get('currency_symbol') ?? '₪'}${(displayAmount).toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: expense.isLocked ? Colors.orange[800] : Colors.black)),
-            Text('${loc?.get('currency_symbol') ?? '₪'}${(displayAmount * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
+            Text('${loc.get('currency_symbol')}${(displayAmount).toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: expense.isLocked ? Colors.orange[800] : Colors.black)),
+            Text('${loc.get('currency_symbol')}${(displayAmount * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
             if (isFuture) const Text('הפרשה חודשית', style: TextStyle(fontSize: 10, color: Colors.grey)),
           ]),
           const SizedBox(width: 12),
@@ -1855,8 +1855,8 @@ class SpecificExpensesScreen extends StatelessWidget {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text('${loc?.get('currency_symbol') ?? '₪'}${(total).toStringAsFixed(0)}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue)),
-                            Text('${loc?.get('currency_symbol') ?? '₪'}${(total * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                            Text('${loc.get('currency_symbol')}${(total).toStringAsFixed(0)}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue)),
+                            Text('${loc.get('currency_symbol')}${(total * 12).toStringAsFixed(0)} בשנה', style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
                           ],
                         ),
                         const SizedBox(width: 8),

@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Responsive Desktop Scaling & Freedom Telemetry Injection)
+// 🔒 STATUS: EDITED (Added Responsive Desktop Scaling & Freedom Telemetry Injection, Removed unnecessary null-aware operators)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -603,7 +603,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               onPressed: () => _showFreedomSettingsDialog(context, budget),
                               icon: Icon(Icons.track_changes, size: isDesktop ? 22 : 18),
                               label: Text(
-                                '${loc?.get('currency_symbol') ?? '₪'}${budget.targetPassiveIncome.toStringAsFixed(0)}', 
+                                '${loc.get('currency_symbol')}${budget.targetPassiveIncome.toStringAsFixed(0)}', 
                                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: targetFontSize)
                               ),
                             ),

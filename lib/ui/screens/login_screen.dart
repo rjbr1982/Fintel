@@ -1,9 +1,10 @@
-// 🔒 STATUS: EDITED (Removed wallet fallback icon to enforce brand identity)
+// 🔒 STATUS: EDITED (Removed wallet fallback icon to enforce brand identity, Implemented Bulletproof Legal Layout & L10n)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../data/database_helper.dart';
+import '../../utils/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -79,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!hasAccepted) {
           if (mounted) {
             setState(() => _isLoading = false);
-            _showConsentDialog(); // הקפצת מסך אישור עם Checkbox
+            _showUnifiedConsentDialog(); // הקפצת מסך אישור ה-Bulletproof
           }
           return;
         }
@@ -113,13 +114,14 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // חלונית שלב 1: הצהרת הסכמה מבוססת Checkbox
-  void _showConsentDialog() {
+  // חלונית משפטית חסינת-קריסות (Bulletproof Layout) משולבת עם Checkbox
+  void _showUnifiedConsentDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         bool isChecked = false;
+        final l10n = AppLocalizations.of(context);
         
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -128,54 +130,69 @@ class _LoginScreenState extends State<LoginScreen> {
               child: AlertDialog(
                 backgroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                title: const Text(
-                  'ברוכים הבאים ל-Fintel',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                title: Text(
+                  l10n.translate('legal_terms'),
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
                   textAlign: TextAlign.center,
                 ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'על מנת להתחיל להשתמש במערכת, עליך לאשר את תנאי השימוש ומדיניות הפרטיות שלנו.',
-                      style: TextStyle(color: Colors.blueGrey, height: 1.4),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                            value: isChecked,
-                            activeColor: const Color(0xFF00A3FF),
-                            onChanged: (val) {
-                              setDialogState(() => isChecked = val ?? false);
-                            },
+                content: SizedBox(
+                  width: double.maxFinite,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        height: 350, // גובה קשיח למניעת קריסות גלילה (Bulletproof Layout)
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Scrollbar(
+                          thumbVisibility: true,
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            child: Text(
+                              l10n.translate('terms_full_text'),
+                              style: const TextStyle(fontSize: 13, height: 1.5, color: Colors.black87),
+                              textAlign: TextAlign.right,
+                              textDirection: TextDirection.rtl,
+                            ),
                           ),
-                          Expanded(
-                            child: InkWell(
-                              onTap: _showFullLegalTextDialog, // פתיחת החלונית המלאה
-                              child: const Text(
-                                'אני מסכים/ה לתנאי השימוש ומדיניות הפרטיות (לחץ לקריאה)',
-                                style: TextStyle(
-                                  color: Color(0xFF00A3FF),
-                                  decoration: TextDecoration.underline,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Checkbox(
+                              value: isChecked,
+                              activeColor: const Color(0xFF00A3FF),
+                              onChanged: (val) {
+                                setDialogState(() => isChecked = val ?? false);
+                              },
+                            ),
+                            Expanded(
+                              child: Text(
+                                l10n.translate('accept_terms_link'),
+                                style: const TextStyle(
+                                  color: Colors.black87,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 actionsAlignment: MainAxisAlignment.spaceBetween,
                 actions: [
@@ -184,7 +201,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       await _forceDeepSignOut();
                       if (context.mounted) Navigator.of(context).pop();
                     },
-                    child: const Text('התנתק', style: TextStyle(color: Colors.redAccent)),
+                    child: Text(
+                      l10n.translate('close'), 
+                      style: const TextStyle(color: Colors.redAccent)
+                    ),
                   ),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -195,7 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: isChecked ? () async {
                       await DatabaseHelper.instance.updateUserMetric('hasAcceptedTerms', true);
                       if (context.mounted) Navigator.of(context).pop();
-                    } : null, // הכפתור נעול כל עוד לא סומן ה-Checkbox
+                    } : null,
                     child: const Text('המשך לדשבורד', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
@@ -207,90 +227,15 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // חלונית שלב 2: הטקסט המשפטי המלא
-  void _showFullLegalTextDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Container(
-            constraints: const BoxConstraints(maxHeight: 600, maxWidth: 600),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('תנאי שימוש ופרטיות', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-                const Divider(),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: const SingleChildScrollView(
-                      physics: BouncingScrollPhysics(),
-                      child: Text(
-                        '''תנאי שימוש באפליקציית Fintel (דוחכם)
-
-1. הסכמה לתנאים: השימוש באפליקציית Fintel ("האפליקציה") מהווה את הסכמתך המלאה לתנאים המפורטים להלן ולמדיניות הפרטיות. 
-2. מהות השירות ואי-תלות (Disclaimer): האפליקציה מהווה כלי טכנולוגי לניהול תקציב, תכנון תזרים ומעקב אחר נכסים. המידע, הנתונים והתחזיות המופקים על ידי "מנוע החירות" או כל רכיב אחר במערכת ניתנים כמות שהם (AS IS). אין באמור באפליקציה משום ייעוץ פיננסי, פנסיוני, השקעות או מס, ואין בו כדי להחליף ייעוץ מקצועי ואישי. האחריות על כל החלטה כלכלית או השקעה חלה על המשתמש בלבד.
-3. הגבלת אחריות: מפתחי האפליקציה אינם אחראים לכל נזק, הפסד או אובדן כספי, ישיר או עקיף, העלול להיגרם כתוצאה מהסתמכות על חישובי המערכת, שיבושים בקווי תקשורת, הפסקות זמניות בשירותי הענן (Firebase), או תקלות במערכת ההפעלה של המכשיר.
-4. אבטחה אישית: על המשתמש לנקוט בכל האמצעים לשמירת אבטחת מכשירו (נעילת מסך, ביומטריה). מפתחי האפליקציה לא יהיו אחראים לחשיפת מידע פיננסי שנגרמה עקב מסירת פרטי ההזדהות (Google Auth) לצד ג' או גישה פיזית למכשיר פתוח.
-5. קניין רוחני: מתודולוגיית "דוחכם", שפת המותג, אלגוריתם ה"צלף", ומנוע "הזרימה" הינם קניין רוחני בלעדי. אין להעתיק, לשכפל או להפיץ רכיבים אלו ללא אישור מראש ובכתב.
-
-מדיניות פרטיות ואבטחת מידע
-
-1. איסוף מידע וסנכרון ענן: המערכת פועלת באמצעות טכנולוגיית סנכרון ענן בזמן אמת (Firebase של חברת Google). המידע הפיננסי המוזן על ידך (הכנסות, הוצאות, נכסים) נשמר תחת מזהה המשתמש שלך, במטרה לאפשר סנכרון רציף בין מכשירים וגיבוי מלא.
-2. הזדהות ללא סיסמאות: למען ביטחונך, האפליקציה אינה שומרת או מנהלת מאגר סיסמאות מקומי. ההזדהות מבוצעת באמצעות שרתי Google (OAuth), כך שפרטי ההתחברות שלך לעולם אינם חשופים למפתחי האפליקציה.
-3. שימוש במידע אישי: האפליקציה אוספת את כתובת הדואר האלקטרוני, השם המלא ותמונת הפרופיל שלך המשויכים לחשבון ה-Google. נתונים אלו נועדו לזיהוי בעלי המידע ולמתן שירות אישי, וכן לצורך שליחת עדכונים מערכתיים או הצעות רלוונטיות, הניתנים להסרה בכל עת. המידע הפיננסי שלך פרטי ולעולם לא יימכר לצדדים שלישיים.
-4. גלישה בטוחה והצפנה: התקשורת בין האפליקציה לשרתי הענן מאובטחת ומוצפנת בסטנדרטים בינלאומיים מתקדמים (HTTPS/TLS). הגישה למסד הנתונים חסומה ברמת השרת (Security Rules) ומורשית אך ורק לבעל החשבון המאומת.
-5. הגנת המכשיר המקומי: האפליקציה מציעה מנגנון נעילה ביומטרית (טביעת אצבע/זיהוי פנים) כשכבת הגנה נוספת. באחריות המשתמש להפעיל מנגנון זה דרך מסך ההגדרות למניעת גישה לא מורשית.''',
-                        style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.6),
-                        textAlign: TextAlign.right,
-                        textDirection: TextDirection.rtl,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueGrey,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('סגור מסמך'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.white, // רקע לבן נקי ויוקרתי
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Stack(
           children: [
-            // הדר (Header) עם לוגו סטטי וטקסט - למעלה מימין
             Positioned(
               top: 24,
               right: 24,
@@ -299,16 +244,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.asset(
-                      'assets/icon/fintel_icon.png', // אייקון משתמש חינמי/כניסה
+                      'assets/icon/fintel_icon.png',
                       width: 36,
                       height: 36,
                       fit: BoxFit.cover,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Fintel',
-                    style: TextStyle(
+                  Text(
+                    l10n.translate('app_title'),
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
                       color: Colors.black87,
@@ -319,7 +264,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             
-            // מרכז המסך - קריאה לפעולה וכפתור התחברות
             Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -352,7 +296,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? const CircularProgressIndicator(color: Color(0xFF00A3FF))
                         : ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1A1A1A), // כפתור פרימיום שחור
+                              backgroundColor: const Color(0xFF1A1A1A),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -370,9 +314,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 height: 18,
                               ),
                             ),
-                            label: const Text(
-                              'המשך עם Google',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            label: Text(
+                              l10n.translate('login_with_google'),
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                             ),
                             onPressed: _signInWithGoogle,
                           ),
