@@ -1,9 +1,11 @@
-// 🔒 STATUS: EDITED (Added UID, isPremium tracking, and Golden Key toggle method)
+// 🔒 STATUS: EDITED (Added adminNotes field and update method)
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdminUserRecord {
   final String uid;
   final String email;
+  final String? displayName;
+  final String? adminNotes; // 📝 שדה חדש להערות מנהל
   final String generation;
   final String country;
   final DateTime? createdAt;
@@ -14,6 +16,8 @@ class AdminUserRecord {
   AdminUserRecord({
     required this.uid,
     required this.email,
+    this.displayName,
+    this.adminNotes,
     required this.generation,
     required this.country,
     this.createdAt,
@@ -44,11 +48,27 @@ class AdminService {
 
   static Future<List<AdminUserRecord>> fetchAllUsers() async {
     final snap = await _db.collection('users').get();
-    return snap.docs.map((doc) {
+    
+    final users = await Future.wait(snap.docs.map((doc) async {
       final data = doc.data();
+      
+      final familySnap = await _db.collection('users')
+          .doc(doc.id)
+          .collection('family_members')
+          .orderBy('birthYear', descending: false)
+          .limit(1)
+          .get();
+
+      String? name;
+      if (familySnap.docs.isNotEmpty) {
+        name = familySnap.docs.first.data()['name'];
+      }
+
       return AdminUserRecord(
         uid: doc.id,
         email: data['email'] ?? 'Unknown',
+        displayName: name ?? 'לא הוגדר שם',
+        adminNotes: data['adminNotes'] as String?, // שליפת ההערה
         generation: data['generation'] ?? 'Regular',
         country: data['country'] ?? 'Unknown',
         createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
@@ -56,10 +76,18 @@ class AdminService {
         metrics: data['metrics'] is Map ? Map<String, dynamic>.from(data['metrics']) : {},
         isPremium: data['isPremium'] == true,
       );
-    }).toList();
+    }));
+
+    return users;
   }
 
-  // 🔑 הפונקציה לשדרוג משתמש ידנית (מפתח הזהב)
+  // 📝 פונקציה חדשה לעדכון הערות מנהל
+  static Future<void> updateAdminNotes(String uid, String notes) async {
+    await _db.collection('users').doc(uid).set({
+      'adminNotes': notes,
+    }, SetOptions(merge: true));
+  }
+
   static Future<void> toggleUserPremium(String uid, bool newStatus) async {
     await _db.collection('users').doc(uid).set({
       'isPremium': newStatus,

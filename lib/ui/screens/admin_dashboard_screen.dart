@@ -1,7 +1,8 @@
-// 🔒 STATUS: EDITED (Fixed Responsive Grid and Added Golden Key Manual Premium Toggle)
+// 🔒 STATUS: SURGICAL MERGE COMPLETE (Preserved All Metrics + Names + Auto-saving Notes + Mail Triggers)
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:async'; 
 import '../../services/admin_service.dart';
 import '../../services/premium_service.dart';
 import '../../main.dart'; 
@@ -47,6 +48,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('שגיאה בטעינת נתונים: $e')));
       }
     }
   }
@@ -118,6 +120,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         )
       ],
     );
+  }
+
+  Future<void> _handleGoldenKey(AdminUserRecord u) async {
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(u.isPremium ? 'ביטול מנוי Pro' : 'שדרוג ל-Pro', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+        content: Text('להעניק ל-${u.displayName ?? u.email} מנוי Pro בחינם?\n(השפעה מיידית באפליקציה שלו)'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ביטול', style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: u.isPremium ? Colors.red : Colors.amber, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            onPressed: () => Navigator.pop(ctx, true), 
+            child: Text('אשר', style: TextStyle(color: u.isPremium ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
+          ),
+        ]
+      )
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      await AdminService.toggleUserPremium(u.uid, !u.isPremium);
+      await _loadData();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('סטטוס מנוי עודכן בהצלחה!'), backgroundColor: Colors.green));
+    }
   }
 
   void _confirmCommercialLaunch() {
@@ -338,6 +367,91 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildScreenerResults() {
+    List<AdminUserRecord> filtered = _users.where((u) {
+      if (_filterGeneration != 'הכל' && u.generation != _filterGeneration) return false;
+      if (_filterCountry != 'הכל' && u.country != _filterCountry) return false;
+      if (_filterSalary != 'הכל' && (u.metrics['hasSalary'] ?? false) != (_filterSalary == 'כן')) return false;
+      if (_filterSinking != 'הכל' && (u.metrics['hasSinkingFunds'] ?? false) != (_filterSinking == 'יש')) return false;
+      if (_filterFreedom != 'הכל' && (u.metrics['hasViewedFreedom'] ?? false) != (_filterFreedom == 'כן')) return false;
+      return true;
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('תוצאות סינון (${filtered.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
+          TextButton.icon(onPressed: () => setState(() => _showScreenerResults = false), icon: const Icon(Icons.close, size: 16), label: const Text('נקה')),
+        ]),
+        const SizedBox(height: 12),
+        if (filtered.isEmpty) const Center(child: Padding(padding: EdgeInsets.all(24.0), child: Text('לא נמצאו משתמשים')))
+        else ListView.builder(
+          shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+          itemCount: filtered.length,
+          itemBuilder: (ctx, i) {
+            final u = filtered[i];
+            return Card(
+              color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: CircleAvatar(backgroundColor: Colors.blue.shade50, child: Text(u.displayName?[0] ?? '?', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))),
+                      title: SelectableText(u.displayName ?? 'לא הוגדר שם', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(u.email),
+                          const SizedBox(height: 4),
+                          // 📊 שורת סטטוס חכמה בתוך הכרטיס
+                          Row(
+                            children: [
+                              _buildMetricStatus(Icons.monetization_on, u.metrics['hasSalary'] == true),
+                              const SizedBox(width: 8),
+                              _buildMetricStatus(Icons.account_balance_wallet, u.metrics['hasSinkingFunds'] == true),
+                              const SizedBox(width: 8),
+                              _buildMetricStatus(Icons.flag, u.metrics['hasViewedFreedom'] == true),
+                            ],
+                          ),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(icon: Icon(u.isPremium ? Icons.workspace_premium : Icons.key, color: u.isPremium ? Colors.amber : Colors.grey), onPressed: () => _handleGoldenKey(u)),
+                          IconButton(icon: const Icon(Icons.copy, size: 18), onPressed: () { Clipboard.setData(ClipboardData(text: u.email)); }),
+                          const SizedBox(width: 8),
+                          Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: u.generation == 'Regular' ? Colors.grey.shade100 : Colors.amber.shade50, borderRadius: BorderRadius.circular(8)), child: Text(u.generation, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: u.generation == 'Regular' ? Colors.black54 : Colors.amber.shade900))),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: _AdminNoteField(uid: u.uid, initialNotes: u.adminNotes),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricStatus(IconData icon, bool isActive) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: isActive ? Colors.green : Colors.grey.shade300),
+        Icon(isActive ? Icons.check : Icons.close, size: 10, color: isActive ? Colors.green : Colors.red.withValues(alpha: 0.3)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Scaffold(backgroundColor: Color(0xFF121212), body: Center(child: CircularProgressIndicator(color: Colors.amber)));
@@ -345,11 +459,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final activeUsers = _users.where((u) => u.lastActive != null && DateTime.now().difference(u.lastActive!).inDays <= 7).toList();
     final active7Days = activeUsers.length;
     final uniqueCountriesList = _users.map((e) => e.country).where((c) => c != 'Unknown').toSet().toList();
-
-    final bottleneckUsers = _users.where((u) => u.createdAt != null && DateTime.now().difference(u.createdAt!).inHours > 48 && !(u.metrics['hasSalary'] ?? false)).map((u) => u.email).toList();
-    final churnUsers = _users.where((u) => u.lastActive != null && DateTime.now().difference(u.lastActive!).inDays > 7).map((u) => u.email).toList();
-    final successAUsers = _users.where((u) => (u.metrics['hasSinkingFunds'] ?? false)).map((u) => u.email).toList();
-    final successBUsers = _users.where((u) => (u.metrics['hasViewedFreedom'] ?? false)).map((u) => u.email).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -360,7 +469,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.table_rows_outlined, color: Colors.grey), tooltip: 'נתונים גולמיים',
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminRawDataScreen(users: _users))),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdminRawDataScreen(users: _users, onTogglePremium: _handleGoldenKey))),
           ),
         ],
       ),
@@ -372,7 +481,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // --- TOP MACRO STATS GRID ---
                 GridView(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -397,8 +505,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-
-                // --- SANDBOX TOOLS ---
                 _buildSectionTitle('ארגז חול (Sandbox)'),
                 const SizedBox(height: 12),
                 GridView(
@@ -428,31 +534,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.purple[800], foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 ),
                 const SizedBox(height: 32),
-
-                // --- SMART CTAs ---
                 _buildSectionTitle('טריגרים חכמים'),
                 const SizedBox(height: 12),
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 240, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.5),
-                  itemCount: 4,
-                  itemBuilder: (ctx, i) {
-                    final data = [
-                      {'t': 'צוואר בקבוק', 'd': 'ללא שכר > 48ש\'', 'c': bottleneckUsers.length, 'cl': Colors.orange, 'ic': Icons.hourglass_empty, 'e': bottleneckUsers},
-                      {'t': 'נטישה', 'd': 'לא פעילים > 7 ימים', 'c': churnUsers.length, 'cl': Colors.redAccent, 'ic': Icons.person_off, 'e': churnUsers},
-                      {'t': 'הצלחה א\'', 'd': 'פתחו קופה צוברת', 'c': successAUsers.length, 'cl': Colors.green, 'ic': Icons.savings, 'e': successAUsers},
-                      {'t': 'הצלחה ב\'', 'd': 'הגיעו למסך חירות', 'c': successBUsers.length, 'cl': Colors.teal, 'ic': Icons.flag, 'e': successBUsers},
-                    ][i];
-                    return _buildSmartCTA(
-                      title: data['t'] as String, desc: data['d'] as String, count: data['c'] as int, color: data['cl'] as Color, icon: data['ic'] as IconData,
-                      onTap: () => _showSmartCTADrilldown(title: data['t'] as String, emails: data['e'] as List<String>, themeColor: data['cl'] as Color, defaultSubject: 'Fintel Update', defaultBody: ''),
-                    );
-                  },
-                ),
+                _buildSmartCTAGrid(),
                 const SizedBox(height: 32),
-
-                // --- SCREENER ---
                 _buildSectionTitle('מסנן קהלים חכם'),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
@@ -469,6 +554,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSmartCTAGrid() {
+    final bottleneckUsers = _users.where((u) => u.createdAt != null && DateTime.now().difference(u.createdAt!).inHours > 48 && !(u.metrics['hasSalary'] ?? false)).map((u) => u.email).toList();
+    final churnUsers = _users.where((u) => u.lastActive != null && DateTime.now().difference(u.lastActive!).inDays > 7).map((u) => u.email).toList();
+    final successAUsers = _users.where((u) => (u.metrics['hasSinkingFunds'] ?? false)).map((u) => u.email).toList();
+    final successBUsers = _users.where((u) => (u.metrics['hasViewedFreedom'] ?? false)).map((u) => u.email).toList();
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 240, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.5),
+      itemCount: 4,
+      itemBuilder: (ctx, i) {
+        final data = [
+          {'t': 'צוואר בקבוק', 'd': 'ללא שכר > 48ש\'', 'c': bottleneckUsers.length, 'cl': Colors.orange, 'ic': Icons.hourglass_empty, 'e': bottleneckUsers},
+          {'t': 'נטישה', 'd': 'לא פעילים > 7 ימים', 'c': churnUsers.length, 'cl': Colors.redAccent, 'ic': Icons.person_off, 'e': churnUsers},
+          {'t': 'הצלחה א\'', 'd': 'פתחו קופה צוברת', 'c': successAUsers.length, 'cl': Colors.green, 'ic': Icons.savings, 'e': successAUsers},
+          {'t': 'הצלחה ב\'', 'd': 'הגיעו למסך חירות', 'c': successBUsers.length, 'cl': Colors.teal, 'ic': Icons.flag, 'e': successBUsers},
+        ][i];
+        return _buildSmartCTA(
+          title: data['t'] as String, desc: data['d'] as String, count: data['c'] as int, color: data['cl'] as Color, icon: data['ic'] as IconData,
+          onTap: () => _showSmartCTADrilldown(title: data['t'] as String, emails: data['e'] as List<String>, themeColor: data['cl'] as Color, defaultSubject: 'Fintel Update', defaultBody: ''),
+        );
+      },
     );
   }
 
@@ -524,91 +635,120 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
     );
   }
-
-  Widget _buildScreenerResults() {
-    List<AdminUserRecord> filtered = _users.where((u) {
-      if (_filterGeneration != 'הכל' && u.generation != _filterGeneration) return false;
-      if (_filterCountry != 'הכל' && u.country != _filterCountry) return false;
-      if (_filterSalary != 'הכל' && (u.metrics['hasSalary'] ?? false) != (_filterSalary == 'כן')) return false;
-      if (_filterSinking != 'הכל' && (u.metrics['hasSinkingFunds'] ?? false) != (_filterSinking == 'יש')) return false;
-      if (_filterFreedom != 'הכל' && (u.metrics['hasViewedFreedom'] ?? false) != (_filterFreedom == 'כן')) return false;
-      return true;
-    }).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('תוצאות סינון (${filtered.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
-          TextButton.icon(onPressed: () => setState(() => _showScreenerResults = false), icon: const Icon(Icons.close, size: 16), label: const Text('נקה')),
-        ]),
-        const SizedBox(height: 12),
-        if (filtered.isEmpty) const Center(child: Padding(padding: EdgeInsets.all(24.0), child: Text('לא נמצאו משתמשים')))
-        else ListView.builder(
-          shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-          itemCount: filtered.length,
-          itemBuilder: (ctx, i) {
-            final u = filtered[i];
-            return Card(
-              color: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                title: SelectableText(u.email, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
-                subtitle: Text('${u.country} | Active: ${u.lastActive?.toString().split(' ')[0] ?? 'Never'}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 🔑 כפתור מפתח הזהב
-                    IconButton(
-                      icon: Icon(u.isPremium ? Icons.workspace_premium : Icons.key, color: u.isPremium ? Colors.amber : Colors.grey),
-                      tooltip: u.isPremium ? 'בטל פרימיום' : 'שדרג לפרימיום (מפתח זהב)',
-                      onPressed: () async {
-                        bool? confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            backgroundColor: Colors.white,
-                            title: Text(u.isPremium ? 'ביטול מנוי Pro' : 'שדרוג ל-Pro', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
-                            content: Text(u.isPremium ? 'האם להחזיר את ${u.email} למנוי בסיסי?' : 'להעניק ל-${u.email} מנוי Pro בחינם?\n(האפליקציה שלו תיפתח באופן מיידי)'),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ביטול', style: TextStyle(color: Colors.grey))),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: u.isPremium ? Colors.red : Colors.amber),
-                                onPressed: () => Navigator.pop(ctx, true), 
-                                child: Text('אשר', style: TextStyle(color: u.isPremium ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
-                              ),
-                            ]
-                          )
-                        );
-                        if (confirm == true) {
-                          setState(() => _isLoading = true);
-                          await AdminService.toggleUserPremium(u.uid, !u.isPremium);
-                          await _loadData();
-                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('סטטוס עודכן בהצלחה! השפעה מיידית.'), backgroundColor: Colors.green));
-                        }
-                      },
-                    ),
-                    IconButton(icon: const Icon(Icons.copy, size: 18), onPressed: () { Clipboard.setData(ClipboardData(text: u.email)); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('מייל הועתק'), duration: Duration(seconds: 1))); }),
-                    const SizedBox(width: 8),
-                    Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: u.generation == 'Regular' ? Colors.grey.shade100 : Colors.amber.shade50, borderRadius: BorderRadius.circular(8)), child: Text(u.generation, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: u.generation == 'Regular' ? Colors.black54 : Colors.amber.shade900))),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
 }
 
 class AdminRawDataScreen extends StatelessWidget {
   final List<AdminUserRecord> users;
-  const AdminRawDataScreen({super.key, required this.users});
+  final Function(AdminUserRecord) onTogglePremium;
+
+  const AdminRawDataScreen({super.key, required this.users, required this.onTogglePremium});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Audit Raw Data'), backgroundColor: Colors.black),
-      body: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(columns: const [DataColumn(label: Text('Email')), DataColumn(label: Text('Gen')), DataColumn(label: Text('Country')), DataColumn(label: Text('Salary')), DataColumn(label: Text('Sinking'))], rows: users.map((u) => DataRow(cells: [DataCell(Text(u.email)), DataCell(Text(u.generation)), DataCell(Text(u.country)), DataCell(Icon(u.metrics['hasSalary'] == true ? Icons.check : Icons.close)), DataCell(Icon(u.metrics['hasSinkingFunds'] == true ? Icons.check : Icons.close))])).toList()))),
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(backgroundColor: Colors.white, foregroundColor: Colors.black87, elevation: 1, title: const Text('נתונים גולמיים', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)), centerTitle: true),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              dataRowMinHeight: 60,
+              dataRowMaxHeight: double.infinity,
+              headingRowColor: WidgetStateProperty.all(Colors.blueGrey.shade50),
+              headingTextStyle: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00A3FF), fontSize: 14),
+              columns: const [
+                DataColumn(label: Text('שם משתמש')),
+                DataColumn(label: Text('אימייל (Email)')),
+                DataColumn(label: Text('הערות מנהל')),
+                DataColumn(label: Text('דור')),
+                DataColumn(label: Text('מדינה')),
+                DataColumn(label: Text('הוזן שכר')), // חזר!
+                DataColumn(label: Text('קופות')),     // חזר!
+                DataColumn(label: Text('חירות')),    // בונוס
+                DataColumn(label: Text('מפתח זהב 🔑')),
+              ],
+              rows: users.map((u) => DataRow(
+                cells: [
+                  DataCell(Text(u.displayName ?? 'לא הוגדר', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87))),
+                  DataCell(Text(u.email)),
+                  DataCell(Container(width: 300, padding: const EdgeInsets.symmetric(vertical: 8), child: _AdminNoteField(uid: u.uid, initialNotes: u.adminNotes))),
+                  DataCell(Text(u.generation)),
+                  DataCell(Text(u.country)),
+                  DataCell(Icon(u.metrics['hasSalary'] == true ? Icons.check_circle : Icons.cancel, color: u.metrics['hasSalary'] == true ? Colors.green : Colors.redAccent)),
+                  DataCell(Icon(u.metrics['hasSinkingFunds'] == true ? Icons.check_circle : Icons.cancel, color: u.metrics['hasSinkingFunds'] == true ? Colors.green : Colors.redAccent)),
+                  DataCell(Icon(u.metrics['hasViewedFreedom'] == true ? Icons.check_circle : Icons.cancel, color: u.metrics['hasViewedFreedom'] == true ? Colors.green : Colors.redAccent)),
+                  DataCell(IconButton(icon: Icon(u.isPremium ? Icons.workspace_premium : Icons.key, color: u.isPremium ? Colors.amber : Colors.grey), onPressed: () => onTogglePremium(u))),
+                ],
+              )).toList(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminNoteField extends StatefulWidget {
+  final String uid;
+  final String? initialNotes;
+  const _AdminNoteField({required this.uid, this.initialNotes});
+
+  @override
+  State<_AdminNoteField> createState() => _AdminNoteFieldState();
+}
+
+class _AdminNoteFieldState extends State<_AdminNoteField> {
+  late TextEditingController _controller;
+  Timer? _debounce;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialNotes);
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(String text) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    setState(() => _isSaving = true);
+    _debounce = Timer(const Duration(milliseconds: 800), () async {
+      await AdminService.updateAdminNotes(widget.uid, text);
+      if (mounted) setState(() => _isSaving = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _controller,
+      maxLines: null,
+      keyboardType: TextInputType.multiline,
+      style: const TextStyle(fontSize: 13),
+      decoration: InputDecoration(
+        hintText: 'הוסף הערה...',
+        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+        isDense: true,
+        suffixIcon: _isSaving 
+          ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.blue)))
+          : Icon(Icons.cloud_done, size: 16, color: _controller.text.isEmpty ? Colors.transparent : Colors.green.shade300),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade200)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade100)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.blue, width: 1)),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+      ),
+      onChanged: _onChanged,
     );
   }
 }

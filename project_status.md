@@ -1,27 +1,20 @@
-# Project Status: Fintel (Dohaham)
-**Version:** 12.89 (Gamma Release Candidate)
-**Status:** Ready for Production Deployment
+# 📊 Fintel - Project Status
 
-## ✅ Completed in Last Session
-- **Admin Dashboard v2:** Implemented responsive GridView, user screener, and the "Golden Key" (Manual Premium Toggle).
-- **GlobalHeader Revamp:** Added a Drawer/Bottom-Sheet containing Legal terms, Privacy Policy, and Account Wipe Protocol.
-- **Responsive UI:** Integrated `ConstrainedBox` and scaling logic into `MainScreen` and `PnLScreen` for optimal Desktop viewing.
-- **Shopping Sync:** Successfully migrated the advanced `ShoppingProvider` from Sandbox to the main project, including notification hooks.
-- **Bug Fixes:** Resolved parameter mismatches in `GlobalHeader` (showBackButton and Drawer logic).
-- **PWA Config:** Updated `manifest.json` and `index.html` with mobile-native behavior and cache-busting logic.
+## ✅ Recently Completed (Latest Session)
+* **Firestore Security Rules:** Successfully deployed robust rules locking database access, specifically granting full Admin privileges to `rjbrrjbr@gmail.com`.
+* **Admin Dashboard UI Overhaul:**
+  * Transformed the Raw Data screen from a dark CLI-style view to a modern, light-themed, horizontally scrollable `DataTable`.
+  * Integrated the "Golden Key" (Premium toggle) seamlessly into both the Screener results and the Raw Data table.
+* **Complex Data Fetching:** * Resolved the Auth vs. Firestore email discrepancy. 
+  * Upgraded `AdminService` to fetch real user names (`displayName`) by diving into the `family_members` sub-collection and sorting by `birthYear` to identify the primary account holder.
+* **CRM Capabilities (Admin Notes):**
+  * Added a dynamic, vertically expanding `adminNotes` text field to user records.
+  * Implemented a silent, auto-saving mechanism using a Debounce timer (800ms) with a visual loading/success indicator.
+* **Code Integrity:** Merged all complex logic (Mail launcher, Advanced Screener, Sandbox toggles, Brain Capsule extraction) into a single, cohesive, 700+ line UI file without losing any functionality.
 
-## 🚧 Pending / Next Steps
-1. **Mission 2 (Billing Loop):** Waiting for Grow (PayMe) API credentials. Once received, need to configure the Make.com webhook.
-2. **Production Deploy:** Run `flutter build web --release` and `firebase deploy --only hosting`.
-3. **User Onboarding:** Send the Hosting URL to early adopters (Alpha/Gamma group) and guide them on "Add to Home Screen".
+## 🔄 Current State
+The Admin Dashboard is fully stable, highly functional, and serves as a powerful CRM tool. It accurately reflects deep database insights, allows immediate user status manipulation, and supports free-text tracking without UI breakage. Linter is clean.
 
-## 🛡 Security & Compliance
-- **Account Wipe:** Tested and active (Users can delete all data and auth).
-- **Legal:** Terms of use and privacy policy active in Drawer and Onboarding.
-- **Firestore Rules:** Secure (Only owners can access their own data).
-
-## 📊 Current Metrics Tracking
-- `isPremium`: Manual/Auto toggle.
-- `hasViewedFreedom`: Tracks onboarding progress.
-- `hasCompletedShopping`: Telemetry for smart reminders.
-- `generation`: Founders (Alpha/Beta) vs. Regular users.
+## 🚀 Next Steps / Backlog
+* Continue monitoring user onboarding flow and metrics population.
+* [Placeholder for future feature requests, e.g., expanding the metrics tracked, adjusting the user-facing UI, or launching commercial mode].
