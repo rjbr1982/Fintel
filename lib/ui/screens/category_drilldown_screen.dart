@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Per-Child Unified Mode Support, Removed Dead Global Menu, Fixed Premium Access)
+// 🔒 STATUS: EDITED (Per-Child Unified Mode Support, Fixed Business Display & Premium Logic)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -618,84 +618,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBusinessTile(BuildContext context, BudgetProvider provider, Expense business) {
-    double netProfit = business.getBusinessNetProfit();
-    bool isPassive = business.isPassive;
-    
-    return Dismissible(
-      key: Key(business.id?.toString() ?? UniqueKey().toString()),
-      direction: DismissDirection.endToStart,
-      background: Container(color: Colors.red, alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: 20), child: const Icon(Icons.delete, color: Colors.white)),
-      onDismissed: (direction) => provider.deleteExpense(business.id!),
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: isPassive ? Colors.green.shade200 : Colors.blue.shade200)),
-        color: isPassive ? Colors.green.shade50 : Colors.white,
-        child: InkWell(
-          onTap: () => _showBusinessDialog(context, provider, business: business),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.storefront, color: isPassive ? Colors.green[800] : Colors.blue[800]),
-                        const SizedBox(width: 8),
-                        Text(business.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
-                      ],
-                    ),
-                    const Icon(Icons.edit, size: 18, color: Colors.grey),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('רווח נטו חודשי', style: TextStyle(fontSize: 12, color: Colors.black54)),
-                        Text(
-                          '₪${netProfit.toStringAsFixed(0)}', 
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: netProfit >= 0 ? Colors.green[800] : Colors.red[800])
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text('השקעה שבועית: ${business.businessWorkingHours.toStringAsFixed(1)} שעות', style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                        if (isPassive)
-                          Container(
-                            margin: const EdgeInsets.only(top: 4),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(color: Colors.green[600], borderRadius: BorderRadius.circular(8)),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.verified, color: Colors.white, size: 12),
-                                SizedBox(width: 4),
-                                Text('נכס פסיבי!', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          )
-                      ],
-                    )
-                  ],
-                )
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
@@ -710,11 +632,8 @@ class CategoryDrilldownScreen extends StatelessWidget {
       );
     }
 
-    final regularExpenses = currentExpenses.where((e) => !e.isBusiness).toList();
-    final businessExpenses = currentExpenses.where((e) => e.isBusiness).toList();
-
     final Map<String, List<Expense>> grouped = {};
-    for (var e in regularExpenses) {
+    for (var e in currentExpenses) {
       final pCat = e.parentCategory;
       if (!grouped.containsKey(pCat)) { grouped[pCat] = []; }
       grouped[pCat]!.add(e);
@@ -884,14 +803,6 @@ class CategoryDrilldownScreen extends StatelessWidget {
                     ),
                   );
                 }),
-                
-                if (businessExpenses.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.only(top: 24, bottom: 8, right: 8),
-                    child: Text("עסקים והכנסות צדדיות", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                  ),
-                  ...businessExpenses.map((business) => _buildBusinessTile(context, provider, business)),
-                ]
               ],
             ),
           ),
@@ -1915,9 +1826,18 @@ class SpecificExpensesScreen extends StatelessWidget {
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.withValues(alpha: 0.15), foregroundColor: Colors.blue[800], elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
                       icon: const Icon(Icons.insights),
-                      label: const Text('מנוע סטטיסטיקת שכר', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('ממוצע שכר', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 6),
+                          Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                        ],
+                      ),
                       onPressed: () {
-                         Navigator.push(context, MaterialPageRoute(builder: (context) => const SalaryEngineScreen()));
+                        PremiumService.requirePremium(context, () {
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const SalaryEngineScreen()));
+                        });
                       },
                     ),
                   ),
@@ -1931,8 +1851,15 @@ class SpecificExpensesScreen extends StatelessWidget {
                         elevation: 0, 
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
                       ),
-                      icon: const Text('👑', style: TextStyle(fontSize: 16)),
-                      label: const Text('פנקס עוסק פטור', style: TextStyle(fontWeight: FontWeight.bold)),
+                      icon: const Icon(Icons.receipt_long, size: 18),
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('פנקס עוסק פטור', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 6),
+                          Image.asset('assets/icon/crown_icon.png', width: 14, height: 14, errorBuilder: (_,__,___) => const SizedBox.shrink()),
+                        ],
+                      ),
                       onPressed: () {
                         PremiumService.requirePremium(context, () {
                           Navigator.push(context, MaterialPageRoute(builder: (context) => const ExemptDealerScreen()));

@@ -12,6 +12,7 @@
 * **Linter Status:** Zero Warnings (Strict enforcement).
 
 ## 2. Strategic Decision Log (יומן החלטות אסטרטגיות)
+* **2026-04:** *Income Screens Polish:* Fixed duplicate business/side-income buttons logic to only appear in the deepest drilldown (`SpecificExpensesScreen`). Renamed Salary Engine to "ממוצע שכר" and integrated the standard brand premium crown icon for both salary and exempt dealer buttons.
 * **2026-04:** *Premium Integration:* Successfully wired `ExemptDealerScreen` into the `CategoryDrilldownScreen` under Incomes, protected by `PremiumService.requirePremium`. Restored `PremiumService` to properly handle the Paywall UI, Founders gift, and Web platform bypass logic.
 * **2026-04:** *Exempt Dealer Ledger (Premium):* Created `exempt_dealer_screen.dart` and upgraded `BusinessSubItem` model with `date`, `tag`, and `receiptNumber`. UI contrast issues fixed. 
 * **2026-04:** *UI & UX Polish:* Added a "PRO" badge for premium users in the global header. Replaced fixed Column with `SingleChildScrollView` in the hamburger menu to fix overflow issues. Added historical purchase viewer to the shopping list.
