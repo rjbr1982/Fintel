@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Per-Child Unified Mode Support, Removed Dead Global Menu)
+// 🔒 STATUS: EDITED (Per-Child Unified Mode Support, Removed Dead Global Menu, Fixed Premium Access)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +7,8 @@ import '../../data/expense_model.dart';
 import '../../utils/app_localizations.dart';
 import '../widgets/global_header.dart';
 import 'salary_engine_screen.dart';
+import 'exempt_dealer_screen.dart';
+import '../../services/premium_service.dart';
 
 String _formatMonthYear(String isoString) {
   try {
@@ -1916,6 +1918,25 @@ class SpecificExpensesScreen extends StatelessWidget {
                       label: const Text('מנוע סטטיסטיקת שכר', style: TextStyle(fontWeight: FontWeight.bold)),
                       onPressed: () {
                          Navigator.push(context, MaterialPageRoute(builder: (context) => const SalaryEngineScreen()));
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber.withValues(alpha: 0.15), 
+                        foregroundColor: Colors.amber[900], 
+                        elevation: 0, 
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+                      ),
+                      icon: const Text('👑', style: TextStyle(fontSize: 16)),
+                      label: const Text('פנקס עוסק פטור', style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: () {
+                        PremiumService.requirePremium(context, () {
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const ExemptDealerScreen()));
+                        });
                       },
                     ),
                   )

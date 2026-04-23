@@ -12,7 +12,8 @@
 * **Linter Status:** Zero Warnings (Strict enforcement).
 
 ## 2. Strategic Decision Log (יומן החלטות אסטרטגיות)
-* **2026-04:** *Exempt Dealer Ledger (Premium):* Created `exempt_dealer_screen.dart` and upgraded `BusinessSubItem` model with `date`, `tag`, and `receiptNumber`. UI contrast issues fixed. Pending integration into the Incomes drilldown screen.
+* **2026-04:** *Premium Integration:* Successfully wired `ExemptDealerScreen` into the `CategoryDrilldownScreen` under Incomes, protected by `PremiumService.requirePremium`. Restored `PremiumService` to properly handle the Paywall UI, Founders gift, and Web platform bypass logic.
+* **2026-04:** *Exempt Dealer Ledger (Premium):* Created `exempt_dealer_screen.dart` and upgraded `BusinessSubItem` model with `date`, `tag`, and `receiptNumber`. UI contrast issues fixed. 
 * **2026-04:** *UI & UX Polish:* Added a "PRO" badge for premium users in the global header. Replaced fixed Column with `SingleChildScrollView` in the hamburger menu to fix overflow issues. Added historical purchase viewer to the shopping list.
 * **2026-04:** *Optimistic UI for Sinking Funds:* Removed `await` from Firebase write operations (`saveSetting`, `insertPlannedWithdrawal`, `updatePlannedWithdrawal`) in `smart_withdrawals_screen.dart` and `budget_provider.dart` (Fire & Forget protocol).
 * **2026-04:** *Playground Integration Phase:* Ported critical sandbox features to main project (Admin Double Lock, Bulletproof Legal UI, Code-Based L10n).
