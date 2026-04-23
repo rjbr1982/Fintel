@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Removed unnecessary null-aware operator for localization)
+// 🔒 STATUS: EDITED (Added Exempt Dealer Premium Menu Item)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -25,6 +25,7 @@ import '../screens/admin_dashboard_screen.dart';
 import '../screens/category_drilldown_screen.dart';
 import '../screens/reducing_screen.dart';
 import '../screens/assets_screen.dart';
+import '../screens/exempt_dealer_screen.dart';
 
 class GlobalHeader extends StatefulWidget implements PreferredSizeWidget {
   final String? title;
@@ -54,7 +55,6 @@ class _GlobalHeaderState extends State<GlobalHeader> {
   void initState() {
     super.initState();
     _checkPremium();
-    // האזנה לשינויים בזמן אמת (כמו מתג המפתחים או רכישה)
     PremiumService.stateNotifier.addListener(_checkPremium);
   }
 
@@ -95,7 +95,6 @@ class _GlobalHeaderState extends State<GlobalHeader> {
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // הגישה האלגנטית: מציגים לוגו רק במסך הראשי (כאשר אין כותרת ספציפית למסך פנימי)
           if (widget.title == null) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(_isPremium ? 0 : 6),
@@ -110,7 +109,6 @@ class _GlobalHeaderState extends State<GlobalHeader> {
             const SizedBox(width: 8),
           ],
           
-          // ניהול הכותרת באמצעות FittedBox - מתכווץ אוטומטית רק אם יש צורך כדי למנוע חיתוך
           Flexible(
             child: widget.title != null 
               ? FittedBox(
@@ -277,6 +275,9 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
                 _buildMenuTile(icon: Icons.account_balance_wallet_outlined, color: Colors.blueGrey, title: 'מעקב עו"ש', onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckingHistoryScreen())); }),
                 _buildMenuTile(icon: Icons.insights, color: Colors.orange, title: 'ממוצע שכר', isPremium: true, onTap: () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const SalaryEngineScreen())); }); }),
                 
+                // הוספת ניהול עוסק פטור 👑
+                _buildMenuTile(icon: Icons.storefront_outlined, color: Colors.indigo, title: 'ניהול עוסק פטור', isPremium: true, onTap: () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const ExemptDealerScreen())); }); }),
+
                 const Divider(),
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

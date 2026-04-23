@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding)
+// 🔒 STATUS: EDITED (Removed await on UI actions to prevent Firebase offline hanging - Optimistic UI)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -172,7 +172,7 @@ class SmartWithdrawalsScreen extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
-              onPressed: () async {
+              onPressed: () {
                 final amt = double.tryParse(amountCtrl.text);
                 if (amt != null && amt > 0 && selectedBucket != null && nameCtrl.text.isNotEmpty) {
                   final pw = PlannedWithdrawal(
@@ -181,8 +181,8 @@ class SmartWithdrawalsScreen extends StatelessWidget {
                     bucketName: selectedBucket!,
                     targetDate: DateTime.now().toIso8601String(), // Will be grouped dynamically
                   );
-                  await provider.addPlannedWithdrawal(pw);
-                  if (ctx.mounted) Navigator.pop(ctx);
+                  provider.addPlannedWithdrawal(pw); // Fire and Forget
+                  Navigator.pop(ctx);
                 }
               },
               child: const Text('שמור תכנון', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -258,9 +258,9 @@ class SmartWithdrawalsScreen extends StatelessWidget {
                 backgroundColor: const Color(0xFF00A3FF),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              onPressed: () async {
-                await provider.setBucketWithdrawalDay(bucketName, selectedDay);
-                if (ctx.mounted) Navigator.pop(ctx);
+              onPressed: () {
+                provider.setBucketWithdrawalDay(bucketName, selectedDay); // Fire and Forget
+                Navigator.pop(ctx);
               },
               child: const Text('שמור', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
@@ -421,17 +421,15 @@ class SmartWithdrawalsScreen extends StatelessWidget {
                                 ),
                                 icon: const Icon(Icons.check_circle, color: Colors.white, size: 20),
                                 label: const Text('בוצעה משיכה בנקאית', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                                onPressed: () async {
-                                  // מפעילים את הפונקציה הלוגית מה-Provider שמקזזת מהקופה ומעדכנת סטטוס
-                                  await provider.executePlannedWithdrawalsForBucket(bucketName);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('מצוין! הסכום קוזז מקופת "$bucketName" וממתין לחיוב בעו"ש.'),
-                                        backgroundColor: Colors.green,
-                                      )
-                                    );
-                                  }
+                                onPressed: () {
+                                  // מפעילים את הפונקציה ללא await כדי לא להקפיא את ה-UI
+                                  provider.executePlannedWithdrawalsForBucket(bucketName);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('מצוין! הסכום קוזז מקופת "$bucketName" וממתין לחיוב בעו"ש.'),
+                                      backgroundColor: Colors.green,
+                                    )
+                                  );
                                 },
                               ),
                             ),

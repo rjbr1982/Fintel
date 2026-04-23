@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added clearBankDeposit flag to copyWith for Nullification support)
+// 🔒 STATUS: EDITED (Added Date, Tag, and ReceiptNumber to BusinessSubItem for Exempt Dealer Report)
 // ignore_for_file: constant_identifier_names
 
 import 'dart:convert';
@@ -44,21 +44,42 @@ class FamilyMember {
   }
 }
 
-// --- מודל תת-סעיף עסק (הכנסה/הוצאה פנימית) ---
+// --- מודל תת-סעיף עסק (הכנסה/הוצאה פנימית - שודרג לדוח תקבולים ותשלומים) ---
 class BusinessSubItem {
   String id;
-  String name;
+  String name; // תיאור העסקה (שם לקוח / ספק)
   double amount;
+  String date; // תאריך ביצוע העסקה
+  String tag; // סיווג חשבונאי
+  String? receiptNumber; // מספר קבלה/חשבונית
 
-  BusinessSubItem({required this.id, required this.name, required this.amount});
+  BusinessSubItem({
+    required this.id, 
+    required this.name, 
+    required this.amount,
+    String? date,
+    String? tag,
+    this.receiptNumber,
+  }) : date = date ?? DateTime.now().toIso8601String(),
+       tag = tag ?? 'כללי';
 
-  Map<String, dynamic> toMap() => {'id': id, 'name': name, 'amount': amount};
+  Map<String, dynamic> toMap() => {
+    'id': id, 
+    'name': name, 
+    'amount': amount,
+    'date': date,
+    'tag': tag,
+    'receiptNumber': receiptNumber,
+  };
   
   factory BusinessSubItem.fromMap(Map<String, dynamic> map) {
     return BusinessSubItem(
       id: map['id'] ?? '',
       name: map['name'] ?? '',
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+      date: map['date'], // Will fallback to current date if null
+      tag: map['tag'],   // Will fallback to 'כללי' if null
+      receiptNumber: map['receiptNumber'],
     );
   }
 }
@@ -90,8 +111,8 @@ class Expense {
 
   // --- שדות לעסק והכנסה פסיבית ---
   final bool isBusiness;
-  final String businessIncomes; // JSON String
-  final String businessExpenses; // JSON String
+  final String businessIncomes; // JSON String of BusinessSubItem
+  final String businessExpenses; // JSON String of BusinessSubItem
   final double businessWorkingHours; // Weekly Hours
 
   // --- שדה תשתית גמישה ---
@@ -155,7 +176,7 @@ class Expense {
     bool? isCustom,
     String? date,
     double? actualBankDeposit,
-    bool clearBankDeposit = false, // 🔒 תמיכה באיפוס הבנק לדינמי
+    bool clearBankDeposit = false,
   }) {
     return Expense(
       id: id ?? this.id,
@@ -181,7 +202,6 @@ class Expense {
       businessWorkingHours: businessWorkingHours ?? this.businessWorkingHours,
       isCustom: isCustom ?? this.isCustom,
       date: date ?? this.date,
-      // אם הדגל דלוק - מחזירים null (איפוס), אחרת לוקחים את הערך החדש או הקיים
       actualBankDeposit: clearBankDeposit ? null : (actualBankDeposit ?? this.actualBankDeposit),
     );
   }

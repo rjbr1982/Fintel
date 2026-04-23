@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Linter Clean: Added curly braces to all flow control structures)
+// 🔒 STATUS: EDITED (Linter Clean + Optimistic UI updates, Fixed catchError return types)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -132,8 +132,11 @@ class BudgetProvider with ChangeNotifier {
 
   Future<void> setBucketWithdrawalDay(String bucketName, int day) async {
     _bucketWithdrawalDays[bucketName] = day;
-    await DatabaseHelper.instance.saveSetting('bucket_day_$bucketName', day.toDouble());
-    notifyListeners();
+    // עריכה כירורגית: אופטימיזציה ל-UI (Fire & Forget) למניעת קריסות אינטרנט
+    notifyListeners(); 
+    DatabaseHelper.instance.saveSetting('bucket_day_$bucketName', day.toDouble()).catchError((e) {
+      debugPrint('Error saving bucket day offline: $e');
+    });
     try {
       await NotificationService.instance.scheduleWithdrawalDay(day);
     } catch (e) {
@@ -1110,9 +1113,15 @@ class BudgetProvider with ChangeNotifier {
     final updated = Expense(id: expense.id, name: expense.name, category: expense.category, parentCategory: expense.parentCategory, monthlyAmount: expense.monthlyAmount, originalAmount: expense.originalAmount, frequency: expense.frequency, isSinking: expense.isSinking, isPerChild: expense.isPerChild, targetAmount: expense.targetAmount, currentBalance: newBalance, allocationRatio: expense.allocationRatio, lastUpdateDate: updateDate ? DateTime.now().toIso8601String() : expense.lastUpdateDate, isLocked: expense.isLocked, manualAmount: expense.manualAmount, date: expense.date, isDynamicSalary: expense.isDynamicSalary, salaryStartDate: expense.salaryStartDate, isCustom: expense.isCustom, isBusiness: expense.isBusiness, businessIncomes: expense.businessIncomes, businessExpenses: expense.businessExpenses, businessWorkingHours: expense.businessWorkingHours, actualBankDeposit: expense.actualBankDeposit);
     _expenses[index] = updated; notifyListeners(); await DatabaseHelper.instance.updateExpense(updated);
   }
-  Future<void> addPlannedWithdrawal(PlannedWithdrawal pw) async { await DatabaseHelper.instance.insertPlannedWithdrawal(pw); }
+  
+  Future<void> addPlannedWithdrawal(PlannedWithdrawal pw) async { 
+    // Optimistic UI Update - Firebase Cache יטפל בשאר
+    DatabaseHelper.instance.insertPlannedWithdrawal(pw).catchError((_) => -1); 
+  }
+  
   Future<void> updatePlannedWithdrawal(PlannedWithdrawal pw) async { await DatabaseHelper.instance.updatePlannedWithdrawal(pw); }
   Future<void> deletePlannedWithdrawal(int id) async { await DatabaseHelper.instance.deletePlannedWithdrawal(id); }
+  
   Future<void> executePlannedWithdrawalsForBucket(String bucketName) async {
     final pending = _plannedWithdrawals.where((pw) => pw.bucketName == bucketName && pw.status == PlannedWithdrawalStatus.pending).toList();
     if (pending.isEmpty) { return; }
@@ -1124,6 +1133,9 @@ class BudgetProvider with ChangeNotifier {
       if (groupName == bucketName) { targetExpenseId = e.id; break; }
     }
     if (targetExpenseId != null) { await addWithdrawal(targetExpenseId, totalAmount, "משיכה מאוחדת: ${pending.map((p) => p.name).join(', ')}"); }
-    for (var pw in pending) { await DatabaseHelper.instance.updatePlannedWithdrawal(PlannedWithdrawal(id: pw.id, name: pw.name, amount: pw.amount, bucketName: pw.bucketName, targetDate: pw.targetDate, status: PlannedWithdrawalStatus.executed)); }
+    for (var pw in pending) { 
+      // עריכה כירורגית: אופטימיזציה ללא המתנה שחוסמת UI
+      DatabaseHelper.instance.updatePlannedWithdrawal(PlannedWithdrawal(id: pw.id, name: pw.name, amount: pw.amount, bucketName: pw.bucketName, targetDate: pw.targetDate, status: PlannedWithdrawalStatus.executed)).catchError((_) => -1); 
+    }
   }
 }

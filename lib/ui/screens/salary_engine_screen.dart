@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed if-statement curlies & TextDirection)
+// 🔒 STATUS: EDITED (Fixed if-statement curlies & TextDirection, UI Proportions Tightened)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui' as ui;
@@ -264,29 +264,29 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16), // Reduced
               Row(
                 children: [
                   Expanded(
                     child: _buildStatCard(
-                      'שכר ממוצע (חודש פעיל)',
+                      'שכר ממוצע (פעיל)',
                       '₪${avgSalaryByWork.toStringAsFixed(0)}',
                       Icons.account_balance_wallet,
                       Colors.blue,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8), // Reduced
                   Expanded(
                     child: _buildStatCard(
                       'תעריף שעתי ממוצע',
-                      '₪${avgHourlyRate.toStringAsFixed(1)} / שעה',
+                      '₪${avgHourlyRate.toStringAsFixed(1)} / ש',
                       Icons.access_time_filled,
                       Colors.purple,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8), // Reduced
               Row(
                 children: [
                   Expanded(
@@ -298,19 +298,19 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
                       subtitle: 'בפועל מתחילת השנה',
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8), // Reduced
                   Expanded(
                     child: _buildStatCard(
-                      'פריסה שנתית (Annual)',
+                      'פריסה (Annual)',
                       '₪${annualizedAmount.toStringAsFixed(0)}',
                       Icons.trending_up,
                       Colors.orange,
-                      subtitle: 'קצב מוערך לשנה מלאה',
+                      subtitle: 'קצב מוערך לשנה',
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 20), // Reduced
 
               if (myRecords.isNotEmpty) ...[
                 Row(
@@ -418,26 +418,27 @@ class _SalaryEngineScreenState extends State<SalaryEngineScreen> {
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color, {String? subtitle}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.2), width: 2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
         boxShadow: [
-          BoxShadow(color: color.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))
+          BoxShadow(color: color.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 3))
         ]
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 12),
-          Text(title, style: const TextStyle(fontSize: 12, color: Colors.blueGrey, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 8),
+          Text(title, style: const TextStyle(fontSize: 11, color: Colors.blueGrey, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 2),
+          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color), maxLines: 1, overflow: TextOverflow.ellipsis),
           if (subtitle != null) ...[
-            const SizedBox(height: 4),
-            Text(subtitle, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+            const SizedBox(height: 2),
+            Text(subtitle, style: const TextStyle(fontSize: 9, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
           ]
         ],
       ),
