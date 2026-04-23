@@ -1,20 +1,23 @@
-# 📊 Fintel - Project Status
+# Project Status: Fintel (dohaham)
 
-## ✅ Recently Completed (Latest Session)
-* **Firestore Security Rules:** Successfully deployed robust rules locking database access, specifically granting full Admin privileges to `rjbrrjbr@gmail.com`.
-* **Admin Dashboard UI Overhaul:**
-  * Transformed the Raw Data screen from a dark CLI-style view to a modern, light-themed, horizontally scrollable `DataTable`.
-  * Integrated the "Golden Key" (Premium toggle) seamlessly into both the Screener results and the Raw Data table.
-* **Complex Data Fetching:** * Resolved the Auth vs. Firestore email discrepancy. 
-  * Upgraded `AdminService` to fetch real user names (`displayName`) by diving into the `family_members` sub-collection and sorting by `birthYear` to identify the primary account holder.
-* **CRM Capabilities (Admin Notes):**
-  * Added a dynamic, vertically expanding `adminNotes` text field to user records.
-  * Implemented a silent, auto-saving mechanism using a Debounce timer (800ms) with a visual loading/success indicator.
-* **Code Integrity:** Merged all complex logic (Mail launcher, Advanced Screener, Sandbox toggles, Brain Capsule extraction) into a single, cohesive, 700+ line UI file without losing any functionality.
+## 1. Current State (תמונת מצב טכנית)
+* **Framework:** Flutter (Web/PWA & Android Native targeted).
+* **Architecture:** Provider (State Management), Firebase (Auth + Firestore).
+* **Core Modules:**
+  - `BudgetProvider`: Manages PnL, Sinking Funds, Categories (5 Pillars), Freedom Engine.
+  - `DebtProvider`: Manages Snowball/Sniper algorithm and historical payoffs.
+  - `AssetProvider`: Manages Asset Portfolio and passive income calculations.
+  - `AdminService`: Centralized Admin God-Mode with double-lock security.
+* **Localization:** Custom Code-Based Map (`AppLocalizations`) supporting 'he' and 'en'.
+* **Linter Status:** Zero Warnings (Strict enforcement).
 
-## 🔄 Current State
-The Admin Dashboard is fully stable, highly functional, and serves as a powerful CRM tool. It accurately reflects deep database insights, allows immediate user status manipulation, and supports free-text tracking without UI breakage. Linter is clean.
-
-## 🚀 Next Steps / Backlog
-* Continue monitoring user onboarding flow and metrics population.
-* [Placeholder for future feature requests, e.g., expanding the metrics tracked, adjusting the user-facing UI, or launching commercial mode].
+## 2. Strategic Decision Log (יומן החלטות אסטרטגיות)
+* **2026-04:** *Playground Integration Phase:* Ported critical sandbox features to main project.
+  * **Admin Double Lock:** `isCurrentUserAdmin()` now checks both Firebase Auth AND the isolated `admins` collection, ensuring secure server-side validation even if UI triggers are bypassed.
+  * **Bulletproof Legal UI:** Merged terms and privacy into a single `_showUnifiedConsentDialog` with a hardcoded `350px` height `Scrollbar` inside a `PopScope` to prevent rendering crashes on mobile/web.
+  * **Code-Based L10n:** Implemented English (`en`) dictionary alongside Hebrew (`he`). Changed `AppLocalizations.of(context)` to return a non-nullable object, ensuring downstream UI components don't require `?.` or fallback operators (`??`).
+* **2026-04:** *Zero Warnings Enforcement:* Stripped all `dead_null_aware_expression` and `unnecessary_non_null_assertion` flags from UI screens.
+* **2026-04:** *Sinking-Growth Asset (חיסגור):* Added `isPcfAccumulator` toggle to Assets. When active, the auto-rollover mechanism deposits the monthly PCF directly into the asset's balance.
+* **2026-04:** *UI & Flow Refinements:*
+  * **Per-Child Unified Mode:** Moved the Unified Sinking Fund 3-dot menu from the "Children" parent level to each child's individual ExpansionTile in `category_drilldown_screen.dart` to allow independent mode configuration (0/1/2).
+  * **Grand Reveal Hard-Lock:** Modified `main_screen.dart` to make the `RevealState` strictly reactive to the `hasCompletedGrandReveal` flag, preventing users from bypassing the animation via the hardware back button and entering a broken UI state.

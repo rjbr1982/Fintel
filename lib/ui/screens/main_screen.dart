@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Responsive Desktop Scaling & Freedom Telemetry Injection, Removed unnecessary null-aware operators)
+// 🔒 STATUS: EDITED (Fixed Nav Bug: State machine completely reactive to BudgetProvider Reveal state)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/budget_provider.dart';
@@ -300,7 +300,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               shape: const CircleBorder(),
-              padding: EdgeInsets.all(iconSize * 0.65), // Dynamic padding
+              padding: EdgeInsets.all(iconSize * 0.65), 
               backgroundColor: color.withValues(alpha: 0.1),
               foregroundColor: color,
               elevation: 0,
@@ -329,7 +329,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildRevealOverlay(int? targetYear, BudgetProvider budget) {
-    if (_currentState == RevealState.expectation) {
+    bool isExpectation = !budget.hasCompletedGrandReveal && _currentState != RevealState.reveal;
+
+    if (isExpectation) {
       return Material(
         color: const Color(0xFF121212),
         child: Center(
@@ -473,6 +475,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         targetYear = DateTime.now().year + (monthsToFreedom / 12).ceil();
         yearText = targetYear.toString();
       }
+    }
+
+    // אבטחת סנכרון: אם הפרובידר מדווח שלא סיימנו ויש דופק שלא מופעל - נפעיל אותו
+    bool isExpectation = !budget.hasCompletedGrandReveal && _currentState != RevealState.reveal;
+    if (isExpectation && !_showPulse) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _showPulse = true);
+      });
     }
 
     // === Responsive Screen Calculus ===
@@ -666,7 +676,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ),
         ),
         
-        if (_currentState != RevealState.dashboard) 
+        if (_currentState != RevealState.dashboard || !budget.hasCompletedGrandReveal) 
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 600),
             child: _buildRevealOverlay(targetYear, budget),

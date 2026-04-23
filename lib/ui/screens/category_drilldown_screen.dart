@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Standardized Info Dialogs for Contextual Onboarding, Removed dead null-aware expressions)
+// 🔒 STATUS: EDITED (Per-Child Unified Mode Support, Removed Dead Global Menu)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -1179,6 +1179,8 @@ class SpecificExpensesScreen extends StatelessWidget {
         double childRatio = items.fold(0.0, (sum, e) => sum + (e.allocationRatio ?? 0));
         String ratioText = childRatio > 0 ? ' | הקצאה: ${(childRatio * 100).toStringAsFixed(1)}%' : '';
 
+        int unifiedMode = provider.getCategoryUnifiedMode('ילדים: $childName');
+
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
           elevation: 2,
@@ -1191,33 +1193,54 @@ class SpecificExpensesScreen extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               leading: CircleAvatar(backgroundColor: Colors.purple[50], child: Icon(Icons.child_care, color: Colors.purple[400])),
-              title: Text(childName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black)),
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(childName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black)),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                    padding: EdgeInsets.zero,
+                    onSelected: (val) {
+                      if (val == 'manage_unified') {
+                        _showUnifiedModeDialog(context, provider, 'ילדים: $childName');
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem(
+                        value: 'manage_unified',
+                        child: Text('הגדרת מצב קופה (0/1/2)', style: TextStyle(fontSize: 14)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
               subtitle: Text('צבור: ₪${childBalance.toStringAsFixed(0)} | תקציב: ₪${childTotal.toStringAsFixed(0)}$ratioText', style: const TextStyle(color: Colors.blueGrey, fontSize: 12)),
               children: [
-                Container(
-                  color: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.purple[50], foregroundColor: Colors.purple[800], elevation: 0),
-                          icon: const Icon(Icons.account_balance_wallet, size: 18),
-                          label: const Text('ניהול קופה אישית', style: TextStyle(fontWeight: FontWeight.bold)),
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context, isScrollControlled: true,
-                              backgroundColor: Colors.white,
-                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                              builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: 'ילדים: $childName', expenses: items),
-                            );
-                          }
-                        )
-                      ),
-                    ]
-                  )
-                ),
-                ...items.map((e) => _buildExpenseTile(context, provider, e, childName: childName, unifiedMode: 1))
+                if (unifiedMode > 0)
+                  Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.purple[50], foregroundColor: Colors.purple[800], elevation: 0),
+                            icon: const Icon(Icons.account_balance_wallet, size: 18),
+                            label: const Text('ניהול קופה אישית', style: TextStyle(fontWeight: FontWeight.bold)),
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context, isScrollControlled: true,
+                                backgroundColor: Colors.white,
+                                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                                builder: (ctx) => _UnifiedFundBottomSheet(provider: provider, parentCategory: 'ילדים: $childName', expenses: items),
+                              );
+                            }
+                          )
+                        ),
+                      ]
+                    )
+                  ),
+                ...items.map((e) => _buildExpenseTile(context, provider, e, childName: childName, unifiedMode: unifiedMode))
               ]
             ),
           )
@@ -1860,22 +1883,22 @@ class SpecificExpensesScreen extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(width: 8),
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert, color: Colors.grey),
-                          onSelected: (val) {
-                            if (val == 'rename') _showRenameParentDialog(context, provider, parentCategory);
-                            if (val == 'manage_unified') _showUnifiedModeDialog(context, provider, parentCategory);
-                          },
-                          itemBuilder: (ctx) => [
-                            if (parentCategory != 'קניות' && parentCategory != 'רכב' && parentCategory != 'ילדים - משתנות' && parentCategory != 'עסקים')
-                              const PopupMenuItem(value: 'rename', child: Text('שינוי שם קבוצה', style: TextStyle(fontSize: 14))),
-                            if (parentCategory != 'קניות' && parentCategory != 'ילדים - משתנות' && parentCategory != 'עסקים')
+                        if (parentCategory != 'קניות' && parentCategory != 'ילדים - משתנות' && parentCategory != 'עסקים')
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert, color: Colors.grey),
+                            onSelected: (val) {
+                              if (val == 'rename') _showRenameParentDialog(context, provider, parentCategory);
+                              if (val == 'manage_unified') _showUnifiedModeDialog(context, provider, parentCategory);
+                            },
+                            itemBuilder: (ctx) => [
+                              if (parentCategory != 'רכב')
+                                const PopupMenuItem(value: 'rename', child: Text('שינוי שם קבוצה', style: TextStyle(fontSize: 14))),
                               const PopupMenuItem(
                                 value: 'manage_unified',
                                 child: Text('הגדרת מצב קופה (0/1/2)', style: TextStyle(fontSize: 14)),
                               ),
-                          ],
-                        ),
+                            ],
+                          ),
                       ],
                     ),
                   ],
