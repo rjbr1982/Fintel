@@ -1,4 +1,4 @@
-// 🔒 STATUS: SURGICAL MERGE COMPLETE (Preserved All Metrics + Names + Auto-saving Notes + Mail Triggers)
+// 🔒 STATUS: EDITED (Fixed TextField Text Color for Admin Notes to ensure high contrast)
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -666,9 +666,9 @@ class AdminRawDataScreen extends StatelessWidget {
                 DataColumn(label: Text('הערות מנהל')),
                 DataColumn(label: Text('דור')),
                 DataColumn(label: Text('מדינה')),
-                DataColumn(label: Text('הוזן שכר')), // חזר!
-                DataColumn(label: Text('קופות')),     // חזר!
-                DataColumn(label: Text('חירות')),    // בונוס
+                DataColumn(label: Text('הוזן שכר')), 
+                DataColumn(label: Text('קופות')),     
+                DataColumn(label: Text('חירות')),    
                 DataColumn(label: Text('מפתח זהב 🔑')),
               ],
               rows: users.map((u) => DataRow(
@@ -734,7 +734,7 @@ class _AdminNoteFieldState extends State<_AdminNoteField> {
       controller: _controller,
       maxLines: null,
       keyboardType: TextInputType.multiline,
-      style: const TextStyle(fontSize: 13),
+      style: const TextStyle(fontSize: 13, color: Colors.black87), // התיקון שביקשת
       decoration: InputDecoration(
         hintText: 'הוסף הערה...',
         hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),

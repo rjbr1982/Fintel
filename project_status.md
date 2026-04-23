@@ -12,11 +12,9 @@
 * **Linter Status:** Zero Warnings (Strict enforcement).
 
 ## 2. Strategic Decision Log (יומן החלטות אסטרטגיות)
-* **2026-04:** *Exempt Dealer Ledger (Premium):* Created `exempt_dealer_screen.dart` and upgraded `BusinessSubItem` model with `date`, `tag`, and `receiptNumber`. This allows generating a formatted accounting report for exempt dealers directly to the clipboard.
-* **2026-04:** *Optimistic UI for Sinking Funds:* Removed `await` from Firebase write operations (`saveSetting`, `insertPlannedWithdrawal`, `updatePlannedWithdrawal`) in `smart_withdrawals_screen.dart` and `budget_provider.dart` (Fire & Forget protocol). This prevents the UI from hanging indefinitely during offline or flaky network states.
-* **2026-04:** *Playground Integration Phase:* Ported critical sandbox features to main project.
-  * **Admin Double Lock:** `isCurrentUserAdmin()` now checks both Firebase Auth AND the isolated `admins` collection.
-  * **Bulletproof Legal UI:** Merged terms and privacy into a single `_showUnifiedConsentDialog`.
-  * **Code-Based L10n:** Implemented English (`en`) dictionary alongside Hebrew (`he`).
+* **2026-04:** *Exempt Dealer Ledger (Premium):* Created `exempt_dealer_screen.dart` and upgraded `BusinessSubItem` model with `date`, `tag`, and `receiptNumber`. UI contrast issues fixed. Pending integration into the Incomes drilldown screen.
+* **2026-04:** *UI & UX Polish:* Added a "PRO" badge for premium users in the global header. Replaced fixed Column with `SingleChildScrollView` in the hamburger menu to fix overflow issues. Added historical purchase viewer to the shopping list.
+* **2026-04:** *Optimistic UI for Sinking Funds:* Removed `await` from Firebase write operations (`saveSetting`, `insertPlannedWithdrawal`, `updatePlannedWithdrawal`) in `smart_withdrawals_screen.dart` and `budget_provider.dart` (Fire & Forget protocol).
+* **2026-04:** *Playground Integration Phase:* Ported critical sandbox features to main project (Admin Double Lock, Bulletproof Legal UI, Code-Based L10n).
 * **2026-04:** *Zero Warnings Enforcement:* Stripped all `dead_null_aware_expression` and `unnecessary_non_null_assertion` flags from UI screens.
-* **2026-04:** *Sinking-Growth Asset (חיסגור):* Added `isPcfAccumulator` toggle to Assets. When active, the auto-rollover mechanism deposits the monthly PCF directly into the asset's balance.
+* **2026-04:** *Sinking-Growth Asset (חיסגור):* Added `isPcfAccumulator` toggle to Assets.

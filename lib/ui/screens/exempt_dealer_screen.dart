@@ -1,4 +1,4 @@
-// 🔒 STATUS: NEW (Exempt Dealer Ledger & Report Generator)
+// 🔒 STATUS: EDITED (Fixed UI colors in Dropdown and Dialogs for better contrast)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
@@ -70,6 +70,10 @@ class _ExemptDealerScreenState extends State<ExemptDealerScreen> {
     bool isCustomTag = false;
     final customTagCtrl = TextEditingController();
 
+    // הגדרת עיצוב אחיד לשדות הטקסט כדי למנוע היעלמות על רקע בהיר
+    const textStyle = TextStyle(color: Colors.black87);
+    const labelStyle = TextStyle(color: Colors.black54);
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -84,8 +88,8 @@ class _ExemptDealerScreenState extends State<ExemptDealerScreen> {
                 children: [
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('תאריך העסקה:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(DateFormat('dd/MM/yyyy').format(selectedDate)),
+                    title: const Text('תאריך העסקה:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                    subtitle: Text(DateFormat('dd/MM/yyyy').format(selectedDate), style: const TextStyle(color: Colors.black54)),
                     trailing: const Icon(Icons.calendar_today, color: Colors.indigo),
                     onTap: () async {
                       final date = await showDatePicker(
@@ -98,20 +102,23 @@ class _ExemptDealerScreenState extends State<ExemptDealerScreen> {
                   TextField(
                     controller: amountCtrl,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'סכום ₪', border: OutlineInputBorder()),
+                    style: textStyle,
+                    decoration: const InputDecoration(labelText: 'סכום ₪', labelStyle: labelStyle, border: OutlineInputBorder()),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: nameCtrl,
-                    decoration: InputDecoration(labelText: isIncome ? 'שם הלקוח / מהות השירות' : 'שם הספק / תיאור ההוצאה', border: const OutlineInputBorder()),
+                    style: textStyle,
+                    decoration: InputDecoration(labelText: isIncome ? 'שם הלקוח / מהות השירות' : 'שם הספק / תיאור ההוצאה', labelStyle: labelStyle, border: const OutlineInputBorder()),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: receiptCtrl,
-                    decoration: const InputDecoration(labelText: 'מספר קבלה/חשבונית (אופציונלי)', border: OutlineInputBorder()),
+                    style: textStyle,
+                    decoration: const InputDecoration(labelText: 'מספר קבלה/חשבונית (אופציונלי)', labelStyle: labelStyle, border: OutlineInputBorder()),
                   ),
                   const SizedBox(height: 16),
-                  const Align(alignment: Alignment.centerRight, child: Text('סיווג חשבונאי:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                  const Align(alignment: Alignment.centerRight, child: Text('סיווג חשבונאי:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87))),
                   const SizedBox(height: 8),
                   if (!isCustomTag)
                     Row(
@@ -125,7 +132,8 @@ class _ExemptDealerScreenState extends State<ExemptDealerScreen> {
                                 value: selectedTag,
                                 isExpanded: true,
                                 dropdownColor: Colors.white,
-                                items: availableTags.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                                style: textStyle,
+                                items: availableTags.map((t) => DropdownMenuItem(value: t, child: Text(t, style: textStyle))).toList(),
                                 onChanged: (val) { if (val != null) setDialogState(() => selectedTag = val); },
                               ),
                             ),
@@ -144,7 +152,8 @@ class _ExemptDealerScreenState extends State<ExemptDealerScreen> {
                         Expanded(
                           child: TextField(
                             controller: customTagCtrl,
-                            decoration: const InputDecoration(labelText: 'הזן סיווג חדש', border: OutlineInputBorder()),
+                            style: textStyle,
+                            decoration: const InputDecoration(labelText: 'הזן סיווג חדש', labelStyle: labelStyle, border: OutlineInputBorder()),
                             autofocus: true,
                           ),
                         ),
@@ -408,7 +417,7 @@ class _ExemptDealerScreenState extends State<ExemptDealerScreen> {
                 const SizedBox(height: 20),
                 const Text('לא נמצאו עסקים במערכת.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
-                const Text('כדי לנהל פנקס תקבולים ותשלומים, עליך להוסיף תחילה "עסק" במסך ניהול הנכסים 👑.', textAlign: TextAlign.center, style: TextStyle(color: Colors.blueGrey, height: 1.5)),
+                const Text('כדי לנהל פנקס תקבולים ותשלומים, עליך להוסיף תחילה "עסק" תחת מסך הוספת הכנסה.', textAlign: TextAlign.center, style: TextStyle(color: Colors.blueGrey, height: 1.5)),
                 const SizedBox(height: 24),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
@@ -450,7 +459,8 @@ class _ExemptDealerScreenState extends State<ExemptDealerScreen> {
                   value: _selectedBusinessId,
                   isExpanded: true,
                   icon: const Icon(Icons.business, color: Colors.indigo),
-                  style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Heebo'),
+                  dropdownColor: Colors.white, // מונע שקיפות לא רצויה
+                  style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Heebo'), // טקסט שחור קריא
                   items: businesses.map((b) => DropdownMenuItem(value: b.id, child: Text(b.name))).toList(),
                   onChanged: (val) { if (val != null) setState(() => _selectedBusinessId = val); },
                 ),

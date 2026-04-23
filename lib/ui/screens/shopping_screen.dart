@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Migrated sorting persistence from SharedPreferences to Cloud-Sync via DatabaseHelper)
+// 🔒 STATUS: EDITED (Added Shopping History Mode & Scroll-to-Top Button)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/shopping_provider.dart';
@@ -25,6 +25,10 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  // מנגנון הגלילה מעלה (משימה 4)
+  final ScrollController _scrollController = ScrollController();
+  bool _showScrollToTop = false;
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +36,15 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     _searchController.addListener(() {
       setState(() { _searchQuery = _searchController.text.toLowerCase(); });
     });
+    
+    _scrollController.addListener(() {
+      if (_scrollController.offset > 200 && !_showScrollToTop) {
+        setState(() => _showScrollToTop = true);
+      } else if (_scrollController.offset <= 200 && _showScrollToTop) {
+        setState(() => _showScrollToTop = false);
+      }
+    });
+
     Future.microtask(() {
       if (mounted) {
         context.read<ShoppingProvider>().loadItems();
@@ -64,6 +77,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -252,6 +266,7 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
             child: Stack(
               children: [
                 displayedItems.isEmpty ? _buildEmptyState() : ListView.separated(
+                  controller: _scrollController,
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                   itemCount: displayedItems.length,
                   separatorBuilder: (context, index) => SizedBox(height: 8 * _textScale),
@@ -275,6 +290,25 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
                     return tile;
                   },
                 ),
+                
+                // כפתור חץ למעלה צף במרכז (משימה 4)
+                if (_showScrollToTop)
+                  Positioned(
+                    bottom: currentBasket > 0 ? 100 : 20, 
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: FloatingActionButton.small(
+                        heroTag: 'scrollToTop',
+                        backgroundColor: Colors.blue.withAlpha(200),
+                        onPressed: () {
+                          _scrollController.animateTo(0, duration: const Duration(milliseconds: 500), curve: Curves.easeInOut);
+                        },
+                        child: Icon(Icons.keyboard_double_arrow_up, color: Colors.white, size: 20 * _textScale),
+                      ),
+                    ),
+                  ),
+
                 if (currentBasket > 0) _buildActiveBasketBar(currentBasket, shoppingProvider),
               ],
             ),
@@ -349,7 +383,143 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
   }
 
   Widget _buildControlMenu(ShoppingProvider provider) {
-    return PopupMenuButton<dynamic>(icon: Icon(Icons.tune, color: const Color(0xFF121212), size: 24 * _textScale), color: Colors.white, surfaceTintColor: Colors.white, onSelected: (value) { if (value == 'manage_cats') { _showCategoryManager(context, provider); } else if (value == 'multi_sort') { _showAdvancedSortSheet(context); } else if (value == 'restore_catalog') { _showRestoreCatalogConfirm(context, provider); } else { setState(() => _selectedCategory = value); } }, itemBuilder: (context) => [PopupMenuItem(value: 'manage_cats', child: Row(children: [Icon(Icons.category_outlined, size: 18 * _textScale, color: Colors.blue), SizedBox(width: 8 * _textScale), Text("ניהול קטגוריות", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))])), PopupMenuItem(value: 'multi_sort', child: Row(children: [Icon(Icons.layers, size: 18 * _textScale, color: Colors.orange), SizedBox(width: 8 * _textScale), Text("מיון רב-שכבתי...", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))])), PopupMenuItem(value: 'restore_catalog', child: Row(children: [Icon(Icons.restore_page_outlined, size: 18 * _textScale, color: Colors.green), SizedBox(width: 8 * _textScale), Text("שחזר קטלוג חסר", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))])), const PopupMenuDivider(), PopupMenuItem(enabled: false, child: Text("סינון קטגוריה", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12 * _textScale, color: Colors.blue))), ...provider.availableCategories.map((cat) => PopupMenuItem(value: cat, child: Row(children: [Icon(Icons.check, size: 16 * _textScale, color: (_selectedCategory == cat) ? Colors.blue : Colors.transparent), SizedBox(width: 8 * _textScale), Text(cat, style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale))]))),]);
+    return PopupMenuButton<dynamic>(
+      icon: Icon(Icons.tune, color: const Color(0xFF121212), size: 24 * _textScale), 
+      color: Colors.white, 
+      surfaceTintColor: Colors.white, 
+      onSelected: (value) { 
+        if (value == 'manage_cats') { 
+          _showCategoryManager(context, provider); 
+        } else if (value == 'multi_sort') { 
+          _showAdvancedSortSheet(context); 
+        } else if (value == 'restore_catalog') { 
+          _showRestoreCatalogConfirm(context, provider); 
+        } else if (value == 'history') { 
+          _showHistorySheet(context, provider); 
+        } else { 
+          setState(() => _selectedCategory = value); 
+        } 
+      }, 
+      itemBuilder: (context) => [
+        PopupMenuItem(value: 'manage_cats', child: Row(children: [Icon(Icons.category_outlined, size: 18 * _textScale, color: Colors.blue), SizedBox(width: 8 * _textScale), Text("ניהול קטגוריות", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))])), 
+        PopupMenuItem(value: 'multi_sort', child: Row(children: [Icon(Icons.layers, size: 18 * _textScale, color: Colors.orange), SizedBox(width: 8 * _textScale), Text("מיון רב-שכבתי...", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))])), 
+        PopupMenuItem(value: 'restore_catalog', child: Row(children: [Icon(Icons.restore_page_outlined, size: 18 * _textScale, color: Colors.green), SizedBox(width: 8 * _textScale), Text("שחזר קטלוג חסר", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))])), 
+        PopupMenuItem(value: 'history', child: Row(children: [Icon(Icons.history, size: 18 * _textScale, color: Colors.purple), SizedBox(width: 8 * _textScale), Text("היסטוריית קניות", style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold, fontSize: 14 * _textScale))])),
+        const PopupMenuDivider(), 
+        PopupMenuItem(enabled: false, child: Text("סינון קטגוריה", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12 * _textScale, color: Colors.blue))), 
+        ...provider.availableCategories.map((cat) => PopupMenuItem(value: cat, child: Row(children: [Icon(Icons.check, size: 16 * _textScale, color: (_selectedCategory == cat) ? Colors.blue : Colors.transparent), SizedBox(width: 8 * _textScale), Text(cat, style: TextStyle(color: Colors.black87, fontSize: 14 * _textScale))]))),
+      ]
+    );
+  }
+
+  // --- מנוע היסטוריית הקניות ---
+  void _showHistorySheet(BuildContext context, ShoppingProvider provider) {
+    final Map<int, List<ShoppingItem>> grouped = {};
+    final now = DateTime.now();
+    final startOfCurrentWeek = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday == 7 ? 0 : now.weekday));
+
+    for (var item in provider.items) {
+      if (item.lastPurchaseDateTime == null) continue;
+      final date = item.lastPurchaseDateTime!;
+      final startOfItemWeek = DateTime(date.year, date.month, date.day).subtract(Duration(days: date.weekday == 7 ? 0 : date.weekday));
+      final offset = startOfItemWeek.difference(startOfCurrentWeek).inDays ~/ 7;
+
+      grouped.putIfAbsent(offset, () => []).add(item);
+    }
+
+    final sortedOffsets = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (_, controller) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.history, color: Colors.purple, size: 24 * _textScale),
+                  const SizedBox(width: 8),
+                  Text("היסטוריית קניות (מוצרים שנקנו)", style: TextStyle(fontSize: 18 * _textScale, fontWeight: FontWeight.bold, color: Colors.black87)),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: sortedOffsets.isEmpty
+                  ? Center(child: Text("לא נמצאו נתוני קנייה בעבר", style: TextStyle(color: Colors.grey, fontSize: 14 * _textScale)))
+                  : ListView.builder(
+                      controller: controller,
+                      itemCount: sortedOffsets.length,
+                      itemBuilder: (context, index) {
+                        final offset = sortedOffsets[index];
+                        final weekItems = grouped[offset]!..sort((a,b) => b.lastPurchaseDateTime!.compareTo(a.lastPurchaseDateTime!));
+                        final title = _getWeekLabel(offset);
+
+                        return ExpansionTile(
+                          leading: const Icon(Icons.date_range, color: Colors.blue),
+                          title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15 * _textScale, color: Colors.black87)),
+                          subtitle: Text("${weekItems.length} מוצרים סומנו בשבוע זה", style: TextStyle(fontSize: 12 * _textScale, color: Colors.grey)),
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                icon: Icon(Icons.restore, size: 18 * _textScale),
+                                label: Text("שחזר את כל מוצרי השבוע לעגלה", style: TextStyle(fontSize: 13 * _textScale)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange[50],
+                                  foregroundColor: Colors.orange[900],
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: Colors.orange.shade200)),
+                                ),
+                                onPressed: () {
+                                  for (var item in weekItems) {
+                                    if (!provider.isChecked(item.id!)) {
+                                      provider.toggleItem(item.id!);
+                                    }
+                                  }
+                                  Navigator.pop(ctx);
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('המוצרים שוחזרו בהצלחה לעגלה!'), backgroundColor: Colors.green));
+                                },
+                              ),
+                            ),
+                            ...weekItems.map((item) {
+                              final date = item.lastPurchaseDateTime!;
+                              return ListTile(
+                                dense: true,
+                                leading: Icon(Icons.check_circle, color: Colors.green, size: 16 * _textScale),
+                                title: Text(item.name, style: TextStyle(fontSize: 14 * _textScale, color: Colors.black87)),
+                                subtitle: Text("נקנה ב- ${date.day}/${date.month}/${date.year}", style: TextStyle(fontSize: 11 * _textScale, color: Colors.blueGrey)),
+                                trailing: TextButton.icon(
+                                  icon: Icon(Icons.add_shopping_cart, size: 16 * _textScale),
+                                  label: Text("הוסף", style: TextStyle(fontSize: 12 * _textScale)),
+                                  style: TextButton.styleFrom(foregroundColor: provider.isChecked(item.id!) ? Colors.grey : Colors.blue),
+                                  onPressed: provider.isChecked(item.id!) ? null : () {
+                                    provider.toggleItem(item.id!);
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${item.name} הוחזר לעגלה'), duration: const Duration(seconds: 1)));
+                                  },
+                                ),
+                              );
+                            }),
+                            const SizedBox(height: 8),
+                          ],
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showRestoreCatalogConfirm(BuildContext context, ShoppingProvider provider) {

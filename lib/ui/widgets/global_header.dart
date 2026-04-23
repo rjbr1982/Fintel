@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Added Exempt Dealer Premium Menu Item)
+// 🔒 STATUS: EDITED (PRO Badge under TEL, Scrollable Main Menu, Removed Exempt Dealer from global menu)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -25,7 +25,6 @@ import '../screens/admin_dashboard_screen.dart';
 import '../screens/category_drilldown_screen.dart';
 import '../screens/reducing_screen.dart';
 import '../screens/assets_screen.dart';
-import '../screens/exempt_dealer_screen.dart';
 
 class GlobalHeader extends StatefulWidget implements PreferredSizeWidget {
   final String? title;
@@ -119,9 +118,29 @@ class _GlobalHeaderState extends State<GlobalHeader> {
                     style: const TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 )
-              : Text(
-                  loc.get('appTitle'),
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: Colors.black87),
+              : Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end, // מיישר את ה-PRO לסוף המילה (ימינה)
+                    children: [
+                      Text(
+                        loc.get('appTitle'),
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: Colors.black87, height: 1.1),
+                      ),
+                      if (_isPremium)
+                        const Text(
+                          'PRO',
+                          style: TextStyle(
+                            color: Color(0xFFD4AF37), // זהב
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.0,
+                            height: 0.8,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
           ),
         ],
@@ -241,71 +260,73 @@ void _showMainMenuBottomSheet(BuildContext context, BudgetProvider budget, bool 
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildBottomSheetHeader(ctx, 'תפריט ראשי', null),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              children: [
-                _buildExpansionMenuTile(
-                  icon: Icons.account_balance_wallet, color: Colors.blue, title: 'תזרים פיננסי (PnL)',
-                  children: [
-                    _buildSubMenuTile('מסך תזרים ראשי', Icons.dashboard, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const PnLScreen())); }),
-                    _buildSubMenuTile('הכנסות', Icons.arrow_downward, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'הכנסות', displayTitle: 'הכנסות'))); }),
-                    _buildSubMenuTile('קבועות', Icons.push_pin, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'קבועות', displayTitle: 'קבועות'))); }),
-                    
-                    _buildSubMenuTile('מנמיכות', Icons.trending_down, () { 
-                      Navigator.pop(ctx); 
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ReducingScreen())); 
-                    }),
-                    
-                    _buildSubMenuTile('משתנות', Icons.shopping_bag_outlined, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'משתנות', displayTitle: 'משתנות'))); }),
-                    _buildSubMenuTile('עתידיות', Icons.savings_outlined, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'עתידיות', displayTitle: 'עתידיות'))); }),
-                    _buildSubMenuTile('פיננסיות', Icons.trending_up, () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const AssetsScreen())); }); }, isPremium: true),
-                  ]
-                ),
-                _buildMenuTile(icon: Icons.shopping_cart_outlined, color: Colors.blueGrey[900]!, title: 'רשימת קניות', onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const ShoppingScreen())); }),
-                
-                if (showSavings) 
-                  _buildMenuTile(
-                    icon: Icons.savings_outlined, 
-                    color: Colors.green, 
-                    title: 'מרכז החסכונות', 
-                    onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const SinkingFundsScreen())); }
-                  ),
-
-                _buildMenuTile(icon: Icons.account_balance_wallet_outlined, color: Colors.blueGrey, title: 'מעקב עו"ש', onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckingHistoryScreen())); }),
-                _buildMenuTile(icon: Icons.insights, color: Colors.orange, title: 'ממוצע שכר', isPremium: true, onTap: () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const SalaryEngineScreen())); }); }),
-                
-                // הוספת ניהול עוסק פטור 👑
-                _buildMenuTile(icon: Icons.storefront_outlined, color: Colors.indigo, title: 'ניהול עוסק פטור', isPremium: true, onTap: () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const ExemptDealerScreen())); }); }),
-
-                const Divider(),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.amber.shade200)),
-                  child: _buildMenuTile(icon: Icons.school, color: Colors.amber[800]!, title: 'אקדמיית Fintel - פרקטיקת השימוש', isPremium: true, onTap: () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const AcademyScreen())); }); }),
-                ),
-                _buildMenuTile(icon: Icons.content_copy, color: Colors.deepPurple, title: 'ייצוא דוח פיננסי (טקסט)', isPremium: true, onTap: () { Navigator.pop(ctx); PremiumService.requirePremium(context, () async { await AiExportService.generateAndCopy(context); if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('הנתונים הועתקו בהצלחה! ניתן להדביק בצ\'אט עם ה-AI או במסמך.'), backgroundColor: Colors.green)); } }); }),
-                _buildMenuTile(icon: Icons.settings, color: Colors.grey.shade700, title: 'הגדרות מערכת', onTap: () { Navigator.pop(ctx); _showMainSettingsBottomSheet(context, budget, showSavings); }),
-                _buildMenuTile(icon: Icons.shield_outlined, color: Colors.teal, title: 'תמיכה ומשפטי', onTap: () { Navigator.pop(ctx); _showSupportBottomSheet(context, budget, showSavings); }),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 40, width: double.infinity,
-                  child: Stack(
-                    alignment: Alignment.center,
+          // עטיפה בגלילה כדי למנוע חיתוך של תחתית המסך
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                children: [
+                  _buildExpansionMenuTile(
+                    icon: Icons.account_balance_wallet, color: Colors.blue, title: 'תזרים פיננסי (PnL)',
                     children: [
-                      FutureBuilder<PackageInfo>(
-                        future: PackageInfo.fromPlatform(),
-                        builder: (context, snapshot) {
-                          String versionText = snapshot.hasData ? 'v${snapshot.data!.version}' : '';
-                          return Text('© 2026 Fintel - כל הזכויות שמורות\n$versionText', textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, color: Colors.grey, height: 1.5));
-                        }
-                      ),
-                      Positioned(right: 20, top: 0, bottom: 0, width: 60, child: GestureDetector(onTap: () => _handleAdminTap(context), behavior: HitTestBehavior.opaque, child: Container(color: Colors.transparent))),
-                    ],
+                      _buildSubMenuTile('מסך תזרים ראשי', Icons.dashboard, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const PnLScreen())); }),
+                      _buildSubMenuTile('הכנסות', Icons.arrow_downward, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'הכנסות', displayTitle: 'הכנסות'))); }),
+                      _buildSubMenuTile('קבועות', Icons.push_pin, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'קבועות', displayTitle: 'קבועות'))); }),
+                      
+                      _buildSubMenuTile('מנמיכות', Icons.trending_down, () { 
+                        Navigator.pop(ctx); 
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const ReducingScreen())); 
+                      }),
+                      
+                      _buildSubMenuTile('משתנות', Icons.shopping_bag_outlined, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'משתנות', displayTitle: 'משתנות'))); }),
+                      _buildSubMenuTile('עתידיות', Icons.savings_outlined, () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryDrilldownScreen(mainCategory: 'עתידיות', displayTitle: 'עתידיות'))); }),
+                      _buildSubMenuTile('פיננסיות', Icons.trending_up, () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const AssetsScreen())); }); }, isPremium: true),
+                    ]
                   ),
-                ),
-                const SizedBox(height: 8),
-              ],
+                  _buildMenuTile(icon: Icons.shopping_cart_outlined, color: Colors.blueGrey[900]!, title: 'רשימת קניות', onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const ShoppingScreen())); }),
+                  
+                  if (showSavings) 
+                    _buildMenuTile(
+                      icon: Icons.savings_outlined, 
+                      color: Colors.green, 
+                      title: 'מרכז החסכונות', 
+                      onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const SinkingFundsScreen())); }
+                    ),
+
+                  _buildMenuTile(icon: Icons.account_balance_wallet_outlined, color: Colors.blueGrey, title: 'מעקב עו"ש', onTap: () { Navigator.pop(ctx); Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckingHistoryScreen())); }),
+                  _buildMenuTile(icon: Icons.insights, color: Colors.orange, title: 'ממוצע שכר', isPremium: true, onTap: () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const SalaryEngineScreen())); }); }),
+
+                  // הערה: תפריט ניהול עוסק פטור הוסר מכאן בהתאם לבקשה.
+
+                  const Divider(),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.amber.shade200)),
+                    child: _buildMenuTile(icon: Icons.school, color: Colors.amber[800]!, title: 'אקדמיית Fintel - פרקטיקת השימוש', isPremium: true, onTap: () { Navigator.pop(ctx); PremiumService.requirePremium(context, () { Navigator.push(context, MaterialPageRoute(builder: (_) => const AcademyScreen())); }); }),
+                  ),
+                  _buildMenuTile(icon: Icons.content_copy, color: Colors.deepPurple, title: 'ייצוא דוח פיננסי (טקסט)', isPremium: true, onTap: () { Navigator.pop(ctx); PremiumService.requirePremium(context, () async { await AiExportService.generateAndCopy(context); if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('הנתונים הועתקו בהצלחה! ניתן להדביק בצ\'אט עם ה-AI או במסמך.'), backgroundColor: Colors.green)); } }); }),
+                  _buildMenuTile(icon: Icons.settings, color: Colors.grey.shade700, title: 'הגדרות מערכת', onTap: () { Navigator.pop(ctx); _showMainSettingsBottomSheet(context, budget, showSavings); }),
+                  _buildMenuTile(icon: Icons.shield_outlined, color: Colors.teal, title: 'תמיכה ומשפטי', onTap: () { Navigator.pop(ctx); _showSupportBottomSheet(context, budget, showSavings); }),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 40, width: double.infinity,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        FutureBuilder<PackageInfo>(
+                          future: PackageInfo.fromPlatform(),
+                          builder: (context, snapshot) {
+                            String versionText = snapshot.hasData ? 'v${snapshot.data!.version}' : '';
+                            return Text('© 2026 Fintel - כל הזכויות שמורות\n$versionText', textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, color: Colors.grey, height: 1.5));
+                          }
+                        ),
+                        Positioned(right: 20, top: 0, bottom: 0, width: 60, child: GestureDetector(onTap: () => _handleAdminTap(context), behavior: HitTestBehavior.opaque, child: Container(color: Colors.transparent))),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
             ),
           ),
         ],
@@ -373,46 +394,48 @@ void _showSupportBottomSheet(BuildContext context, BudgetProvider budget, bool s
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildBottomSheetHeader(ctx, 'תמיכה ומשפטי', () => _showMainMenuBottomSheet(context, budget, showSavings)),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const CircleAvatar(backgroundColor: Color(0xFFE8F5E9), child: Icon(Icons.chat_bubble_outline, color: Colors.green)),
-                  title: const Text('פנו אלינו ב-WhatsApp', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-                  onTap: () async { Navigator.pop(ctx); const String waUrl = 'https://wa.me/972559323615'; try { await launchUrl(Uri.parse(waUrl), mode: LaunchMode.externalApplication); } catch (e) { Clipboard.setData(const ClipboardData(text: '+972-55-932-3615')); if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('לא הצלחנו לפתוח את WhatsApp, המספר הועתק ללוח!'), backgroundColor: Colors.blueGrey, duration: Duration(seconds: 4))); } } },
-                ),
-                const Divider(height: 1, indent: 70),
-                ListTile(
-                  leading: const CircleAvatar(backgroundColor: Color(0xFFE3F2FD), child: Icon(Icons.mail_outline, color: Colors.blue)),
-                  title: const Text('פנו אלינו באימייל', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-                  onTap: () async { Navigator.pop(ctx); final String emailUrl = 'mailto:fintel.app.info@gmail.com?subject=${Uri.encodeComponent("פידבק על אפליקציית דוחכם")}'; try { await launchUrl(Uri.parse(emailUrl), mode: LaunchMode.externalApplication); } catch (e) { Clipboard.setData(const ClipboardData(text: 'fintel.app.info@gmail.com')); if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('לא הצלחנו לפתוח את אפליקציית הדואר, הכתובת הועתקה ללוח!'), backgroundColor: Colors.blueGrey, duration: Duration(seconds: 4))); } } },
-                ),
-                const Divider(height: 1, indent: 70),
-                ListTile(
-                  leading: CircleAvatar(backgroundColor: Colors.orange.shade50, child: Icon(Icons.description_outlined, color: Colors.orange.shade700)),
-                  title: const Text('תנאי שימוש', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-                  onTap: () { Navigator.pop(ctx); _showLegalBottomSheet(context: context, budget: budget, showSavings: showSavings, title: 'תנאי שימוש', icon: Icons.description_outlined, iconColor: Colors.orange.shade700, content: '''תנאי שימוש באפליקציית Fintel (דוחכם)
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const CircleAvatar(backgroundColor: Color(0xFFE8F5E9), child: Icon(Icons.chat_bubble_outline, color: Colors.green)),
+                    title: const Text('פנו אלינו ב-WhatsApp', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+                    onTap: () async { Navigator.pop(ctx); const String waUrl = 'https://wa.me/972559323615'; try { await launchUrl(Uri.parse(waUrl), mode: LaunchMode.externalApplication); } catch (e) { Clipboard.setData(const ClipboardData(text: '+972-55-932-3615')); if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('לא הצלחנו לפתוח את WhatsApp, המספר הועתק ללוח!'), backgroundColor: Colors.blueGrey, duration: Duration(seconds: 4))); } } },
+                  ),
+                  const Divider(height: 1, indent: 70),
+                  ListTile(
+                    leading: const CircleAvatar(backgroundColor: Color(0xFFE3F2FD), child: Icon(Icons.mail_outline, color: Colors.blue)),
+                    title: const Text('פנו אלינו באימייל', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+                    onTap: () async { Navigator.pop(ctx); final String emailUrl = 'mailto:fintel.app.info@gmail.com?subject=${Uri.encodeComponent("פידבק על אפליקציית דוחכם")}'; try { await launchUrl(Uri.parse(emailUrl), mode: LaunchMode.externalApplication); } catch (e) { Clipboard.setData(const ClipboardData(text: 'fintel.app.info@gmail.com')); if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('לא הצלחנו לפתוח את אפליקציית הדואר, הכתובת הועתקה ללוח!'), backgroundColor: Colors.blueGrey, duration: Duration(seconds: 4))); } } },
+                  ),
+                  const Divider(height: 1, indent: 70),
+                  ListTile(
+                    leading: CircleAvatar(backgroundColor: Colors.orange.shade50, child: Icon(Icons.description_outlined, color: Colors.orange.shade700)),
+                    title: const Text('תנאי שימוש', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+                    onTap: () { Navigator.pop(ctx); _showLegalBottomSheet(context: context, budget: budget, showSavings: showSavings, title: 'תנאי שימוש', icon: Icons.description_outlined, iconColor: Colors.orange.shade700, content: '''תנאי שימוש באפליקציית Fintel (דוחכם)
 
 1. הסכמה לתנאים: השימוש באפליקציית Fintel ("האפליקציה") מהווה את הסכמתך המלאה לתנאים המפורטים להלן ולמדיניות הפרטיות. 
 2. מהות השירות ואי-תלות (Disclaimer): האפליקציה מהווה כלי טכנולוגי לניהול תקציב, תכנון תזרים ומעקב אחר נכסים. המידע, הנתונים והתחזיות המופקים על ידי "מנוע החירות" או כל רכיב אחר במערכת ניתנים כמות שהם (AS IS). אין באמור באפליקציה משום ייעוץ פיננסי, פנסיוני, השקעות או מס, ואין בו כדי להחליף ייעוץ מקצועי ואישי. האחריות על כל החלטה כלכלית או השקעה חלה על המשתמש בלבד.
 3. הגבלת אחריות: מפתחי האפליקציה אינם אחראים לכל נזק, הפסד או אובדן כספי, ישיר או עקיף, העלול להיגרם כתוצאה מהסתמכות על חישובי המערכת, שיבושים בקווי תקשורת, הפסקות זמניות בשירותי הענן (Firebase), או תקלות במערכת ההפעלה של המכשיר.
 4. אבטחה אישית: על המשתמש לנקוט בכל האמצעים לשמירת אבטחת מכשירו (נעילת מסך, ביומטריה). מפתחי האפליקציה לא יהיו אחראים לחשיפת מידע פיננסי שנגרמה עקב מסירת פרטי ההזדהות (Google Auth) לצד ג' או גישה פיזית למכשיר פתוח.
 5. קניין רוחני: מתודולוגיית "דוחכם", שפת המותג, אלגוריתם ה"צלף", ומנוע "הזרימה" הינם קניין רוחני בלעדי. אין להעתיק, לשכפל או להפיץ רכיבים אלו ללא אישור מראש ובכתב.'''); },
-                ),
-                const Divider(height: 1, indent: 70),
-                ListTile(
-                  leading: CircleAvatar(backgroundColor: Colors.green.shade50, child: Icon(Icons.lock_outline, color: Colors.green.shade700)),
-                  title: const Text('מדיניות פרטיות', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
-                  onTap: () { Navigator.pop(ctx); _showLegalBottomSheet(context: context, budget: budget, showSavings: showSavings, title: 'מדיניות פרטיות', icon: Icons.lock_outline, iconColor: Colors.green.shade700, content: '''מדיניות פרטיות ואבטחת מידע
+                  ),
+                  const Divider(height: 1, indent: 70),
+                  ListTile(
+                    leading: CircleAvatar(backgroundColor: Colors.green.shade50, child: Icon(Icons.lock_outline, color: Colors.green.shade700)),
+                    title: const Text('מדיניות פרטיות', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+                    onTap: () { Navigator.pop(ctx); _showLegalBottomSheet(context: context, budget: budget, showSavings: showSavings, title: 'מדיניות פרטיות', icon: Icons.lock_outline, iconColor: Colors.green.shade700, content: '''מדיניות פרטיות ואבטחת מידע
 
 1. איסוף מידע וסנכרון ענן: המערכת פועלת באמצעות טכנולוגיית סנכרון ענן בזמן אמת (Firebase של חברת Google). המידע הפיננסי המוזן על ידך (הכנסות, הוצאות, נכסים) נשמר תחת מזהה המשתמש שלך, במטרה לאפשר סנכרון רציף בין מכשירים וגיבוי מלא.
 2. הזדהות ללא סיסמאות: למען ביטחונך, האפליקציה אינה שומרת או מנהלת מאגר סיסמאות מקומי. ההזדהות מבוצעת באמצעות שרתי Google (OAuth), כך שפרטי ההתחברות שלך לעולם אינם חשופים למפתחי האפליקציה.
 3. שימוש במידע אישי: האפליקציה אוספת את כתובת הדואר האלקטרוני, השם המלא ותמונת הפרופיל שלך המשויכים לחשבון ה-Google. נתונים אלו נועדו לזיהוי בעלי המידע ולמתן שירות אישי, וכן לצורך שליחת עדכונים מערכתיים או הצעות רלוונטיות, הניתנים להסרה בכל עת. המידע הפיננסי שלך פרטי ולעולם לא יימכר לצדדים שלישיים.
 4. גלישה בטוחה והצפנה: התקשורת בין האפליקציה לשרתי הענן מאובטחת ומוצפנת בסטנדרטים בינלאומיים מתקדמים (HTTPS/TLS). הגישה למסד הנתונים חסומה ברמת השרת (Security Rules) ומורשית אך ורק לבעל החשבון המאומת.
 5. הגנת המכשיר המקומי: האפליקציה מציעה מנגנון נעילה ביומטרית (טביעת אצבע/זיהוי פנים) כשכבת הגנה נוספת. באחריות המשתמש להפעיל מנגנון זה דרך מסך ההגדרות למניעת גישה לא מורשית.'''); },
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
