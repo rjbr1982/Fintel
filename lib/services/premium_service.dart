@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Restored full Pro features list and added monthly subscription mention for IL users)
+// 🔒 STATUS: EDITED (Reordered Paywall feature list according to strategic priority)
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -208,103 +208,108 @@ class PremiumService {
           contentPadding: EdgeInsets.zero,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480, maxHeight: 850),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                    child: Image.asset('assets/icon/fintel_pro_banner.jpg', width: double.infinity, fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 24), color: const Color(0xFF121212),
-                        child: Column(children: [Image.asset('assets/icon/premium_icon.png', width: 72, height: 72, errorBuilder: (_,__,___) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 72)), const SizedBox(height: 12), const Text('Fintel Pro', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2))]))),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        Text(
-                          isHebrew ? "שדרג ל-Fintel Pro\nשליטה מוחלטת בתזרים" : "Upgrade to Fintel Pro\nUltimate Cashflow Control", 
-                          textAlign: TextAlign.center, 
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)
-                        ),
-                        const SizedBox(height: 24),
-                        // Full Feature List Restored
-                        _buildBullet(isHebrew ? "מנוע החירות - חישוב שנת יעד מדויקת." : "Freedom Engine - Exact target year calculation."),
-                        _buildBullet(isHebrew ? "מכונת זמן לחיסול חובות - אלגוריתם ה'צלף'." : "Debt Time Machine - Sniper Algorithm."),
-                        _buildBullet(isHebrew ? "ייצוב שכר תנודתי - מנוע ממוצע שכר חכם." : "Income Stabilizer - Smart Salary Average."),
-                        _buildBullet(isHebrew ? "ניהול נכסים והשקעות מתקדם." : "Advanced Asset & Investment Management."),
-                        _buildBullet(isHebrew ? "מערכת 'אנטי-הפתעות' להוצאות עתידיות." : "Anti-Surprise Sinking Funds System."),
-                        _buildBullet(isHebrew ? "דוחות וסטטיסטיקות צמיחה מתקדמות." : "Advanced Growth Analytics & Reports."),
-                        
-                        const SizedBox(height: 32),
-                        SizedBox(
-                          width: double.infinity,
-                          child: isProcessing 
-                            ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A3FF)))
-                            : (AppGlobals.forceUSNotifier.value && kIsWeb) // Logic updated to use sandbox switch
-                                ? Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blueGrey.shade50,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: Colors.blueGrey.shade200)
-                                    ),
-                                    child: const Text(
-                                      "Web checkout is not available in your region.\nPlease download our Android app from the Google Play Store to subscribe.",
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(color: Colors.blueGrey, fontSize: 13, fontWeight: FontWeight.w600),
-                                    ),
-                                  )
-                                : Column(
-                                    children: [
-                                      ElevatedButton(
-                                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                                        onPressed: () async {
-                                          setState(() => isProcessing = true);
-                                          bool success = await HybridBillingEngine.purchasePro();
-                                          
-                                          if (!ctx.mounted) return;
-                                          
-                                          if (success) {
-                                            Navigator.pop(ctx);
-                                            if (kIsWeb) {
-                                              if (!context.mounted) return;
-                                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isHebrew ? 'ממתין לאישור תשלום. המסך יתרענן אוטומטית.' : 'Waiting for payment confirmation. The screen will refresh automatically.'), backgroundColor: Colors.blueGrey));
-                                            } else {
-                                              await DatabaseHelper.instance.setPremiumStatus(true);
-                                              PremiumService.notifyStateChanged();
-                                              onGranted();
-                                            }
-                                          } else {
-                                            setState(() => isProcessing = false);
-                                            if (!context.mounted) return;
-                                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isHebrew ? 'שגיאה בתקשורת עם השרת. נסה שוב.' : 'Server communication error. Please try again.'), backgroundColor: Colors.redAccent));
-                                          }
-                                        },
-                                        child: Center(child: Text(isHebrew ? "רכישת מנוי לכל החיים (Lifetime)" : "Get Lifetime Access", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+            constraints: const BoxConstraints(maxWidth: 480, maxHeight: 800),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Fixed Header Banner
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  child: Image.asset('assets/icon/fintel_pro_banner.jpg', width: double.infinity, fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 24), color: const Color(0xFF121212),
+                      child: Column(children: [Image.asset('assets/icon/premium_icon.png', width: 72, height: 72, errorBuilder: (_,__,___) => const Icon(Icons.workspace_premium, color: Colors.amber, size: 72)), const SizedBox(height: 12), const Text('Fintel Pro', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.2))]))),
+                ),
+                // Scrollable Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            isHebrew ? "שדרג ל-Fintel Pro\nשליטה מוחלטת בתזרים" : "Upgrade to Fintel Pro\nUltimate Cashflow Control", 
+                            textAlign: TextAlign.center, 
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)
+                          ),
+                          const SizedBox(height: 24),
+                          // Feature List reordered strategically
+                          _buildBullet(isHebrew ? "מערכת חיסול חובות חכמה, לחיסול כל החובות בחצי זמן." : "Smart Debt Elimination - Settle all debts in half the time."),
+                          _buildBullet(isHebrew ? "מערכת 'אנטי-הפתעות' להוצאות עתידיות." : "Anti-Surprise Sinking Funds System."),
+                          _buildBullet(isHebrew ? "ייצוב שכר תנודתי - מנוע ממוצע שכר חכם." : "Income Stabilizer - Smart Salary Average."),
+                          _buildBullet(isHebrew ? "אקדמיית Fintel - גישה מלאה לשיעורי פרקטיקה וניהול פיננסי." : "Fintel Academy - Full access to practical financial management lessons."),
+                          _buildBullet(isHebrew ? "ניהול נכסים והשקעות מתקדם." : "Advanced Asset & Investment Management."),
+                          _buildBullet(isHebrew ? "ניהול עוסק פטור - תיעוד תקבולים ותשלומים עם העתקה מהירה לרו\"ח." : "Exempt Dealer Management - Ledger tracking with quick copy for accountant."),
+                          
+                          const SizedBox(height: 32),
+                          SizedBox(
+                            width: double.infinity,
+                            child: isProcessing 
+                              ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A3FF)))
+                              : (AppGlobals.forceUSNotifier.value && kIsWeb)
+                                  ? Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blueGrey.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.blueGrey.shade200)
                                       ),
-                                      if (isHebrew && kIsWeb) ...[
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          "מעדיף מנוי חודשי גמיש?\nהורד את האפליקציה מחנות ה-Google Play",
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 12, fontWeight: FontWeight.w500),
+                                      child: const Text(
+                                        "Web checkout is not available in your region.\nPlease download our Android app from the Google Play Store to subscribe.",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(color: Colors.blueGrey, fontSize: 13, fontWeight: FontWeight.w600),
+                                      ),
+                                    )
+                                  : Column(
+                                      children: [
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A3FF), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                                          onPressed: () async {
+                                            setState(() => isProcessing = true);
+                                            bool success = await HybridBillingEngine.purchasePro();
+                                            
+                                            if (!ctx.mounted) return;
+                                            
+                                            if (success) {
+                                              Navigator.pop(ctx);
+                                              if (kIsWeb) {
+                                                if (!context.mounted) return;
+                                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isHebrew ? 'ממתין לאישור תשלום. המסך יתרענן אוטומטית.' : 'Waiting for payment confirmation. The screen will refresh automatically.'), backgroundColor: Colors.blueGrey));
+                                              } else {
+                                                await DatabaseHelper.instance.setPremiumStatus(true);
+                                                PremiumService.notifyStateChanged();
+                                                onGranted();
+                                              }
+                                            } else {
+                                              setState(() => isProcessing = false);
+                                              if (!context.mounted) return;
+                                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isHebrew ? 'שגיאה בתקשורת עם השרת. נסה שוב.' : 'Server communication error. Please try again.'), backgroundColor: Colors.redAccent));
+                                            }
+                                          },
+                                          child: Center(child: Text(isHebrew ? "רכישת מנוי לכל החיים (Lifetime)" : "Get Lifetime Access", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
                                         ),
+                                        if (isHebrew && kIsWeb) ...[
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            "מעדיף מנוי חודשי גמיש?\nהורד את האפליקציה מחנות ה-Google Play",
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 12, fontWeight: FontWeight.w500),
+                                          ),
+                                        ],
                                       ],
-                                    ],
-                                  ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextButton(
-                          onPressed: isProcessing ? null : () => Navigator.pop(ctx), 
-                          child: Text(isHebrew ? "לא תודה, אמשיך בגרסה הבסיסית" : "No thanks, I'll stick to the basic version", style: const TextStyle(color: Colors.grey, fontSize: 13))
-                        ),
-                      ],
+                                    ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: isProcessing ? null : () => Navigator.pop(ctx), 
+                            child: Text(isHebrew ? "לא תודה, אמשיך בגרסה הבסיסית" : "No thanks, I'll stick to the basic version", style: const TextStyle(color: Colors.grey, fontSize: 13))
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

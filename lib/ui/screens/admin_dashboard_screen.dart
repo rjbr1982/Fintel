@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Fixed TextField Text Color for Admin Notes to ensure high contrast)
+// 🔒 STATUS: EDITED (Added direct 'Copy Mailing List' buttons for BCC extractions)
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -243,7 +243,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 style: ElevatedButton.styleFrom(backgroundColor: themeColor, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 icon: const Icon(Icons.mail), label: const Text('דיוור מיידי לכל הקבוצה', style: TextStyle(fontWeight: FontWeight.bold)),
                 onPressed: () { Navigator.pop(ctx); _triggerMail(emails, defaultSubject, defaultBody); },
-              )
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.black87, side: BorderSide(color: Colors.grey.shade300), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                icon: const Icon(Icons.copy), label: Text('העתק רשימת תפוצה (${emails.length} משתמשים)'),
+                onPressed: () { 
+                  Clipboard.setData(ClipboardData(text: emails.join(',')));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('הועתקו ${emails.length} כתובות מייל ללוח')));
+                },
+              ),
             ],
           ),
         ),
@@ -382,7 +391,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text('תוצאות סינון (${filtered.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
-          TextButton.icon(onPressed: () => setState(() => _showScreenerResults = false), icon: const Icon(Icons.close, size: 16), label: const Text('נקה')),
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: () {
+                  final bcc = filtered.map((u) => u.email).join(',');
+                  Clipboard.setData(ClipboardData(text: bcc));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('הועתקו ${filtered.length} כתובות מייל ללוח')));
+                },
+                icon: const Icon(Icons.copy, size: 16), label: const Text('העתק רשימת תפוצה')
+              ),
+              TextButton.icon(onPressed: () => setState(() => _showScreenerResults = false), icon: const Icon(Icons.close, size: 16), label: const Text('נקה')),
+            ],
+          ),
         ]),
         const SizedBox(height: 12),
         if (filtered.isEmpty) const Center(child: Padding(padding: EdgeInsets.all(24.0), child: Text('לא נמצאו משתמשים')))
@@ -734,7 +755,7 @@ class _AdminNoteFieldState extends State<_AdminNoteField> {
       controller: _controller,
       maxLines: null,
       keyboardType: TextInputType.multiline,
-      style: const TextStyle(fontSize: 13, color: Colors.black87), // התיקון שביקשת
+      style: const TextStyle(fontSize: 13, color: Colors.black87), 
       decoration: InputDecoration(
         hintText: 'הוסף הערה...',
         hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),

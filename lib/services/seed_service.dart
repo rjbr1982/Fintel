@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Removed 'בילויים' from Default Fixed Expenses)
+// 🔒 STATUS: EDITED (Changed "בלת"ם רפואי (חירום)" to "רפואי")
 import '../data/database_helper.dart';
 import '../data/expense_model.dart';
 import '../data/shopping_model.dart';
@@ -201,7 +201,7 @@ class SeedService {
       _create('מוצרי חשמל וריהוט', 'עתידיות', 'רכישות קטנות', 0, isSinking: true, allocationRatio: 0.07),
       _create('אירועים משפחתיים (בר מצווה/חתונה)', 'עתידיות', 'הפקת אירועים', 0, isSinking: true, allocationRatio: 0.11),
       _create('תחזוקת נכס ושיפוצים', 'עתידיות', 'תיקונים', 0, isSinking: true, allocationRatio: 0.02),
-      _create('בלת"ם רפואי (חירום)', 'עתידיות', 'רפואי', 0, isSinking: true, allocationRatio: 0.02),
+      _create('רפואי', 'עתידיות', 'רפואי', 0, isSinking: true, allocationRatio: 0.02),
       _create('חופשה שנתית', 'עתידיות', 'חופשה שנתית', 0, isSinking: true, allocationRatio: 0.11),
       
       // === פיננסיות ===
