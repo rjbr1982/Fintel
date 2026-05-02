@@ -1,7 +1,10 @@
-# AI CONTEXT - Fintel Project
-**Current Stage:** Premium Feature Integration and Production Readiness.
-**Last Actions:**
-- Fixed business buttons duplicate display (removed from `CategoryDrilldownScreen` macro view, kept only in `SpecificExpensesScreen` micro view).
-- Renamed salary engine button to "ממוצע שכר" and added the premium crown icon (`assets/icon/crown_icon.png`) to it and the "Exempt Dealer" button.
-**Next Task:** Awaiting user's next strategic objective (e.g., additional premium capabilities, analytics improvements, or testing phase).
-**Constitution Status:** סטטוס חוקה: תואמת לקוד (לא נדרשים שינויים בסשן זה).
+# AI_CONTEXT.md
+
+## Current Stage:
+Refining the product's constitution to accurately reflect the categorization of features, specifically ensuring that the Auto-Rollover and Sinking Funds ("Green Frame") are explicitly defined as core, free features rather than premium ones.
+
+## Next Task:
+Wait for the user's next directive. If a new session begins, ensure this context is loaded, along with the latest `project_status.md` and codebase state.
+
+## Constitution Status:
+Updated to version 12.90. The constitution accurately reflects the current strategic vision regarding feature access (Freemium model).

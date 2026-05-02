@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Reordered Paywall feature list according to strategic priority)
+// 🔒 STATUS: EDITED (Removed Sinking Funds from Paywall feature list per Constitution v12.90)
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -235,7 +235,6 @@ class PremiumService {
                           const SizedBox(height: 24),
                           // Feature List reordered strategically
                           _buildBullet(isHebrew ? "מערכת חיסול חובות חכמה, לחיסול כל החובות בחצי זמן." : "Smart Debt Elimination - Settle all debts in half the time."),
-                          _buildBullet(isHebrew ? "מערכת 'אנטי-הפתעות' להוצאות עתידיות." : "Anti-Surprise Sinking Funds System."),
                           _buildBullet(isHebrew ? "ייצוב שכר תנודתי - מנוע ממוצע שכר חכם." : "Income Stabilizer - Smart Salary Average."),
                           _buildBullet(isHebrew ? "אקדמיית Fintel - גישה מלאה לשיעורי פרקטיקה וניהול פיננסי." : "Fintel Academy - Full access to practical financial management lessons."),
                           _buildBullet(isHebrew ? "ניהול נכסים והשקעות מתקדם." : "Advanced Asset & Investment Management."),
