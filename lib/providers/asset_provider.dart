@@ -1,3 +1,4 @@
+// 🔒 STATUS: EDITED (Added Bunker identification logic)
 import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 import '../data/asset_model.dart';
@@ -36,6 +37,17 @@ class AssetProvider with ChangeNotifier {
   double get totalAssetsValue {
     return _assets.fold(0.0, (sum, item) => sum + item.value);
   }
+
+  // --- יסודות "הנוסחה": זיהוי נכס מסוג בונקר ---
+  Asset? get bunkerAsset {
+    try {
+      return _assets.firstWhere((a) => a.name.contains('בונקר'));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  double get bunkerBalance => bunkerAsset?.value ?? 0.0;
 
   // הכנסה פסיבית חודשית תיאורטית (לפי תשואה שהוזנה בנכס או ברירת מחדל)
   double get totalPassiveIncomeMonthly {

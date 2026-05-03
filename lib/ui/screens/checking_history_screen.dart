@@ -1,10 +1,13 @@
-// 🔒 STATUS: EDITED (Fixed TextDirection intl collision)
+// 🔒 STATUS: EDITED (Added Buffer UI and Sweep Ritual logic)
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'dart:math';
 import 'dart:ui' as ui;
 import '../../data/database_helper.dart';
 import '../../data/checking_model.dart';
+import '../../providers/budget_provider.dart';
+import '../../providers/asset_provider.dart';
 import '../widgets/global_header.dart';
 
 class CheckingHistoryScreen extends StatelessWidget {
@@ -26,9 +29,18 @@ class CheckingHistoryScreen extends StatelessWidget {
           }
 
           final entries = snapshot.data ?? [];
+          CheckingEntry? latestEntry;
+          if (entries.isNotEmpty) {
+            latestEntry = entries.reduce((a, b) => DateTime.parse(a.date).isAfter(DateTime.parse(b.date)) ? a : b);
+          }
+          
+          final budgetProvider = Provider.of<BudgetProvider>(context);
+          final assetProvider = Provider.of<AssetProvider>(context);
           
           return Column(
             children: [
+              if (entries.isNotEmpty)
+                _buildBufferAndSweepSection(context, latestEntry, budgetProvider, assetProvider),
               if (entries.isNotEmpty)
                 _buildGraph(entries),
               if (entries.isNotEmpty)
@@ -45,7 +57,10 @@ class CheckingHistoryScreen extends StatelessWidget {
                     : ListView.builder(
                         itemCount: entries.length,
                         itemBuilder: (context, index) {
-                          final entry = entries[index];
+                          // מיון הרשימה שתוצג לפי תאריך יורד
+                          final sortedEntries = List<CheckingEntry>.from(entries)
+                             ..sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
+                          final entry = sortedEntries[index];
                           final dateObj = DateTime.parse(entry.date);
                           final formattedDate = DateFormat('dd/MM/yyyy').format(dateObj);
                           return Dismissible(
@@ -89,6 +104,102 @@ class CheckingHistoryScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildBufferAndSweepSection(BuildContext context, CheckingEntry? latestEntry, BudgetProvider budget, AssetProvider assets) {
+    if (latestEntry == null) return const SizedBox();
+
+    double currentBalance = latestEntry.amount;
+    double bufferTarget = budget.bufferTarget;
+    
+    // מניעת חלוקה באפס אם טרם הוזנו הכנסות
+    if (bufferTarget <= 0) return const SizedBox();
+
+    double progress = (currentBalance / bufferTarget).clamp(0.0, 1.0);
+    bool isBufferFull = currentBalance >= bufferTarget;
+    double surplus = isBufferFull ? (currentBalance - bufferTarget) : 0.0;
+    
+    double bunkerTarget = budget.bunkerTarget;
+    double bunkerBalance = assets.bunkerBalance;
+    bool isBunkerFull = bunkerBalance >= bunkerTarget && bunkerTarget > 0;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16, left: 16, right: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('בולם זעזועים', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+              Text('${(progress * 100).toStringAsFixed(0)}%', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isBufferFull ? Colors.green : Colors.orange)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              backgroundColor: Colors.grey[200],
+              valueColor: AlwaysStoppedAnimation<Color>(isBufferFull ? Colors.green : Colors.orange),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text('₪${currentBalance.toStringAsFixed(0)} מתוך יעד של ₪${bufferTarget.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          
+          if (isBufferFull && surplus > 0) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12.0),
+              child: Divider(),
+            ),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isBunkerFull ? Colors.teal.withValues(alpha: 0.1) : Colors.amber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: isBunkerFull ? Colors.teal.withValues(alpha: 0.3) : Colors.amber.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isBunkerFull ? Icons.rocket_launch : Icons.shield_outlined,
+                    color: isBunkerFull ? Colors.teal : Colors.amber[800],
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'טקס הגריפה',
+                          style: TextStyle(fontWeight: FontWeight.bold, color: isBunkerFull ? Colors.teal[800] : Colors.amber[900]),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          isBunkerFull
+                              ? 'הבונקר מלא! יש לגרוף את העודף בסך ₪${surplus.toStringAsFixed(0)} לטובת מנוע ההשקעות.'
+                              : 'נמצא עודף. יש לגרוף ₪${surplus.toStringAsFixed(0)} לטובת הבונקר (קרן חירום בפיקדון נפרד).',
+                          style: TextStyle(fontSize: 13, color: isBunkerFull ? Colors.teal[900] : Colors.amber[900]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
@@ -112,7 +223,7 @@ class CheckingHistoryScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const Text(
-              'מסך זה נועד לבקרה בלבד. המערכת תצייר עבורך גרף מגמה כדי שתוכל לראות את התקדמות היתרה שלך לאורך זמן.\n\nטיפ: לקבלת תמונת צמיחה אמינה, הזן את היתרה ביום קבוע (מומלץ ב-20 לחודש, לאחר ירידת החיובים).',
+              'מסך זה נועד לבקרה וניהול עודפים. המערכת תצייר עבורך גרף מגמה כדי שתוכל לראות את התקדמות היתרה שלך לאורך זמן.\n\nטיפ: לקבלת תמונת צמיחה אמינה ולביצוע טקס גריפה מדויק, הזן את היתרה יום לפני כניסת המשכורת (מומלץ ב-28 לחודש, לאחר שכל ההוצאות ירדו).',
               style: TextStyle(fontSize: 15, color: Colors.black54, height: 1.5),
               textAlign: TextAlign.center,
             ),
@@ -139,7 +250,7 @@ class CheckingHistoryScreen extends StatelessWidget {
       height: 240,
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(16),
@@ -180,7 +291,7 @@ class CheckingHistoryScreen extends StatelessWidget {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('הזן את הסכום המדויק שיש כעת בחשבון העו"ש, לצורך בקרת צמיחת עודפים.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+                  const Text('הזן את הסכום המדויק שיש כעת בחשבון העו"ש, לצורך בקרת צמיחת עודפים וטקס הגריפה.', style: TextStyle(fontSize: 13, color: Colors.grey)),
                   const SizedBox(height: 16),
                   TextField(
                     controller: amountCtrl,

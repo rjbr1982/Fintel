@@ -1,4 +1,4 @@
-// 🔒 STATUS: EDITED (Linter Clean + Optimistic UI updates, Fixed catchError return types)
+// 🔒 STATUS: EDITED (Added Buffer and Bunker target getters)
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -109,6 +109,10 @@ class BudgetProvider with ChangeNotifier {
     double reducedTarget = baseTarget - totalPassiveIncome;
     return (reducedTarget > 0) ? reducedTarget : 0;
   }
+
+  // --- יסודות "הנוסחה": בולם זעזועים והבונקר ---
+  double get bufferTarget => totalIncome;
+  double get bunkerTarget => totalIncome * 3;
 
   int getCategoryUnifiedMode(String cat) {
     if (_unifiedCategoryModes.containsKey(cat)) {
