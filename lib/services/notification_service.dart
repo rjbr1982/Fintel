@@ -24,8 +24,9 @@ class NotificationService {
     if (!kIsWeb) {
       tz.initializeTimeZones();
       try {
-        final String timeZoneName = await FlutterTimezone.getLocalTimezone();
-        tz.setLocalLocation(tz.getLocation(timeZoneName));
+        // התיקון המיוחל לגרסה 5.0 של flutter_timezone
+        final timeZoneInfo = await FlutterTimezone.getLocalTimezone();
+        tz.setLocalLocation(tz.getLocation(timeZoneInfo.identifier));
       } catch (e) {
         tz.setLocalLocation(tz.getLocation('Asia/Jerusalem'));
       }

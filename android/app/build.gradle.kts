@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -8,15 +11,22 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// קריאת קובץ ההגדרות (key.properties) בצורה תקינה ל-Kotlin
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 android {
-    namespace = "com.example.dohaham"
+    // עדכון המזהה שיתאים לגוגל
+    namespace = "com.myfintelapp.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-        // הפעלת תמיכה בספריות Java מודרניות עבור רכיב ההתראות
         isCoreLibraryDesugaringEnabled = true
     }
 
@@ -25,24 +35,31 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.dohaham"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // עדכון המזהה שיתאים לגוגל
+        applicationId = "com.myfintelapp.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         
-        // מניעת שגיאות בבנייה של חבילות גדולות
         multiDexEnabled = true
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+            val storeFilePath = keystoreProperties.getProperty("storeFile")
+            if (storeFilePath != null) {
+                storeFile = file(storeFilePath)
+            }
+            storePassword = keystoreProperties.getProperty("storePassword")
+        }
+    }
+
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
@@ -52,6 +69,5 @@ flutter {
 }
 
 dependencies {
-    // הספרייה המאפשרת את פעולת ה-Desugaring עבור אנדרואיד
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

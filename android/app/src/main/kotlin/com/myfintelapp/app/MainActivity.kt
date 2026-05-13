@@ -1,4 +1,4 @@
-package com.example.dohaham
+package com.myfintelapp.app
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 
